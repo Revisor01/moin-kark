@@ -1,7 +1,6 @@
 // Design-Tokens für „Was ist los in Dithmarschen".
 // Küstlich-evangelischer, warm-redaktioneller Look: Nordsee-Teal + warmer Sand + Koralle.
-// Schriften: Fraunces (warme Editorial-Serife, Headlines) + Inter (Body) —
-// passt zu Simons bestehender Markensprache (Predigt-Dokumente).
+// Schriften: Bricolage Grotesque (Headlines) + DM Sans (Body).
 
 export const colors = {
   // Marke / Primär — Nordsee-Teal
