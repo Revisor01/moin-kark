@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import Map, {
+  AttributionControl,
   Layer,
   Marker,
   Source,
@@ -102,6 +103,7 @@ export default function EventMap({
       onClick={onClick}
       onLoad={emitBounds}
       onMoveEnd={emitBounds}
+      attributionControl={false}
       cursor="auto"
     >
       {/* Fog of War: alles außerhalb Dithmarschens abdunkeln */}
@@ -121,6 +123,9 @@ export default function EventMap({
           paint={{ "line-color": colors.primary, "line-width": 3, "line-opacity": 0.9 }}
         />
       </Source>
+
+      {/* Kleiner, eingeklappter Info-/Attribution-Button (⊕ → OSM-Credit) */}
+      <AttributionControl compact position="bottom-left" />
 
       <Source id={SOURCE_ID} {...sourceConfig} data={data as any}>
         <Layer {...(clusterLayer as any)} />

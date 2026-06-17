@@ -147,6 +147,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(28,43,43,0.45)",
     justifyContent: "flex-end",
     alignItems: "center",
+    zIndex: 1000,
   },
   sheet: {
     backgroundColor: colors.surface,
