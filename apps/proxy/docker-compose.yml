@@ -1,0 +1,41 @@
+# Deployment-Stack für den Read-Proxy auf server.godsapp.de (Apache → Traefik → Container).
+# Build-Kontext ist der Monorepo-Root, damit packages/shared mitkommt.
+services:
+  kkdith-proxy:
+    build:
+      context: ../..
+      dockerfile: apps/proxy/Dockerfile
+    image: kkdith-proxy:latest
+    container_name: kkdith-proxy
+    restart: unless-stopped
+    environment:
+      PORT: "8787"
+      CACHE_TTL_MS: "1200000"
+      DEFAULT_WINDOW_DAYS: "60"
+      MAX_WINDOW_DAYS: "90"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://kkkarte.godsapp.de}"
+      # Tokens werden über Portainer-Stack-ENV / .env injiziert (NIE im Repo).
+      CD_TOKEN_2596: "${CD_TOKEN_2596:-}"
+      CD_TOKEN_2619: "${CD_TOKEN_2619:-}"
+      CD_TOKEN_2715: "${CD_TOKEN_2715:-}"
+      CD_TOKEN_2718: "${CD_TOKEN_2718:-}"
+      CD_TOKEN_2720: "${CD_TOKEN_2720:-}"
+      CD_TOKEN_2722: "${CD_TOKEN_2722:-}"
+      CD_TOKEN_2723: "${CD_TOKEN_2723:-}"
+      CD_TOKEN_2724: "${CD_TOKEN_2724:-}"
+      CD_TOKEN_2725: "${CD_TOKEN_2725:-}"
+      CD_TOKEN_2729: "${CD_TOKEN_2729:-}"
+      CD_TOKEN_2753: "${CD_TOKEN_2753:-}"
+      CD_TOKEN_2936: "${CD_TOKEN_2936:-}"
+      CD_TOKEN_2940: "${CD_TOKEN_2940:-}"
+      CD_TOKEN_6572: "${CD_TOKEN_6572:-}"
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kkdith-proxy.rule=Host(`kkkarte.godsapp.de`)"
+      - "traefik.http.services.kkdith-proxy.loadbalancer.server.port=8787"
+
+networks:
+  traefik:
+    external: true
