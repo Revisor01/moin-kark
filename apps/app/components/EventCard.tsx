@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   accent: { width: 4 },
-  thumb: { width: 84, height: 84 },
+  thumb: { width: 96, alignSelf: "stretch", minHeight: 96 },
   thumbEmpty: {
     backgroundColor: colors.surfaceMuted,
     alignItems: "center",

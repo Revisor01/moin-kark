@@ -35,6 +35,11 @@ export default function Home() {
   const { data: categories } = useCategories();
   const { location, status: locStatus, request: requestLocation } = useLocation();
 
+  // Standort beim Start einmalig anfragen (opt-in System-Dialog) → Marker direkt sichtbar.
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
+
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bounds, setBounds] = useState<Bounds | null>(null);
@@ -78,6 +83,18 @@ export default function Home() {
     return KIRCHSPIELE.filter((k) => present.has(k));
   }, [allFeatures]);
 
+  // Gemeinden des gewählten Kirchspiels (alphabetisch). Leer = keine Gemeinde-Reihe.
+  const gemeindeOptions = useMemo(() => {
+    if (!filters.kirchspiel) return [];
+    const set = new Set<string>();
+    for (const f of allFeatures) {
+      if (f.properties.kirchspiel === filters.kirchspiel && f.properties.parish) {
+        set.add(f.properties.parish);
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "de"));
+  }, [allFeatures, filters.kirchspiel]);
+
   const selectedFeature = useMemo(
     () => allFeatures.find((f) => f.properties.id === selectedId) ?? null,
     [allFeatures, selectedId]
@@ -91,7 +108,7 @@ export default function Home() {
   const header = (
     <View style={styles.header}>
       <Text style={styles.kicker}>Evangelische Kirche Dithmarschen</Text>
-      <Text style={styles.h1}>Kirche. Hier bei dir.</Text>
+      <Text style={styles.h1}>Kirche. In deiner Nähe.</Text>
       <Text style={styles.sub}>
         {filtered.length} {filtered.length === 1 ? "Veranstaltung" : "Veranstaltungen"}
         {bounds && !filters.nearby ? " im Kartenausschnitt" : ""}
@@ -129,7 +146,10 @@ export default function Home() {
       nearbyAvailable={locStatus !== "denied"}
       kirchspiele={kirchspielOptions as unknown as string[]}
       activeKirchspiel={filters.kirchspiel}
-      onKirchspiel={(k) => setFilters((f) => ({ ...f, kirchspiel: k }))}
+      onKirchspiel={(k) => setFilters((f) => ({ ...f, kirchspiel: k, parish: null }))}
+      gemeinden={gemeindeOptions}
+      activeGemeinde={filters.parish}
+      onGemeinde={(g) => setFilters((f) => ({ ...f, parish: g }))}
       categories={categoryTitles}
       activeCategory={filters.category}
       onCategory={(c) => setFilters((f) => ({ ...f, category: c }))}

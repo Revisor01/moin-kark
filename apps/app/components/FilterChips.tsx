@@ -11,6 +11,9 @@ interface Props {
   kirchspiele: string[];
   activeKirchspiel: string | null;
   onKirchspiel: (k: string | null) => void;
+  gemeinden: string[]; // Gemeinden des gewählten Kirchspiels (leer = keine Reihe)
+  activeGemeinde: string | null;
+  onGemeinde: (g: string | null) => void;
   categories: string[]; // nach Häufigkeit sortierte Titel
   activeCategory: string | null;
   onCategory: (c: string | null) => void;
@@ -77,6 +80,9 @@ export default function FilterChips({
   kirchspiele,
   activeKirchspiel,
   onKirchspiel,
+  gemeinden,
+  activeGemeinde,
+  onGemeinde,
   categories,
   activeCategory,
   onCategory,
@@ -103,6 +109,15 @@ export default function FilterChips({
           />
         ))}
       </Row>
+
+      {gemeinden.length > 0 ? (
+        <Row label="Gemeinde">
+          <Chip label="Alle" active={activeGemeinde === null} onPress={() => onGemeinde(null)} />
+          {gemeinden.map((g) => (
+            <Chip key={g} label={g} active={activeGemeinde === g} onPress={() => onGemeinde(g)} />
+          ))}
+        </Row>
+      ) : null}
 
       <Row label="Art">
         <Chip label="Alle" active={activeCategory === null} onPress={() => onCategory(null)} />
