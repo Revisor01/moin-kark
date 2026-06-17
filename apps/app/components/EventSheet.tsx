@@ -159,10 +159,10 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.xs },
   time: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
   title: {
-    fontFamily: fonts.displayBold,
-    fontSize: 24,
+    fontFamily: fonts.serifBold,
+    fontSize: 26,
     color: colors.foreground,
-    lineHeight: 28,
+    lineHeight: 30,
     marginBottom: spacing.xs,
   },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "right",
   },
-  desc: { fontFamily: fonts.body, fontSize: 15, color: colors.foreground, lineHeight: 22 },
+  desc: { fontFamily: fonts.serif, fontSize: 17, color: colors.foreground, lineHeight: 25 },
   mapButton: {
     marginTop: spacing.lg,
     backgroundColor: colors.primary,
