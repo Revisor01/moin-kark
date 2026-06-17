@@ -13,6 +13,8 @@ export interface EventMapProps {
   onBoundsChange?: (bounds: Bounds) => void;
   /** Zähler: bei Erhöhung fliegt die Karte zum userLocation (für „Zu mir"-Button/Chip). */
   flyToUserToken?: number;
+  /** Wenn ein Sheet/Modal offen ist: Karten-Controls (Attribution) ausblenden. */
+  dimmed?: boolean;
 }
 
 // Fallback-Export (Bundler überschreibt per Plattform-Suffix).

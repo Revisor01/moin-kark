@@ -29,6 +29,7 @@ export default function EventMap({
   userLocation,
   onBoundsChange,
   flyToUserToken,
+  dimmed,
 }: EventMapProps) {
   const mapRef = useRef<MapRef>(null);
 
@@ -124,8 +125,9 @@ export default function EventMap({
         />
       </Source>
 
-      {/* Kleiner, eingeklappter Info-/Attribution-Button (⊕ → OSM-Credit) */}
-      <AttributionControl compact position="bottom-left" />
+      {/* Kleiner, eingeklappter Info-/Attribution-Button (⊕ → OSM-Credit, Pflicht).
+          Bei offenem Sheet/Modal ausblenden, damit er nicht darüber liegt. */}
+      {!dimmed ? <AttributionControl compact position="bottom-left" /> : null}
 
       <Source id={SOURCE_ID} {...sourceConfig} data={data as any}>
         <Layer {...(clusterLayer as any)} />
