@@ -128,7 +128,11 @@ function Meta({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgba(28,43,43,0.45)",
     justifyContent: "flex-end",
     alignItems: "center",
