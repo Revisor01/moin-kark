@@ -69,12 +69,17 @@ export function colorForCategory(title?: string): string {
   return categoryColors.default;
 }
 
+// Bricolage Grotesque = charaktervolle Display-Grotesk für Headlines + Lesetitel.
+// DM Sans = ruhiger, gut lesbarer Body für Fließtext und UI.
 export const fonts = {
-  display: "Fraunces_600SemiBold",
-  displayBold: "Fraunces_700Bold",
-  body: "Inter_400Regular",
-  bodyMedium: "Inter_500Medium",
-  bodySemibold: "Inter_600SemiBold",
+  display: "BricolageGrotesque_600SemiBold",
+  displayBold: "BricolageGrotesque_700Bold",
+  // Lesetitel (Event-Titel).
+  serif: "DMSans_400Regular",
+  serifBold: "BricolageGrotesque_600SemiBold",
+  body: "DMSans_400Regular",
+  bodyMedium: "DMSans_500Medium",
+  bodySemibold: "DMSans_600SemiBold",
 } as const;
 
 export const spacing = {

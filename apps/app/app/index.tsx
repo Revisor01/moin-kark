@@ -12,7 +12,8 @@ import { KIRCHSPIELE } from "@kkd/shared";
 import EventMap from "../components/EventMap";
 import EventList from "../components/EventList";
 import EventSheet from "../components/EventSheet";
-import FilterChips from "../components/FilterChips";
+import FilterBar from "../components/FilterBar";
+import FilterSheet from "../components/FilterSheet";
 import { useCategories, useEvents } from "../lib/hooks/useEvents";
 import { useLocation } from "../lib/hooks/useLocation";
 import {
@@ -44,6 +45,14 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [flyToken, setFlyToken] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Anzahl aktiver Filter (für Badge am Button). „Nähe" zählt separat im FilterBar.
+  const activeFilterCount =
+    (filters.date !== "all" ? 1 : 0) +
+    (filters.kirchspiel ? 1 : 0) +
+    (filters.parish ? 1 : 0) +
+    (filters.category ? 1 : 0);
 
   const allFeatures = data?.features ?? [];
 
@@ -138,12 +147,21 @@ export default function Home() {
   }
 
   const filterBar = (
-    <FilterChips
-      date={filters.date}
-      onDate={(d) => setFilters((f) => ({ ...f, date: d }))}
+    <FilterBar
+      activeCount={activeFilterCount}
+      onOpenFilters={() => setFiltersOpen(true)}
       nearby={filters.nearby}
       onToggleNearby={onToggleNearby}
       nearbyAvailable={locStatus !== "denied"}
+    />
+  );
+
+  const filterSheet = (
+    <FilterSheet
+      visible={filtersOpen}
+      onClose={() => setFiltersOpen(false)}
+      date={filters.date}
+      onDate={(d) => setFilters((f) => ({ ...f, date: d }))}
       kirchspiele={kirchspielOptions as unknown as string[]}
       activeKirchspiel={filters.kirchspiel}
       onKirchspiel={(k) => setFilters((f) => ({ ...f, kirchspiel: k, parish: null }))}
@@ -153,6 +171,8 @@ export default function Home() {
       categories={categoryTitles}
       activeCategory={filters.category}
       onCategory={(c) => setFilters((f) => ({ ...f, category: c }))}
+      onReset={() => setFilters(DEFAULT_FILTERS)}
+      resultCount={filtered.length}
     />
   );
 
@@ -178,6 +198,7 @@ export default function Home() {
             <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
           </View>
         </View>
+        {filterSheet}
         <EventSheet feature={selectedFeature} onClose={() => setSelectedId(null)} />
       </View>
     );
@@ -191,6 +212,7 @@ export default function Home() {
       <View style={styles.listNarrow}>
         <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
       </View>
+      {filterSheet}
       <EventSheet feature={selectedFeature} onClose={() => setSelectedId(null)} />
     </View>
   );

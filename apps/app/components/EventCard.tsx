@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   thumbInitial: { fontFamily: fonts.display, fontSize: 30, color: colors.faint },
   body: { flex: 1, padding: spacing.md, gap: 2, justifyContent: "center" },
   time: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.primary },
-  title: { fontFamily: fonts.display, fontSize: 16, color: colors.foreground, lineHeight: 20 },
+  title: { fontFamily: fonts.serifBold, fontSize: 17, color: colors.foreground, lineHeight: 21 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 2 },
   tag: {
     borderWidth: 1,

@@ -11,7 +11,7 @@ import type { EventFeatureCollection } from "@kkd/shared";
 import {
   CLUSTER_LAYER,
   POINT_LAYER,
-  OPENFREEMAP_STYLE,
+  MAP_STYLE,
   SOURCE_ID,
   clusterCountLayer,
   clusterLayer,
@@ -19,6 +19,7 @@ import {
   sourceConfig,
 } from "../lib/mapStyle";
 import { DITHMARSCHEN, colors } from "../lib/theme";
+import { DITHMARSCHEN_MASK, DITHMARSCHEN_OUTLINE } from "../lib/dithmarschen-boundary";
 import type { EventMapProps } from "./EventMap";
 
 export default function EventMap({
@@ -95,7 +96,7 @@ export default function EventMap({
         zoom: DITHMARSCHEN.zoom,
       }}
       maxBounds={DITHMARSCHEN.bounds}
-      mapStyle={OPENFREEMAP_STYLE}
+      mapStyle={MAP_STYLE}
       style={{ width: "100%", height: "100%" }}
       interactiveLayerIds={[CLUSTER_LAYER, POINT_LAYER]}
       onClick={onClick}
@@ -103,6 +104,24 @@ export default function EventMap({
       onMoveEnd={emitBounds}
       cursor="auto"
     >
+      {/* Fog of War: alles außerhalb Dithmarschens abdunkeln */}
+      <Source id="dith-mask" type="geojson" data={DITHMARSCHEN_MASK}>
+        <Layer
+          id="dith-mask-fill"
+          type="fill"
+          paint={{ "fill-color": "#0A1F1F", "fill-opacity": 0.55 }}
+        />
+      </Source>
+      {/* Starker Umriss des Kirchenkreises */}
+      <Source id="dith-outline" type="geojson" data={DITHMARSCHEN_OUTLINE}>
+        <Layer
+          id="dith-outline-line"
+          type="line"
+          layout={{ "line-join": "round", "line-cap": "round" }}
+          paint={{ "line-color": colors.primary, "line-width": 3, "line-opacity": 0.9 }}
+        />
+      </Source>
+
       <Source id={SOURCE_ID} {...sourceConfig} data={data as any}>
         <Layer {...(clusterLayer as any)} />
         <Layer {...(clusterCountLayer as any)} />
