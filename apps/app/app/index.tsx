@@ -191,6 +191,7 @@ export default function Home() {
       userLocation={location}
       onBoundsChange={setBounds}
       flyToUserToken={flyToken}
+      dimmed={filtersOpen || selectedFeature !== null}
     />
   );
 
