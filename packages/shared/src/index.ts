@@ -1,3 +1,3 @@
-export * from "./types.js";
-export * from "./kirchspiele.js";
-export * from "./kirchen-coords.js";
+export * from "./types";
+export * from "./kirchspiele";
+export * from "./kirchen-coords";

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Was ist los in Dithmarschen",
+    "name": "Kirche. Hier bei dir.",
     "slug": "kkdith-karte",
     "scheme": "kkdith",
     "version": "0.1.0",
@@ -12,11 +12,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "de.godsapp.kkdithkarte",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte."
       }
     },
     "android": {
       "package": "de.godsapp.kkdithkarte",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#FBF6EE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -30,6 +35,16 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router", "expo-status-bar", "expo-font"]
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte."
+        }
+      ]
+    ]
   }
 }

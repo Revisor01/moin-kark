@@ -4,13 +4,54 @@ import type { EventFeature } from "@kkd/shared";
 
 export type DateFilter = "all" | "today" | "week" | "weekend";
 
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 export interface Filters {
   date: DateFilter;
   /** Normalisierter Kategorie-Titel (lowercase) oder null = alle. */
   category: string | null;
+  /** Kirchspiel-Name (exakt) oder null = alle. */
+  kirchspiel: string | null;
+  /** Umkreis-Filter aktiv (nur Events im Radius um den eigenen Standort). */
+  nearby: boolean;
 }
 
-export const DEFAULT_FILTERS: Filters = { date: "all", category: null };
+export const DEFAULT_FILTERS: Filters = {
+  date: "all",
+  category: null,
+  kirchspiel: null,
+  nearby: false,
+};
+
+/** Umkreis-Radius für „In meiner Nähe" in Kilometern. */
+export const NEARBY_RADIUS_KM = 10;
+
+/** Haversine-Distanz in km zwischen zwei Punkten. */
+export function distanceKm(a: LatLng, b: LatLng): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+export interface Bounds {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+function inBounds(f: EventFeature, b: Bounds): boolean {
+  const [lng, lat] = f.geometry.coordinates;
+  return lng >= b.west && lng <= b.east && lat >= b.south && lat <= b.north;
+}
 
 const BERLIN_TZ = "Europe/Berlin";
 
@@ -70,14 +111,31 @@ function matchesCategory(f: EventFeature, category: string | null): boolean {
   return f.properties.categories.some((c) => c.title.trim().toLowerCase() === category);
 }
 
+export interface FilterContext {
+  now?: Date;
+  /** Eigener Standort — nötig für den Umkreis-Filter. */
+  location?: LatLng | null;
+  /** Sichtbarer Karten-Ausschnitt — Liste folgt der Karte, wenn gesetzt. */
+  bounds?: Bounds | null;
+}
+
 export function applyFilters(
   features: EventFeature[],
   filters: Filters,
-  now: Date = new Date()
+  ctx: FilterContext = {}
 ): EventFeature[] {
-  return features.filter(
-    (f) => matchesDate(f.properties.startUtc, filters.date, now) && matchesCategory(f, filters.category)
-  );
+  const now = ctx.now ?? new Date();
+  return features.filter((f) => {
+    if (!matchesDate(f.properties.startUtc, filters.date, now)) return false;
+    if (!matchesCategory(f, filters.category)) return false;
+    if (filters.kirchspiel && f.properties.kirchspiel !== filters.kirchspiel) return false;
+    if (filters.nearby && ctx.location) {
+      const [lng, lat] = f.geometry.coordinates;
+      if (distanceKm(ctx.location, { lat, lng }) > NEARBY_RADIUS_KM) return false;
+    }
+    if (ctx.bounds && !inBounds(f, ctx.bounds)) return false;
+    return true;
+  });
 }
 
 /** Sortiert nach Startzeit aufsteigend. */
