@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/*
+
+# Secrets — NIEMALS committen (ChurchDesk-Read-Tokens!)
+.env
+.env.*
+!.env.example
+*.secret
+secrets.*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Expo
+apps/app/.expo/
+apps/app/web-build/
+apps/app/dist/
+apps/app/ios/
+apps/app/android/
+*.orig.*
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
