@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -8,12 +8,20 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KIRCHSPIELE } from "@kkd/shared";
 import EventMap from "../components/EventMap";
 import EventList from "../components/EventList";
 import EventSheet from "../components/EventSheet";
 import FilterChips from "../components/FilterChips";
 import { useCategories, useEvents } from "../lib/hooks/useEvents";
-import { DEFAULT_FILTERS, applyFilters, sortByStart, type Filters } from "../lib/filters";
+import { useLocation } from "../lib/hooks/useLocation";
+import {
+  DEFAULT_FILTERS,
+  applyFilters,
+  sortByStart,
+  type Bounds,
+  type Filters,
+} from "../lib/filters";
 import { colors, fonts, spacing } from "../lib/theme";
 
 const WIDE_BREAKPOINT = 900;
@@ -25,15 +33,38 @@ export default function Home() {
 
   const { data, isLoading, isError, refetch } = useEvents();
   const { data: categories } = useCategories();
+  const { location, status: locStatus, request: requestLocation } = useLocation();
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [bounds, setBounds] = useState<Bounds | null>(null);
+  const [flyToken, setFlyToken] = useState(0);
 
   const allFeatures = data?.features ?? [];
 
+  // „In meiner Nähe": Standort anfordern, Filter togglen, zur Position fliegen.
+  const onToggleNearby = async () => {
+    if (filters.nearby) {
+      setFilters((f) => ({ ...f, nearby: false }));
+      return;
+    }
+    const loc = location ?? (await requestLocation());
+    if (loc) {
+      setFilters((f) => ({ ...f, nearby: true }));
+      setFlyToken((t) => t + 1);
+    }
+  };
+
   const filtered = useMemo(
-    () => sortByStart(applyFilters(allFeatures, filters)),
-    [allFeatures, filters]
+    () => sortByStart(applyFilters(allFeatures, filters, { location, bounds })),
+    [allFeatures, filters, location, bounds]
+  );
+
+  // Karten-Pins folgen denselben Filtern, aber NICHT dem Viewport (sonst verschwinden Pins
+  // beim Zoomen). Nur die Liste folgt dem Ausschnitt.
+  const mapFeatures = useMemo(
+    () => applyFilters(allFeatures, filters, { location }),
+    [allFeatures, filters, location]
   );
 
   const categoryTitles = useMemo(
@@ -41,17 +72,29 @@ export default function Home() {
     [categories]
   );
 
+  // Nur Kirchspiele zeigen, die auch Events haben.
+  const kirchspielOptions = useMemo(() => {
+    const present = new Set(allFeatures.map((f) => f.properties.kirchspiel));
+    return KIRCHSPIELE.filter((k) => present.has(k));
+  }, [allFeatures]);
+
   const selectedFeature = useMemo(
     () => allFeatures.find((f) => f.properties.id === selectedId) ?? null,
     [allFeatures, selectedId]
   );
 
+  // Beim ersten Laden Bounds noch nicht gesetzt → Liste zeigt alles.
+  useEffect(() => {
+    if (filters.nearby) setBounds(null); // Umkreis schlägt Viewport
+  }, [filters.nearby]);
+
   const header = (
     <View style={styles.header}>
-      <Text style={styles.kicker}>Kirchenkreis Dithmarschen</Text>
-      <Text style={styles.h1}>Was ist los in Dithmarschen</Text>
+      <Text style={styles.kicker}>Evangelische Kirche Dithmarschen</Text>
+      <Text style={styles.h1}>Kirche. Hier bei dir.</Text>
       <Text style={styles.sub}>
         {filtered.length} {filtered.length === 1 ? "Veranstaltung" : "Veranstaltungen"}
+        {bounds && !filters.nearby ? " im Kartenausschnitt" : ""}
       </Text>
     </View>
   );
@@ -69,9 +112,7 @@ export default function Home() {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
         <Text style={styles.h1}>Nanu …</Text>
-        <Text style={styles.errorText}>
-          Die Veranstaltungen konnten nicht geladen werden.
-        </Text>
+        <Text style={styles.errorText}>Die Veranstaltungen konnten nicht geladen werden.</Text>
         <TouchableOpacity style={styles.retry} onPress={() => refetch()} activeOpacity={0.85}>
           <Text style={styles.retryText}>Erneut versuchen</Text>
         </TouchableOpacity>
@@ -83,28 +124,38 @@ export default function Home() {
     <FilterChips
       date={filters.date}
       onDate={(d) => setFilters((f) => ({ ...f, date: d }))}
+      nearby={filters.nearby}
+      onToggleNearby={onToggleNearby}
+      nearbyAvailable={locStatus !== "denied"}
+      kirchspiele={kirchspielOptions as unknown as string[]}
+      activeKirchspiel={filters.kirchspiel}
+      onKirchspiel={(k) => setFilters((f) => ({ ...f, kirchspiel: k }))}
       categories={categoryTitles}
       activeCategory={filters.category}
       onCategory={(c) => setFilters((f) => ({ ...f, category: c }))}
     />
   );
 
-  // --- Breites Layout: Karte links, Liste rechts ---
+  const map = (
+    <EventMap
+      features={mapFeatures}
+      selectedId={selectedId}
+      onSelect={setSelectedId}
+      userLocation={location}
+      onBoundsChange={setBounds}
+      flyToUserToken={flyToken}
+    />
+  );
+
   if (isWide) {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]}>
+        {header}
         <View style={styles.wideRow}>
-          <View style={styles.mapPane}>
-            <EventMap features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
-          </View>
+          <View style={styles.mapPane}>{map}</View>
           <View style={styles.listPane}>
             {filterBar}
-            <EventList
-              features={filtered}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              header={header}
-            />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
           </View>
         </View>
         <EventSheet feature={selectedFeature} onClose={() => setSelectedId(null)} />
@@ -112,14 +163,11 @@ export default function Home() {
     );
   }
 
-  // --- Schmales Layout: Karte oben, Liste unten (scrollbar) ---
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {header}
       {filterBar}
-      <View style={styles.mapNarrow}>
-        <EventMap features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
-      </View>
+      <View style={styles.mapNarrow}>{map}</View>
       <View style={styles.listNarrow}>
         <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
       </View>
@@ -144,8 +192,10 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   kicker: {
     fontFamily: fonts.bodySemibold,

@@ -5,7 +5,13 @@ import { colors, fonts, radius, spacing } from "../lib/theme";
 interface Props {
   date: DateFilter;
   onDate: (d: DateFilter) => void;
-  categories: string[]; // bereits nach Häufigkeit sortierte Titel
+  nearby: boolean;
+  onToggleNearby: () => void;
+  nearbyAvailable: boolean;
+  kirchspiele: string[];
+  activeKirchspiel: string | null;
+  onKirchspiel: (k: string | null) => void;
+  categories: string[]; // nach Häufigkeit sortierte Titel
   activeCategory: string | null;
   onCategory: (c: string | null) => void;
 }
@@ -21,47 +27,85 @@ function Chip({
   label,
   active,
   onPress,
+  tone = "neutral",
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
+  tone?: "neutral" | "accent";
 }) {
+  const activeStyle =
+    tone === "accent"
+      ? { backgroundColor: colors.accent, borderColor: colors.accent }
+      : { backgroundColor: colors.primary, borderColor: colors.primary };
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={[styles.chip, active && styles.chipActive]}
+      style={[styles.chip, active && activeStyle]}
     >
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.rowWrap}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+        {children}
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function FilterChips({
   date,
   onDate,
+  nearby,
+  onToggleNearby,
+  nearbyAvailable,
+  kirchspiele,
+  activeKirchspiel,
+  onKirchspiel,
   categories,
   activeCategory,
   onCategory,
 }: Props) {
   return (
     <View style={styles.wrap}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-      >
+      <Row label="Wann">
         {DATE_LABELS.map((d) => (
           <Chip key={d.key} label={d.label} active={date === d.key} onPress={() => onDate(d.key)} />
         ))}
-        <View style={styles.divider} />
-        <Chip
-          label="Alle Arten"
-          active={activeCategory === null}
-          onPress={() => onCategory(null)}
-        />
+        {nearbyAvailable ? (
+          <Chip label="In meiner Nähe" active={nearby} onPress={onToggleNearby} tone="accent" />
+        ) : null}
+      </Row>
+
+      <Row label="Kirchspiel">
+        <Chip label="Alle" active={activeKirchspiel === null} onPress={() => onKirchspiel(null)} />
+        {kirchspiele.map((k) => (
+          <Chip
+            key={k}
+            label={k}
+            active={activeKirchspiel === k}
+            onPress={() => onKirchspiel(k)}
+          />
+        ))}
+      </Row>
+
+      <Row label="Art">
+        <Chip label="Alle" active={activeCategory === null} onPress={() => onCategory(null)} />
         {categories.map((c) => (
           <Chip
             key={c}
@@ -70,7 +114,7 @@ export default function FilterChips({
             onPress={() => onCategory(c.toLowerCase())}
           />
         ))}
-      </ScrollView>
+      </Row>
     </View>
   );
 }
@@ -80,10 +124,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  rowWrap: { gap: 2 },
+  rowLabel: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: colors.faint,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
   },
   row: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: 6,
     gap: spacing.sm,
     alignItems: "center",
   },
@@ -94,25 +150,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    minHeight: 36,
+    minHeight: 34,
     justifyContent: "center",
   },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 14,
-    color: colors.foreground,
-  },
-  chipTextActive: {
-    color: colors.onPrimary,
-  },
-  divider: {
-    width: 1,
-    height: 22,
-    backgroundColor: colors.borderStrong,
-    marginHorizontal: spacing.xs,
-  },
+  chipText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.foreground },
+  chipTextActive: { color: colors.onPrimary },
 });
