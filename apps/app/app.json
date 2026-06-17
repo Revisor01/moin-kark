@@ -2,12 +2,12 @@
   "expo": {
     "name": "Moin Kark",
     "slug": "kkdith-karte",
+    "owner": "r3visor",
     "scheme": "kkdith",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "de.godsapp.kkdithkarte",
@@ -39,6 +39,16 @@
       "expo-router",
       "expo-status-bar",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0E6E6E"
+        }
+      ],
+      "@maplibre/maplibre-react-native",
       [
         "expo-location",
         {
