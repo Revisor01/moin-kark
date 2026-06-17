@@ -14,6 +14,7 @@ import EventList from "../components/EventList";
 import EventSheet from "../components/EventSheet";
 import FilterBar from "../components/FilterBar";
 import FilterSheet from "../components/FilterSheet";
+import DraggableListSheet from "../components/DraggableListSheet";
 import { useCategories, useEvents } from "../lib/hooks/useEvents";
 import { useLocation } from "../lib/hooks/useLocation";
 import {
@@ -46,6 +47,7 @@ export default function Home() {
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [flyToken, setFlyToken] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mapAreaHeight, setMapAreaHeight] = useState(0);
 
   // Anzahl aktiver Filter (für Badge am Button). „Nähe" zählt separat im FilterBar.
   const activeFilterCount =
@@ -73,6 +75,10 @@ export default function Home() {
     () => sortByStart(applyFilters(allFeatures, filters, { location, bounds })),
     [allFeatures, filters, location, bounds]
   );
+
+  const listSubtitle = `${filtered.length} ${
+    filtered.length === 1 ? "Veranstaltung" : "Veranstaltungen"
+  }${bounds && !filters.nearby ? " im Ausschnitt" : ""}`;
 
   // Karten-Pins folgen denselben Filtern, aber NICHT dem Viewport (sonst verschwinden Pins
   // beim Zoomen). Nur die Liste folgt dem Ausschnitt.
@@ -208,9 +214,16 @@ export default function Home() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {header}
       {filterBar}
-      <View style={styles.mapNarrow}>{map}</View>
-      <View style={styles.listNarrow}>
-        <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+      <View
+        style={styles.mapArea}
+        onLayout={(e) => setMapAreaHeight(e.nativeEvent.layout.height)}
+      >
+        {map}
+        {mapAreaHeight > 0 ? (
+          <DraggableListSheet availableHeight={mapAreaHeight} topInset={0} subtitle={listSubtitle}>
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+          </DraggableListSheet>
+        ) : null}
       </View>
       {filterSheet}
       <EventSheet feature={selectedFeature} onClose={() => setSelectedId(null)} />
@@ -229,8 +242,7 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.border,
     backgroundColor: colors.background,
   },
-  mapNarrow: { height: 280, backgroundColor: colors.mapWater },
-  listNarrow: { flex: 1 },
+  mapArea: { flex: 1, backgroundColor: colors.mapWater },
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
