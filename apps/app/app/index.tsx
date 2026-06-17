@@ -126,7 +126,8 @@ export default function Home() {
       <Text style={styles.h1}>Kirche. In deiner Nähe.</Text>
       <Text style={styles.sub}>
         {filtered.length} {filtered.length === 1 ? "Veranstaltung" : "Veranstaltungen"}
-        {bounds && !filters.nearby ? " im Kartenausschnitt" : ""}
+        {/* "im Ausschnitt" nur im breiten Layout; mobil steht es im Listen-Sheet */}
+        {isWide && bounds && !filters.nearby ? " im Kartenausschnitt" : ""}
       </Text>
     </View>
   );

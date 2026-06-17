@@ -132,6 +132,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(28,43,43,0.45)",
     justifyContent: "flex-end",
     alignItems: "center",
+    zIndex: 1000, // über Karten-Controls (Attribution etc.)
   },
   sheet: {
     backgroundColor: colors.surface,
@@ -154,8 +155,18 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   scroll: { paddingBottom: spacing.xl },
-  hero: { width: "100%", height: 200 },
-  heroEmpty: { opacity: 0.25 },
+  hero: {
+    width: "100%",
+    height: 200,
+    // Bild selbst auf die obere Sheet-Rundung clippen (Web-Subpixel-Glitch vermeiden)
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+  },
+  heroEmpty: {
+    opacity: 0.25,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+  },
   content: { padding: spacing.xl, gap: spacing.xs },
   time: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
   title: {
