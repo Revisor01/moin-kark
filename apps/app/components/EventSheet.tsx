@@ -45,7 +45,6 @@ export default function EventSheet({ feature, onClose }: Props) {
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
       <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-        <View style={styles.grabber} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           {p.image?.url ? (
             <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
@@ -103,6 +102,8 @@ export default function EventSheet({ feature, onClose }: Props) {
           </View>
         </ScrollView>
 
+        <View style={styles.grabber} pointerEvents="none" />
+
         <TouchableOpacity
           style={styles.close}
           onPress={onClose}
@@ -139,20 +140,21 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 520,
     maxHeight: "88%",
+    overflow: "hidden", // clippt das Hero-Bild auf die obere Rundung (kein weißer Strich)
     ...shadow.sheet,
   },
   grabber: {
+    position: "absolute",
+    top: spacing.sm,
     alignSelf: "center",
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.borderStrong,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    backgroundColor: "rgba(255,255,255,0.85)",
     zIndex: 2,
   },
   scroll: { paddingBottom: spacing.xl },
-  hero: { width: "100%", height: 180 },
+  hero: { width: "100%", height: 200 },
   heroEmpty: { opacity: 0.25 },
   content: { padding: spacing.xl, gap: spacing.xs },
   time: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
