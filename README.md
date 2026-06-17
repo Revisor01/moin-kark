@@ -42,3 +42,25 @@ cp .env.example .env   # 14 Tokens eintragen
 npm run dev
 curl localhost:8787/events.geojson | python3 -m json.tool
 ```
+
+## Deployment (Proxy)
+
+Live: **https://kkkarte.godsapp.de** (Apache/KeyHelp → Traefik:8888 → Container:8787).
+
+Redeploy nach Code-Änderung am Proxy:
+
+```bash
+# 1. Quellcode auf den Server spiegeln (ohne Secrets/node_modules)
+rsync -az --delete --exclude node_modules --exclude .git --exclude .env \
+  --exclude '*.log' --exclude apps/app \
+  ./ root@server.godsapp.de:/opt/stacks/kkdith-proxy/build/
+
+# 2. Image auf dem Server neu bauen
+ssh root@server.godsapp.de \
+  "cd /opt/stacks/kkdith-proxy/build && docker build -f apps/proxy/Dockerfile -t kkdith-proxy:latest ."
+
+# 3. Stack neu starten (Portainer: Stack 'kkdith-proxy' redeploy, oder:)
+ssh root@server.godsapp.de "docker restart kkdith-proxy"
+```
+
+Die 14 Tokens liegen als Portainer-Stack-ENV (`kkdith-proxy`), niemals im Repo.
