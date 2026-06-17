@@ -5,7 +5,8 @@
   "description": "Was ist los in Dithmarschen — Kirchenkreis-Event-Karte (Web + iOS + Android)",
   "workspaces": [
     "packages/*",
-    "apps/proxy"
+    "apps/proxy",
+    "apps/app"
   ],
   "engines": {
     "node": ">=20"
