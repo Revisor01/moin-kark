@@ -96,10 +96,6 @@ export default function ProfileSheet({
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.hint}>
-            Lokale Erinnerung an gemerkte Veranstaltungen – ganz ohne Server, direkt auf
-            deinem Gerät.
-          </Text>
 
           {/* Merkliste */}
           <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>
@@ -158,7 +154,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(28,43,43,0.45)",
+    backgroundColor: "rgba(28,43,43,0.6)",
     justifyContent: "flex-end",
     alignItems: "center",
     zIndex: 1000,
