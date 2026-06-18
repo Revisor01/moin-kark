@@ -49,6 +49,8 @@ export interface EventProps {
   price?: string;
   /** Woher die Koordinaten stammen (QA-Transparenz). */
   coordSource: CoordSource;
+  /** Redaktionelles „KAT: Highlight" — Event besonders hervorheben (Liste + Karte). */
+  highlight?: boolean;
 }
 
 export interface EventFeature {

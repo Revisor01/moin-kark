@@ -13,7 +13,8 @@
       "bundleIdentifier": "de.godsapp.kkdithkarte",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte."
+        "NSLocationWhenInUseUsageDescription": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte.",
+        "LSApplicationQueriesSchemes": ["comgooglemaps"]
       }
     },
     "android": {
@@ -43,8 +44,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 220,
-          "resizeMode": "contain",
+          "resizeMode": "cover",
           "backgroundColor": "#F8EDD9"
         }
       ],

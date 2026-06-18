@@ -20,7 +20,12 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
   const time = formatEventTime(p.startUtc, p.endUtc, p.allDay, p.showEndtime);
 
   return (
-    <View style={[styles.card, active && styles.cardActive]}>
+    <View style={[styles.card, p.highlight && styles.cardHighlight, active && styles.cardActive]}>
+      {p.highlight ? (
+        <View style={styles.highlightBadge} pointerEvents="none">
+          <Text style={styles.highlightBadgeText}>★ Tipp</Text>
+        </View>
+      ) : null}
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
@@ -84,6 +89,27 @@ const styles = StyleSheet.create({
   cardActive: {
     borderColor: colors.primary,
     borderWidth: 2,
+  },
+  cardHighlight: {
+    borderColor: colors.accent,
+    borderWidth: 2,
+  },
+  highlightBadge: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    zIndex: 2,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderBottomRightRadius: radius.sm,
+    borderTopLeftRadius: radius.md,
+  },
+  highlightBadgeText: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    color: colors.onAccent,
+    letterSpacing: 0.3,
   },
   accent: { width: 4 },
   thumb: { width: 96, alignSelf: "stretch", minHeight: 96 },

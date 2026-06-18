@@ -7,7 +7,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import { colors, fonts, radius, spacing } from "../lib/theme";
 import { Text } from "react-native";
 
 interface Props {
@@ -86,30 +86,49 @@ export default function DraggableListSheet({
   }));
 
   return (
-    <Animated.View style={[styles.sheet, animatedStyle]}>
-      {/* Griffbereich (nur dieser reagiert auf Drag → Liste bleibt scrollbar) */}
-      <GestureDetector gesture={pan}>
-        <View style={styles.handleArea}>
-          <View style={styles.grabber} />
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        </View>
-      </GestureDetector>
-      <View style={styles.body}>{children}</View>
+    // Äußere View: trägt Schatten + Position, KEIN overflow:hidden (sonst wird Schatten weggeclippt).
+    <Animated.View style={[styles.sheetShadow, animatedStyle]}>
+      {/* Innere View: clippt die runden Ecken + Liste, trägt Rahmen/Hintergrund. */}
+      <View style={styles.sheetInner}>
+        {/* Griffbereich (nur dieser reagiert auf Drag → Liste bleibt scrollbar) */}
+        <GestureDetector gesture={pan}>
+          <View style={styles.handleArea}>
+            <View style={styles.grabber} />
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </View>
+        </GestureDetector>
+        <View style={styles.body}>{children}</View>
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: {
+  sheetShadow: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    // Kräftiger, klar sichtbarer Schatten nach OBEN — das Sheet schwebt über der Karte
+    // ohne Backdrop, also muss die Kante allein durch Schatten + Linie deutlich werden.
+    shadowColor: "#0A1F1F",
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 28,
+  },
+  sheetInner: {
+    flex: 1,
     backgroundColor: colors.background,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
+    borderTopWidth: 1.5,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.borderStrong,
     overflow: "hidden",
-    ...shadow.sheet,
   },
   handleArea: {
     alignItems: "center",

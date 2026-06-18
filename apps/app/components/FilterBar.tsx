@@ -1,56 +1,51 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { colors, fonts, radius, spacing } from "../lib/theme";
-
-export interface ActiveFilterChip {
-  key: string;
-  label: string;
-  onRemove: () => void;
-}
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
 
 interface Props {
   onOpenFilters: () => void;
-  activeChips: ActiveFilterChip[];
+  /** Anzahl aktiver Filter (für das Badge). 0 = kein Badge. */
+  activeCount: number;
+  /** „Zu meinem Standort“ — undefined wenn kein Standort verfügbar/erlaubt. */
+  onJumpToLocation?: () => void;
 }
 
-export default function FilterBar({ onOpenFilters, activeChips }: Props) {
+/**
+ * Schwebende Steuerleiste ÜBER der Karte — kein eigener Hintergrund, nur die
+ * Buttons selbst (mit Shadow) heben sich ab. Wird absolut positioniert.
+ */
+export default function FilterBar({ onOpenFilters, activeCount, onJumpToLocation }: Props) {
   return (
-    <View style={styles.bar}>
+    <View style={styles.bar} pointerEvents="box-none">
       <TouchableOpacity
         style={styles.filterBtn}
         onPress={onOpenFilters}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel="Filter öffnen"
+        accessibilityLabel={
+          activeCount > 0 ? `Filter (${activeCount} aktiv)` : "Filter öffnen"
+        }
       >
         <Text style={styles.filterIcon}>⚲</Text>
         <Text style={styles.filterText}>Filter</Text>
-        {activeChips.length > 0 ? (
+        {activeCount > 0 ? (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{activeChips.length}</Text>
+            <Text style={styles.badgeText}>{activeCount}</Text>
           </View>
         ) : null}
       </TouchableOpacity>
 
-      {activeChips.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
+      <View style={styles.spacer} pointerEvents="none" />
+
+      {onJumpToLocation ? (
+        <TouchableOpacity
+          style={styles.locBtn}
+          onPress={onJumpToLocation}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Zu meinem Standort"
         >
-          {activeChips.map((c) => (
-            <TouchableOpacity
-              key={c.key}
-              style={styles.activeChip}
-              onPress={c.onRemove}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`${c.label} entfernen`}
-            >
-              <Text style={styles.activeChipText}>{c.label}</Text>
-              <Text style={styles.activeChipX}>✕</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <Text style={styles.locIcon}>◎</Text>
+        </TouchableOpacity>
       ) : null}
     </View>
   );
@@ -60,12 +55,8 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   filterBtn: {
     flexDirection: "row",
@@ -75,7 +66,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
-    minHeight: 38,
+    minHeight: 40,
+    ...shadow.card,
   },
   filterIcon: { color: colors.onPrimary, fontSize: 15, transform: [{ rotate: "45deg" }] },
   filterText: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.onPrimary },
@@ -90,20 +82,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   badgeText: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.primary },
-  chipRow: { gap: spacing.sm, alignItems: "center", paddingRight: spacing.lg },
-  activeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
+  spacer: { flex: 1 },
+  locBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    minHeight: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
   },
-  activeChipText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.foreground },
-  activeChipX: { fontSize: 12, color: colors.muted },
+  locIcon: { fontSize: 20, color: colors.primary },
 });

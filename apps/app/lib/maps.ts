@@ -19,10 +19,14 @@ export function openInMaps(
   }
 
   if (app === "google") {
-    // Google Maps App (falls installiert) sonst Web-Fallback
-    const appUrl = `comgooglemaps://?q=${lat},${lng}&center=${lat},${lng}`;
+    // Google Maps App (falls installiert) sonst Web-Fallback.
+    // iOS braucht „comgooglemaps" in LSApplicationQueriesSchemes, sonst liefert
+    // canOpenURL immer false und es landet trotz App im Browser (siehe app.json).
+    const appUrl = `comgooglemaps://?q=${q}&center=${lat},${lng}`;
     const webUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    Linking.canOpenURL(appUrl).then((ok) => Linking.openURL(ok ? appUrl : webUrl));
+    Linking.canOpenURL(appUrl)
+      .then((ok) => Linking.openURL(ok ? appUrl : webUrl))
+      .catch(() => Linking.openURL(webUrl));
     return;
   }
   // Apple Karten
