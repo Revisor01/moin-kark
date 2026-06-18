@@ -14,12 +14,15 @@ import EventList from "../components/EventList";
 import EventSheet from "../components/EventSheet";
 import FilterBar from "../components/FilterBar";
 import FilterSheet from "../components/FilterSheet";
+import ProfileSheet from "../components/ProfileSheet";
 import DraggableListSheet from "../components/DraggableListSheet";
 import { useCategories, useEvents } from "../lib/hooks/useEvents";
 import { useLocation } from "../lib/hooks/useLocation";
+import { useMapsApp, useSavedEvents } from "../lib/store";
 import {
   DEFAULT_FILTERS,
   applyFilters,
+  distanceKm,
   sortByStart,
   type Bounds,
   type Filters,
@@ -36,6 +39,8 @@ export default function Home() {
   const { data, isLoading, isError, refetch } = useEvents();
   const { data: categories } = useCategories();
   const { location, status: locStatus, request: requestLocation } = useLocation();
+  const { mapsApp, setMapsApp } = useMapsApp();
+  const { isSaved, toggle: toggleSave, saved } = useSavedEvents();
 
   // Standort beim Start einmalig anfragen (opt-in System-Dialog) → Marker direkt sichtbar.
   useEffect(() => {
@@ -47,7 +52,9 @@ export default function Home() {
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [flyToken, setFlyToken] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
+  const [didInitialZoom, setDidInitialZoom] = useState(false);
 
   // Anzahl aktiver Filter (für Badge am Button). „Nähe" zählt separat im FilterBar.
   const activeFilterCount =
@@ -71,14 +78,36 @@ export default function Home() {
     }
   };
 
+  // „Zu meinem Standort"-Button: Position holen + hinfliegen.
+  const onJumpToLocation = async () => {
+    const loc = location ?? (await requestLocation());
+    if (loc) setFlyToken((t) => t + 1);
+  };
+
+  // Dynamischer Start-Zoom: ist der User nah an Events (≤8 km) → reinzoomen, sonst Übersicht.
+  useEffect(() => {
+    if (didInitialZoom || !location || allFeatures.length === 0) return;
+    const near = allFeatures.some((f) => {
+      const [lng, lat] = f.geometry.coordinates;
+      return distanceKm(location, { lat, lng }) <= 8;
+    });
+    if (near) {
+      setFlyToken((t) => t + 1); // EventMap fliegt zur Position (Zoom 11.5)
+    }
+    setDidInitialZoom(true);
+  }, [location, allFeatures, didInitialZoom]);
+
   const filtered = useMemo(
     () => sortByStart(applyFilters(allFeatures, filters, { location, bounds })),
     [allFeatures, filters, location, bounds]
   );
 
-  const listSubtitle = `${filtered.length} ${
-    filtered.length === 1 ? "Veranstaltung" : "Veranstaltungen"
-  }${bounds && !filters.nearby ? " im Ausschnitt" : ""}`;
+  // Gemerkte Events als Feature-Liste (fürs Profil).
+  const savedFeatures = useMemo(
+    () => sortByStart(allFeatures.filter((f) => saved.has(f.properties.id))),
+    [allFeatures, saved]
+  );
+
 
   // Karten-Pins folgen denselben Filtern, aber NICHT dem Viewport (sonst verschwinden Pins
   // beim Zoomen). Nur die Liste folgt dem Ausschnitt.
@@ -122,14 +151,38 @@ export default function Home() {
 
   const header = (
     <View style={styles.header}>
-      <Text style={styles.kicker}>Evangelische Kirche Dithmarschen</Text>
-      <Text style={styles.h1}>Kirche. In deiner Nähe.</Text>
-      <Text style={styles.sub}>
-        {filtered.length} {filtered.length === 1 ? "Veranstaltung" : "Veranstaltungen"}
-        {/* "im Ausschnitt" nur im breiten Layout; mobil steht es im Listen-Sheet */}
-        {isWide && bounds && !filters.nearby ? " im Kartenausschnitt" : ""}
-      </Text>
+      <View style={styles.headerText}>
+        <Text style={styles.kicker}>Evangelische Kirche Dithmarschen</Text>
+        <Text style={styles.h1}>Kirche. In deiner Nähe.</Text>
+        <Text style={styles.sub}>
+          {filtered.length} {filtered.length === 1 ? "Veranstaltung" : "Veranstaltungen"}
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={styles.profileBtn}
+        onPress={() => setProfileOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Profil"
+      >
+        <Text style={styles.profileIcon}>♥</Text>
+        {saved.size > 0 ? (
+          <View style={styles.profileBadge}>
+            <Text style={styles.profileBadgeText}>{saved.size}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
     </View>
+  );
+
+  const profileSheet = (
+    <ProfileSheet
+      visible={profileOpen}
+      onClose={() => setProfileOpen(false)}
+      mapsApp={mapsApp}
+      onMapsApp={setMapsApp}
+      savedFeatures={savedFeatures}
+      onSelectEvent={setSelectedId}
+    />
   );
 
   if (isLoading) {
@@ -191,7 +244,8 @@ export default function Home() {
       userLocation={location}
       onBoundsChange={setBounds}
       flyToUserToken={flyToken}
-      dimmed={filtersOpen || selectedFeature !== null}
+      dimmed={filtersOpen || profileOpen || selectedFeature !== null}
+      onJumpToLocation={locStatus !== "denied" ? onJumpToLocation : undefined}
     />
   );
 
@@ -207,7 +261,14 @@ export default function Home() {
           </View>
         </View>
         {filterSheet}
-        <EventSheet feature={selectedFeature} onClose={() => setSelectedId(null)} />
+        {profileSheet}
+        <EventSheet
+          feature={selectedFeature}
+          onClose={() => setSelectedId(null)}
+          mapsApp={mapsApp}
+          isSaved={selectedFeature ? isSaved(selectedFeature.properties.id) : false}
+          onToggleSave={toggleSave}
+        />
       </View>
     );
   }
@@ -222,13 +283,20 @@ export default function Home() {
       >
         {map}
         {mapAreaHeight > 0 ? (
-          <DraggableListSheet availableHeight={mapAreaHeight} topInset={0} subtitle={listSubtitle}>
+          <DraggableListSheet availableHeight={mapAreaHeight} topInset={0}>
             <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
           </DraggableListSheet>
         ) : null}
       </View>
       {filterSheet}
-      <EventSheet feature={selectedFeature} onClose={() => setSelectedId(null)} />
+      {profileSheet}
+      <EventSheet
+        feature={selectedFeature}
+        onClose={() => setSelectedId(null)}
+        mapsApp={mapsApp}
+        isSaved={selectedFeature ? isSaved(selectedFeature.properties.id) : false}
+        onToggleSave={toggleSave}
+      />
     </View>
   );
 }
@@ -246,6 +314,8 @@ const styles = StyleSheet.create({
   },
   mapArea: { flex: 1, backgroundColor: colors.mapWater },
   header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
@@ -253,6 +323,34 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  headerText: { flex: 1 },
+  profileBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  profileIcon: { fontSize: 19, color: colors.accent },
+  profileBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  profileBadgeText: { fontFamily: fonts.bodySemibold, fontSize: 10, color: colors.onAccent },
   kicker: {
     fontFamily: fonts.bodySemibold,
     fontSize: 12,

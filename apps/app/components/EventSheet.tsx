@@ -1,6 +1,5 @@
 import {
   Image,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,17 +9,35 @@ import {
 } from "react-native";
 import type { EventFeature } from "@kkd/shared";
 import { formatEventTime } from "../lib/filters";
+import { openInMaps } from "../lib/maps";
+import type { MapsApp } from "../lib/store";
 import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
 
 interface Props {
   feature: EventFeature | null;
   onClose: () => void;
+  mapsApp: MapsApp;
+  isSaved: boolean;
+  onToggleSave: (id: number) => void;
 }
 
-/** HTML grob zu Klartext (für die Kurzansicht). */
+/**
+ * Entfernt interne Redaktions-Marker (z.B. „KAT: …", „URL: …", „INFO: …"),
+ * die am Zeilenanfang stehen — die verwirren in der öffentlichen Ansicht.
+ */
+function stripMarkers(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !/^\s*[A-ZÄÖÜ]{2,}\s*:/.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** HTML grob zu Klartext + Marker-Bereinigung. */
 function htmlToText(html?: string): string {
   if (!html) return "";
-  return html
+  const text = html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<[^>]+>/g, "")
@@ -29,29 +46,55 @@ function htmlToText(html?: string): string {
     .replace(/&[a-z]+;/gi, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+  return stripMarkers(text);
 }
 
-export default function EventSheet({ feature, onClose }: Props) {
+export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggleSave }: Props) {
   if (!feature) return null;
   const p = feature.properties;
   const cat = p.categories[0]?.title;
   const accent = colorForCategory(cat);
   const time = formatEventTime(p.startUtc, p.endUtc, p.allDay, p.showEndtime);
-  const desc = p.summary?.trim() || htmlToText(p.descriptionHtml);
+  const desc = stripMarkers(p.summary?.trim() ?? "") || htmlToText(p.descriptionHtml);
   const address = [p.address, [p.zipcode, p.city].filter(Boolean).join(" ")]
     .filter(Boolean)
     .join(", ");
+  const [lng, lat] = feature.geometry.coordinates;
 
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
       <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          {p.image?.url ? (
-            <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
-          ) : (
-            <View style={[styles.hero, styles.heroEmpty, { backgroundColor: accent }]} />
-          )}
+        {/* FIXES Bild — scrollt nicht mit */}
+        {p.image?.url ? (
+          <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
+        ) : (
+          <View style={[styles.hero, styles.heroEmpty, { backgroundColor: accent }]} />
+        )}
+        <View style={styles.grabber} pointerEvents="none" />
 
+        {/* Merken (Herz) */}
+        <TouchableOpacity
+          style={styles.heart}
+          onPress={() => onToggleSave(p.id)}
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? "Nicht mehr merken" : "Merken"}
+        >
+          <Text style={[styles.heartIcon, isSaved && styles.heartActive]}>
+            {isSaved ? "♥" : "♡"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.close}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Schließen"
+        >
+          <Text style={styles.closeText}>×</Text>
+        </TouchableOpacity>
+
+        {/* ALLES außer Bild scrollbar */}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.content}>
             <Text style={styles.time}>{time}</Text>
             <Text style={styles.title}>{p.title}</Text>
@@ -70,9 +113,7 @@ export default function EventSheet({ feature, onClose }: Props) {
             <View style={styles.divider} />
 
             <View style={styles.metaBlock}>
-              {p.parish ? (
-                <Meta label="Kirchengemeinde" value={p.parish} />
-              ) : null}
+              {p.parish ? <Meta label="Kirchengemeinde" value={p.parish} /> : null}
               <Meta label="Kirchspiel" value={p.kirchspiel} />
               {p.locationName ? <Meta label="Ort" value={p.locationName} /> : null}
               {address ? <Meta label="Adresse" value={address} /> : null}
@@ -86,32 +127,17 @@ export default function EventSheet({ feature, onClose }: Props) {
               </>
             ) : null}
 
-            {address ? (
-              <TouchableOpacity
-                style={styles.mapButton}
-                activeOpacity={0.85}
-                onPress={() =>
-                  Linking.openURL(
-                    `https://www.openstreetmap.org/?mlat=${feature.geometry.coordinates[1]}&mlon=${feature.geometry.coordinates[0]}#map=17/${feature.geometry.coordinates[1]}/${feature.geometry.coordinates[0]}`
-                  )
-                }
-              >
-                <Text style={styles.mapButtonText}>Auf der Karte öffnen</Text>
-              </TouchableOpacity>
-            ) : null}
+            <TouchableOpacity
+              style={styles.mapButton}
+              activeOpacity={0.85}
+              onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? p.title)}
+            >
+              <Text style={styles.mapButtonText}>
+                In {mapsApp === "google" ? "Google Maps" : "Apple Karten"} öffnen
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
-
-        <View style={styles.grabber} pointerEvents="none" />
-
-        <TouchableOpacity
-          style={styles.close}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Schließen"
-        >
-          <Text style={styles.closeText}>×</Text>
-        </TouchableOpacity>
       </Pressable>
     </Pressable>
   );
@@ -228,4 +254,18 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   closeText: { fontSize: 24, color: colors.foreground, lineHeight: 26, marginTop: -2 },
+  heart: {
+    position: "absolute",
+    top: spacing.md,
+    right: spacing.md + 44,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
+  },
+  heartIcon: { fontSize: 20, color: colors.muted, lineHeight: 22 },
+  heartActive: { color: colors.accent },
 });

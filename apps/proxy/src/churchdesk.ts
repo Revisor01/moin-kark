@@ -42,38 +42,59 @@ function fmtDate(d: Date): string {
  * Holt alle öffentlichen Events einer Org im Zeitfenster, mit Pagination.
  * Die public partnerToken-API liefert ausschließlich öffentliche Events.
  */
+/** Holt einen einzelnen Zeit-Chunk (max. PAGE_SIZE Events). */
+async function fetchChunk(
+  org: OrgConfig,
+  from: Date,
+  to: Date,
+  signal?: AbortSignal
+): Promise<CdEvent[]> {
+  const url = new URL(`${BASE}/events`);
+  url.searchParams.set("partnerToken", org.token);
+  url.searchParams.set("organizationId", String(org.id));
+  url.searchParams.set("startDate", fmtDate(from));
+  url.searchParams.set("endDate", fmtDate(to));
+  url.searchParams.set("itemsNumber", String(PAGE_SIZE));
+
+  const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`ChurchDesk ${org.id} HTTP ${res.status}`);
+  const data = (await res.json()) as unknown;
+  return Array.isArray(data)
+    ? (data as CdEvent[])
+    : ((data as { items?: CdEvent[] }).items ?? []);
+}
+
+const DAY = 86400_000;
+
+/**
+ * Holt alle öffentlichen Events einer Org im Zeitfenster.
+ *
+ * ChurchDesks `pageNumber` funktioniert NICHT (liefert immer dieselbe erste Seite),
+ * daher paginieren wir über die ZEIT: Wir holen in Chunks und halbieren ein Fenster,
+ * sobald es ans 100er-Limit stößt — so gehen keine Events verloren.
+ */
 export async function fetchOrgEvents(
   org: OrgConfig,
   from: Date,
   to: Date,
   signal?: AbortSignal
 ): Promise<CdEvent[]> {
-  const all: CdEvent[] = [];
-  let page = 0;
-  // Defensiver Seiten-Deckel (max 10 Seiten = 1000 Events / Org / Fenster).
-  for (; page < 10; page++) {
-    const url = new URL(`${BASE}/events`);
-    url.searchParams.set("partnerToken", org.token);
-    url.searchParams.set("organizationId", String(org.id));
-    url.searchParams.set("startDate", fmtDate(from));
-    url.searchParams.set("endDate", fmtDate(to));
-    url.searchParams.set("itemsNumber", String(PAGE_SIZE));
-    if (page > 0) url.searchParams.set("pageNumber", String(page + 1));
+  const byId = new Map<number, CdEvent>();
 
-    const res = await fetch(url, {
-      signal,
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) {
-      throw new Error(`ChurchDesk ${org.id} HTTP ${res.status}`);
+  // Rekursiv: Fenster holen; wenn voll (==100), in zwei Hälften teilen.
+  async function collect(a: Date, b: Date, depth: number): Promise<void> {
+    const items = await fetchChunk(org, a, b, signal);
+    for (const e of items) byId.set(e.id, e);
+    // Wenn das Fenster „voll" war, könnten Events fehlen → aufteilen.
+    // Stoppe bei sehr kleinen Fenstern (≤2 Tage) oder zu tiefer Rekursion.
+    const spanDays = (b.getTime() - a.getTime()) / DAY;
+    if (items.length >= PAGE_SIZE && spanDays > 2 && depth < 8) {
+      const mid = new Date(a.getTime() + (b.getTime() - a.getTime()) / 2);
+      await collect(a, mid, depth + 1);
+      await collect(new Date(mid.getTime() + DAY), b, depth + 1);
     }
-    const data = (await res.json()) as unknown;
-    const items: CdEvent[] = Array.isArray(data)
-      ? (data as CdEvent[])
-      : ((data as { items?: CdEvent[] }).items ?? []);
-
-    all.push(...items);
-    if (items.length < PAGE_SIZE) break; // letzte Seite
   }
-  return all;
+
+  await collect(from, to, 0);
+  return [...byId.values()];
 }

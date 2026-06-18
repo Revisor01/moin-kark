@@ -15,6 +15,8 @@ export interface EventMapProps {
   flyToUserToken?: number;
   /** Wenn ein Sheet/Modal offen ist: Karten-Controls (Attribution) ausblenden. */
   dimmed?: boolean;
+  /** Button „Zu meinem Standort" — wenn gesetzt, wird er angezeigt. */
+  onJumpToLocation?: () => void;
 }
 
 // Fallback-Export (Bundler überschreibt per Plattform-Suffix).
