@@ -49,6 +49,7 @@
         }
       ],
       "@maplibre/maplibre-react-native",
+      "expo-notifications",
       [
         "expo-location",
         {
