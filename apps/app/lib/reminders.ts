@@ -11,16 +11,22 @@ export const DEFAULT_REMINDER: ReminderPref = "evening";
 // Map: eventId -> [notificationIds]. Damit wir beim Entfernen gezielt canceln.
 const MAP_KEY = "kkd:reminderMap";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Scheduling gibt es nur nativ. Auf Web sind alle Funktionen No-ops (sonst Crash).
+const IS_WEB = Platform.OS === "web";
+
+if (!IS_WEB) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function ensurePermission(): Promise<boolean> {
+  if (IS_WEB) return false;
   const { status } = await Notifications.getPermissionsAsync();
   if (status === "granted") return true;
   const req = await Notifications.requestPermissionsAsync();
@@ -47,7 +53,7 @@ export async function getReminderPref(): Promise<ReminderPref> {
 
 /** Plant die Erinnerung(en) für ein Event gemäß Präferenz. Vergangene Zeiten werden übersprungen. */
 export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Promise<void> {
-  if (pref === "off") return;
+  if (IS_WEB || pref === "off") return;
   const start = new Date(f.properties.startUtc);
   const now = Date.now();
   const triggers: { date: Date; label: string }[] = [];
@@ -84,6 +90,7 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
 
 /** Bricht alle geplanten Erinnerungen für ein Event ab. */
 export async function cancelForEvent(eventId: number): Promise<void> {
+  if (IS_WEB) return;
   const map = await loadMap();
   for (const id of map[eventId] ?? []) {
     await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
@@ -94,6 +101,7 @@ export async function cancelForEvent(eventId: number): Promise<void> {
 
 /** Plant alle gemerkten Events neu (z.B. nach Präferenz-Wechsel). */
 export async function rescheduleAll(saved: EventFeature[], pref: ReminderPref): Promise<void> {
+  if (IS_WEB) return;
   await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
   await saveMap({});
   if (pref === "off") return;
