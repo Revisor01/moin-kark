@@ -9,6 +9,15 @@ export function openInMaps(
   label?: string
 ) {
   const q = encodeURIComponent(label ?? "Veranstaltung");
+
+  // Web/Desktop: keine native App → immer Google Maps im Browser (neuer Tab).
+  if (Platform.OS === "web") {
+    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    if (typeof window !== "undefined") window.open(url, "_blank");
+    else Linking.openURL(url);
+    return;
+  }
+
   if (app === "google") {
     // Google Maps App (falls installiert) sonst Web-Fallback
     const appUrl = `comgooglemaps://?q=${lat},${lng}&center=${lat},${lng}`;
