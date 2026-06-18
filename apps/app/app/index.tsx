@@ -18,7 +18,14 @@ import ProfileSheet from "../components/ProfileSheet";
 import DraggableListSheet from "../components/DraggableListSheet";
 import { useCategories, useEvents } from "../lib/hooks/useEvents";
 import { useLocation } from "../lib/hooks/useLocation";
-import { useMapsApp, useSavedEvents } from "../lib/store";
+import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
+import {
+  cancelForEvent,
+  ensurePermission,
+  rescheduleAll,
+  scheduleForEvent,
+  type ReminderPref,
+} from "../lib/reminders";
 import {
   DEFAULT_FILTERS,
   applyFilters,
@@ -40,7 +47,8 @@ export default function Home() {
   const { data: categories } = useCategories();
   const { location, status: locStatus, request: requestLocation } = useLocation();
   const { mapsApp, setMapsApp } = useMapsApp();
-  const { isSaved, toggle: toggleSave, saved } = useSavedEvents();
+  const { isSaved, toggle: rawToggleSave, saved } = useSavedEvents();
+  const { pref: reminderPref, setPref: setReminderPref } = useReminderPref();
 
   // Standort beim Start einmalig anfragen (opt-in System-Dialog) → Marker direkt sichtbar.
   useEffect(() => {
@@ -64,6 +72,25 @@ export default function Home() {
     (filters.category ? 1 : 0);
 
   const allFeatures = data?.features ?? [];
+
+  // Merken + lokale Erinnerung planen/abbrechen.
+  const toggleSave = async (id: number) => {
+    const wasSaved = isSaved(id);
+    rawToggleSave(id);
+    if (wasSaved) {
+      cancelForEvent(id);
+    } else if (reminderPref !== "off") {
+      const f = allFeatures.find((x) => x.properties.id === id);
+      if (f && (await ensurePermission())) scheduleForEvent(f, reminderPref);
+    }
+  };
+
+  // Erinnerungs-Präferenz ändern → alle gemerkten Events neu planen.
+  const onReminderPref = async (p: ReminderPref) => {
+    setReminderPref(p);
+    if (p !== "off") await ensurePermission();
+    rescheduleAll(savedFeatures, p);
+  };
 
   // „In meiner Nähe": Standort anfordern, Filter togglen, zur Position fliegen.
   const onToggleNearby = async () => {
@@ -180,6 +207,8 @@ export default function Home() {
       onClose={() => setProfileOpen(false)}
       mapsApp={mapsApp}
       onMapsApp={setMapsApp}
+      reminderPref={reminderPref}
+      onReminderPref={onReminderPref}
       savedFeatures={savedFeatures}
       onSelectEvent={setSelectedId}
       onToggleSave={toggleSave}

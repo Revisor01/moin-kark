@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import type { EventFeature } from "@kkd/shared";
 import type { MapsApp } from "../lib/store";
+import type { ReminderPref } from "../lib/reminders";
 import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
 import EventCard from "./EventCard";
 
@@ -18,6 +19,8 @@ interface Props {
   onClose: () => void;
   mapsApp: MapsApp;
   onMapsApp: (a: MapsApp) => void;
+  reminderPref: ReminderPref;
+  onReminderPref: (p: ReminderPref) => void;
   savedFeatures: EventFeature[];
   onSelectEvent: (id: number) => void;
   onToggleSave: (id: number) => void;
@@ -28,6 +31,8 @@ export default function ProfileSheet({
   onClose,
   mapsApp,
   onMapsApp,
+  reminderPref,
+  onReminderPref,
   savedFeatures,
   onSelectEvent,
   onToggleSave,
@@ -64,6 +69,36 @@ export default function ProfileSheet({
           </View>
           <Text style={styles.hint}>
             Wird verwendet, wenn du in einer Veranstaltung „Auf Karte öffnen" tippst.
+          </Text>
+
+          {/* Erinnerungen */}
+          <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Erinnerung</Text>
+          <View style={styles.segment}>
+            {(
+              [
+                ["evening", "Vorabend"],
+                ["2h", "2 Std vorher"],
+                ["both", "Beides"],
+                ["off", "Aus"],
+              ] as [ReminderPref, string][]
+            ).map(([val, label]) => (
+              <TouchableOpacity
+                key={val}
+                style={[styles.segmentBtn, reminderPref === val && styles.segmentBtnActive]}
+                onPress={() => onReminderPref(val)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[styles.segmentSmall, reminderPref === val && styles.segmentTextActive]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.hint}>
+            Lokale Erinnerung an gemerkte Veranstaltungen – ganz ohne Server, direkt auf
+            deinem Gerät.
           </Text>
 
           {/* Merkliste */}
@@ -179,6 +214,7 @@ const styles = StyleSheet.create({
   },
   segmentBtnActive: { backgroundColor: colors.surface, ...shadow.card },
   segmentText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.muted },
+  segmentSmall: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.muted },
   segmentTextActive: { color: colors.foreground },
   hint: { fontFamily: fonts.body, fontSize: 13, color: colors.faint, marginTop: spacing.sm },
   empty: {

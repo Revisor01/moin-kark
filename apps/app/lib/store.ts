@@ -48,6 +48,26 @@ export function useSavedEvents() {
 }
 
 // --- Karten-App-Präferenz ---
+// --- Erinnerungs-Präferenz ---
+import {
+  DEFAULT_REMINDER,
+  getReminderPref,
+  setReminderPref as persistReminderPref,
+  type ReminderPref,
+} from "./reminders";
+
+export function useReminderPref() {
+  const [pref, setPrefState] = useState<ReminderPref>(DEFAULT_REMINDER);
+  useEffect(() => {
+    getReminderPref().then(setPrefState);
+  }, []);
+  const setPref = useCallback((p: ReminderPref) => {
+    setPrefState(p);
+    persistReminderPref(p);
+  }, []);
+  return { pref, setPref };
+}
+
 export function useMapsApp() {
   const [mapsApp, setMapsAppState] = useState<MapsApp>("apple");
 
