@@ -64,13 +64,6 @@ export default function Home() {
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const [didInitialZoom, setDidInitialZoom] = useState(false);
 
-  // Anzahl aktiver Filter (für Badge am Button). „Nähe" zählt separat im FilterBar.
-  const activeFilterCount =
-    (filters.date !== "all" ? 1 : 0) +
-    (filters.kirchspiel ? 1 : 0) +
-    (filters.parish ? 1 : 0) +
-    (filters.category ? 1 : 0);
-
   const allFeatures = data?.features ?? [];
 
   // Merken + lokale Erinnerung planen/abbrechen.
@@ -90,19 +83,6 @@ export default function Home() {
     setReminderPref(p);
     if (p !== "off") await ensurePermission();
     rescheduleAll(savedFeatures, p);
-  };
-
-  // „In meiner Nähe": Standort anfordern, Filter togglen, zur Position fliegen.
-  const onToggleNearby = async () => {
-    if (filters.nearby) {
-      setFilters((f) => ({ ...f, nearby: false }));
-      return;
-    }
-    const loc = location ?? (await requestLocation());
-    if (loc) {
-      setFilters((f) => ({ ...f, nearby: true }));
-      setFlyToken((t) => t + 1);
-    }
   };
 
   // „Zu meinem Standort"-Button: Position holen + hinfliegen.
@@ -171,11 +151,6 @@ export default function Home() {
     [allFeatures, selectedId]
   );
 
-  // Beim ersten Laden Bounds noch nicht gesetzt → Liste zeigt alles.
-  useEffect(() => {
-    if (filters.nearby) setBounds(null); // Umkreis schlägt Viewport
-  }, [filters.nearby]);
-
   const header = (
     <View style={styles.header}>
       <View style={styles.headerText}>
@@ -236,14 +211,31 @@ export default function Home() {
     );
   }
 
+  const activeChips = [
+    filters.date !== "all" && {
+      key: "date",
+      label: { today: "Heute", week: "Diese Woche", weekend: "Wochenende" }[filters.date] ?? "",
+      onRemove: () => setFilters((f) => ({ ...f, date: "all" as const })),
+    },
+    filters.kirchspiel && {
+      key: "ks",
+      label: filters.kirchspiel,
+      onRemove: () => setFilters((f) => ({ ...f, kirchspiel: null, parish: null })),
+    },
+    filters.parish && {
+      key: "gem",
+      label: filters.parish,
+      onRemove: () => setFilters((f) => ({ ...f, parish: null })),
+    },
+    filters.category && {
+      key: "cat",
+      label: categoryTitles.find((c) => c.toLowerCase() === filters.category) ?? filters.category,
+      onRemove: () => setFilters((f) => ({ ...f, category: null })),
+    },
+  ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[];
+
   const filterBar = (
-    <FilterBar
-      activeCount={activeFilterCount}
-      onOpenFilters={() => setFiltersOpen(true)}
-      nearby={filters.nearby}
-      onToggleNearby={onToggleNearby}
-      nearbyAvailable={locStatus !== "denied"}
-    />
+    <FilterBar onOpenFilters={() => setFiltersOpen(true)} activeChips={activeChips} />
   );
 
   const filterSheet = (

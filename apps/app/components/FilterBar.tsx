@@ -1,21 +1,18 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors, fonts, radius, spacing } from "../lib/theme";
 
-interface Props {
-  activeCount: number;
-  onOpenFilters: () => void;
-  nearby: boolean;
-  onToggleNearby: () => void;
-  nearbyAvailable: boolean;
+export interface ActiveFilterChip {
+  key: string;
+  label: string;
+  onRemove: () => void;
 }
 
-export default function FilterBar({
-  activeCount,
-  onOpenFilters,
-  nearby,
-  onToggleNearby,
-  nearbyAvailable,
-}: Props) {
+interface Props {
+  onOpenFilters: () => void;
+  activeChips: ActiveFilterChip[];
+}
+
+export default function FilterBar({ onOpenFilters, activeChips }: Props) {
   return (
     <View style={styles.bar}>
       <TouchableOpacity
@@ -27,25 +24,33 @@ export default function FilterBar({
       >
         <Text style={styles.filterIcon}>⚲</Text>
         <Text style={styles.filterText}>Filter</Text>
-        {activeCount > 0 ? (
+        {activeChips.length > 0 ? (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{activeCount}</Text>
+            <Text style={styles.badgeText}>{activeChips.length}</Text>
           </View>
         ) : null}
       </TouchableOpacity>
 
-      {nearbyAvailable ? (
-        <TouchableOpacity
-          style={[styles.nearby, nearby && styles.nearbyActive]}
-          onPress={onToggleNearby}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityState={{ selected: nearby }}
+      {activeChips.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
         >
-          <Text style={[styles.nearbyText, nearby && styles.nearbyTextActive]}>
-            In meiner Nähe
-          </Text>
-        </TouchableOpacity>
+          {activeChips.map((c) => (
+            <TouchableOpacity
+              key={c.key}
+              style={styles.activeChip}
+              onPress={c.onRemove}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${c.label} entfernen`}
+            >
+              <Text style={styles.activeChipText}>{c.label}</Text>
+              <Text style={styles.activeChipX}>✕</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       ) : null}
     </View>
   );
@@ -85,17 +90,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   badgeText: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.primary },
-  nearby: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+  chipRow: { gap: spacing.sm, alignItems: "center", paddingRight: spacing.lg },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 38,
-    justifyContent: "center",
+    borderColor: colors.borderStrong,
+    minHeight: 34,
   },
-  nearbyActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  nearbyText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.foreground },
-  nearbyTextActive: { color: colors.onAccent },
+  activeChipText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.foreground },
+  activeChipX: { fontSize: 12, color: colors.muted },
 });

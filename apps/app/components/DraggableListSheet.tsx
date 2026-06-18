@@ -113,13 +113,13 @@ const styles = StyleSheet.create({
   },
   handleArea: {
     alignItems: "center",
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
+    justifyContent: "center",
+    height: 44, // große, leicht greifbare Drag-Zone
     backgroundColor: colors.background,
   },
   grabber: {
-    width: 44,
-    height: 5,
+    width: 52,
+    height: 6,
     borderRadius: 3,
     backgroundColor: colors.borderStrong,
   },

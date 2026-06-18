@@ -17,8 +17,6 @@ export interface Filters {
   kirchspiel: string | null;
   /** Kirchengemeinde (parish, exakt) oder null = alle. Nur sinnvoll mit gewähltem Kirchspiel. */
   parish: string | null;
-  /** Umkreis-Filter aktiv (nur Events im Radius um den eigenen Standort). */
-  nearby: boolean;
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -26,7 +24,6 @@ export const DEFAULT_FILTERS: Filters = {
   category: null,
   kirchspiel: null,
   parish: null,
-  nearby: false,
 };
 
 /** Umkreis-Radius für „In meiner Nähe" in Kilometern. */
@@ -133,10 +130,6 @@ export function applyFilters(
     if (!matchesCategory(f, filters.category)) return false;
     if (filters.kirchspiel && f.properties.kirchspiel !== filters.kirchspiel) return false;
     if (filters.parish && f.properties.parish !== filters.parish) return false;
-    if (filters.nearby && ctx.location) {
-      const [lng, lat] = f.geometry.coordinates;
-      if (distanceKm(ctx.location, { lat, lng }) > NEARBY_RADIUS_KM) return false;
-    }
     if (ctx.bounds && !inBounds(f, ctx.bounds)) return false;
     return true;
   });
