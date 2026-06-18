@@ -37,3 +37,8 @@ yarn-error.*
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# iOS signing (lokal, NIE committen)
+apps/app/dist-cert.p12
+apps/app/moinkark.mobileprovision
+apps/app/credentials.json
