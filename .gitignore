@@ -42,3 +42,6 @@ yarn-error.*
 apps/app/dist-cert.p12
 apps/app/moinkark.mobileprovision
 apps/app/credentials.json
+
+# Quell-Bilder (nicht committen)
+Gemini_Generated_*.png
