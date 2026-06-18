@@ -10,11 +10,16 @@
     },
     "preview": {
       "distribution": "internal",
-      "ios": { "simulator": false }
+      "ios": {
+        "simulator": false
+      }
     },
     "production": {
       "autoIncrement": true,
-      "ios": { "resourceClass": "m-medium" }
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "credentialsSource": "local"
     }
   },
   "submit": {
@@ -22,7 +27,8 @@
       "ios": {
         "ascApiKeyPath": "../../../.claude/secrets/AuthKey_REPLACE_WITH_ASC_KEY_ID.p8",
         "ascApiKeyId": "REPLACE_WITH_ASC_KEY_ID",
-        "ascApiKeyIssuerId": "REPLACE_WITH_ASC_ISSUER_ID"
+        "ascApiKeyIssuerId": "REPLACE_WITH_ASC_ISSUER_ID",
+        "ascAppId": "6781438884"
       }
     }
   }

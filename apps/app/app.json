@@ -23,7 +23,7 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#FBF6EE",
+        "backgroundColor": "#F8EDD9",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -43,9 +43,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#0E6E6E"
+          "backgroundColor": "#F8EDD9"
         }
       ],
       "@maplibre/maplibre-react-native",
@@ -55,6 +55,12 @@
           "locationWhenInUsePermission": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "797bf5a4-9a2c-469e-9f0b-f881d5bb9772"
+      }
+    }
   }
 }
