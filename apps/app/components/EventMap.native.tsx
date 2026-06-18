@@ -79,6 +79,7 @@ export default function EventMap({
         mapStyle={MAP_STYLE as any}
         logo={false}
         compass={false}
+        attribution={false}
         onRegionDidChange={onRegionDidChange}
       >
         <Camera

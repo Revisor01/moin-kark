@@ -8,19 +8,31 @@ interface Props {
   selectedId?: number | null;
   onSelect: (id: number) => void;
   header?: React.ReactElement;
+  isSaved?: (id: number) => boolean;
+  onToggleSave?: (id: number) => void;
 }
 
-export default function EventList({ features, selectedId, onSelect, header }: Props) {
+export default function EventList({
+  features,
+  selectedId,
+  onSelect,
+  header,
+  isSaved,
+  onToggleSave,
+}: Props) {
   return (
     <FlatList
       data={features}
       keyExtractor={(f) => String(f.properties.id)}
       ListHeaderComponent={header}
+      extraData={{ selectedId, isSaved }}
       renderItem={({ item }) => (
         <EventCard
           feature={item}
           active={item.properties.id === selectedId}
           onPress={() => onSelect(item.properties.id)}
+          saved={isSaved?.(item.properties.id)}
+          onToggleSave={onToggleSave}
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
