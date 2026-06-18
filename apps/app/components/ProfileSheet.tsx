@@ -20,6 +20,7 @@ interface Props {
   onMapsApp: (a: MapsApp) => void;
   savedFeatures: EventFeature[];
   onSelectEvent: (id: number) => void;
+  onToggleSave: (id: number) => void;
 }
 
 export default function ProfileSheet({
@@ -29,6 +30,7 @@ export default function ProfileSheet({
   onMapsApp,
   savedFeatures,
   onSelectEvent,
+  onToggleSave,
 }: Props) {
   if (!visible) return null;
 
@@ -78,6 +80,8 @@ export default function ProfileSheet({
                 <EventCard
                   key={f.properties.id}
                   feature={f}
+                  saved
+                  onToggleSave={onToggleSave}
                   onPress={() => {
                     onClose();
                     onSelectEvent(f.properties.id);

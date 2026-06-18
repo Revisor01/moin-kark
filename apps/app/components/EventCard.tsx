@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { EventFeature } from "@kkd/shared";
 import { formatEventTime } from "../lib/filters";
 import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
@@ -7,55 +7,72 @@ interface Props {
   feature: EventFeature;
   active?: boolean;
   onPress: () => void;
+  /** Ist das Event gemerkt? (zeigt Herz) */
+  saved?: boolean;
+  /** Herz antippen → merken/entfernen. Wenn nicht gesetzt, kein Herz. */
+  onToggleSave?: (id: number) => void;
 }
 
-export default function EventCard({ feature, active, onPress }: Props) {
+export default function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
   const p = feature.properties;
   const cat = p.categories[0]?.title;
   const accent = colorForCategory(cat);
   const time = formatEventTime(p.startUtc, p.endUtc, p.allDay, p.showEndtime);
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
-      accessibilityRole="button"
-      accessibilityLabel={`${p.title}, ${time}, ${p.parish ?? p.kirchspiel}`}
-      style={[styles.card, active && styles.cardActive]}
-    >
-      <View style={[styles.accent, { backgroundColor: accent }]} />
-      {p.image?.url ? (
-        <Image source={{ uri: p.image.url }} style={styles.thumb} resizeMode="cover" />
-      ) : (
-        <View style={[styles.thumb, styles.thumbEmpty]}>
-          <Text style={styles.thumbInitial}>{p.title.slice(0, 1)}</Text>
-        </View>
-      )}
-      <View style={styles.body}>
-        <Text style={styles.time}>{time}</Text>
-        <Text style={styles.title} numberOfLines={2}>
-          {p.title}
-        </Text>
-        <View style={styles.metaRow}>
-          {cat ? (
-            <View style={[styles.tag, { borderColor: accent }]}>
-              <Text style={[styles.tagText, { color: accent }]} numberOfLines={1}>
-                {cat}
-              </Text>
-            </View>
-          ) : null}
-          <Text style={styles.place} numberOfLines={1}>
-            {p.parish ?? p.locationName ?? p.kirchspiel}
+    <View style={[styles.card, active && styles.cardActive]}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${p.title}, ${time}, ${p.parish ?? p.kirchspiel}`}
+        style={styles.pressArea}
+      >
+        <View style={[styles.accent, { backgroundColor: accent }]} />
+        {p.image?.url ? (
+          <Image source={{ uri: p.image.url }} style={styles.thumb} resizeMode="cover" />
+        ) : (
+          <View style={[styles.thumb, styles.thumbEmpty]}>
+            <Text style={styles.thumbInitial}>{p.title.slice(0, 1)}</Text>
+          </View>
+        )}
+        <View style={styles.body}>
+          <Text style={styles.time}>{time}</Text>
+          <Text style={styles.title} numberOfLines={2}>
+            {p.title}
           </Text>
+          <View style={styles.metaRow}>
+            {cat ? (
+              <View style={[styles.tag, { borderColor: accent }]}>
+                <Text style={[styles.tagText, { color: accent }]} numberOfLines={1}>
+                  {cat}
+                </Text>
+              </View>
+            ) : null}
+            <Text style={styles.place} numberOfLines={1}>
+              {p.parish ?? p.locationName ?? p.kirchspiel}
+            </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </Pressable>
+      {onToggleSave ? (
+        <Pressable
+          style={styles.heart}
+          onPress={() => onToggleSave(p.id)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? "Nicht mehr merken" : "Merken"}
+        >
+          <Text style={[styles.heartIcon, saved && styles.heartActive]}>
+            {saved ? "♥" : "♡"}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: "row",
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     overflow: "hidden",
@@ -63,6 +80,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadow.card,
   },
+  pressArea: { flexDirection: "row" },
   cardActive: {
     borderColor: colors.primary,
     borderWidth: 2,
@@ -88,4 +106,15 @@ const styles = StyleSheet.create({
   },
   tagText: { fontFamily: fonts.bodyMedium, fontSize: 11 },
   place: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, flexShrink: 1 },
+  heart: {
+    position: "absolute",
+    top: 6,
+    right: 8,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heartIcon: { fontSize: 18, color: colors.faint, lineHeight: 20 },
+  heartActive: { color: colors.accent },
 });

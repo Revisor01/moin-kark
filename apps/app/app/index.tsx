@@ -182,6 +182,7 @@ export default function Home() {
       onMapsApp={setMapsApp}
       savedFeatures={savedFeatures}
       onSelectEvent={setSelectedId}
+      onToggleSave={toggleSave}
     />
   );
 
@@ -257,7 +258,7 @@ export default function Home() {
           <View style={styles.mapPane}>{map}</View>
           <View style={styles.listPane}>
             {filterBar}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} />
           </View>
         </View>
         {filterSheet}
@@ -284,7 +285,7 @@ export default function Home() {
         {map}
         {mapAreaHeight > 0 ? (
           <DraggableListSheet availableHeight={mapAreaHeight} topInset={0}>
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} />
           </DraggableListSheet>
         ) : null}
       </View>
