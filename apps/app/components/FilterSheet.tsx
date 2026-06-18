@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import type { DateFilter } from "../lib/filters";
-import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
 
 interface Props {
   visible: boolean;
@@ -38,18 +38,24 @@ function Chip({
   label,
   active,
   onPress,
+  color,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
+  /** Optionale Kategorie-Farbe für den aktiven Zustand. */
+  color?: string;
 }) {
+  const activeBg = color
+    ? { backgroundColor: color, borderColor: color }
+    : styles.chipActive;
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={[styles.chip, active && styles.chipActive]}
+      style={[styles.chip, active && activeBg]}
     >
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </TouchableOpacity>
@@ -125,6 +131,7 @@ export default function FilterSheet({
                 key={c}
                 label={c}
                 active={activeCategory === c.toLowerCase()}
+                color={colorForCategory(c)}
                 onPress={() => onCategory(c.toLowerCase())}
               />
             ))}
