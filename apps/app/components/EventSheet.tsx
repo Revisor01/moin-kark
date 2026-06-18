@@ -6,7 +6,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EventFeature } from "@kkd/shared";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
@@ -50,6 +52,11 @@ function htmlToText(html?: string): string {
 }
 
 export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggleSave }: Props) {
+  const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
+  // Feste Sheet-Höhe (statt maxHeight%) — nur so bekommt die ScrollView einen
+  // klar begrenzten Raum und scrollt zuverlässig intern bis zum Maps-Button.
+  const sheetHeight = Math.min(winH * 0.88, winH - insets.top - 24);
   if (!feature) return null;
   const p = feature.properties;
   const cat = p.categories[0]?.title;
@@ -63,7 +70,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
 
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
-      <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <Pressable style={[styles.sheet, { height: sheetHeight }]} onPress={(e) => e.stopPropagation()}>
         {/* FIXES Bild — scrollt nicht mit */}
         {p.image?.url ? (
           <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
@@ -93,13 +100,26 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
           <Text style={styles.closeText}>×</Text>
         </TouchableOpacity>
 
-        {/* ALLES außer Bild scrollbar */}
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {/* ALLES außer Bild scrollbar. flexShrink:1 → ScrollView nimmt nur den Raum unter
+            dem fixen Bild und scrollt intern, statt den Sheet über maxHeight hinaus zu dehnen. */}
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: spacing.xl + insets.bottom },
+          ]}
+        >
           <View style={styles.content}>
             <Text style={styles.time}>{time}</Text>
             <Text style={styles.title}>{p.title}</Text>
 
             <View style={styles.badges}>
+              {p.highlight ? (
+                <View style={styles.highlightBadge}>
+                  <Text style={styles.highlightBadgeText}>★ Tipp</Text>
+                </View>
+              ) : null}
               {cat ? (
                 <View style={[styles.badge, { backgroundColor: accent }]}>
                   <Text style={styles.badgeText}>{cat}</Text>
@@ -170,9 +190,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
     width: "100%",
     maxWidth: 520,
-    maxHeight: "88%",
     overflow: "hidden", // clippt das Hero-Bild auf die obere Rundung (kein weißer Strich)
-    ...shadow.sheet,
+    // Höhe wird inline gesetzt (feste Höhe → ScrollView scrollt zuverlässig).
+    // Kein Rahmen/Schatten nötig: der dunkle Backdrop setzt das Sheet schon klar ab.
   },
   grabber: {
     position: "absolute",
@@ -184,6 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.85)",
     zIndex: 2,
   },
+  scrollView: { flex: 1 },
   scroll: { paddingBottom: spacing.xl },
   hero: {
     width: "100%",
@@ -207,6 +228,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  highlightBadge: {
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: colors.accent,
+  },
+  highlightBadgeText: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.onAccent },
   badge: { borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 4 },
   badgeText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.onAccent },
   badgeOutline: {

@@ -168,6 +168,8 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     maxHeight: "85%",
     paddingBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
     ...shadow.sheet,
   },
   grabber: {

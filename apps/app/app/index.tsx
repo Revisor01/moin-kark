@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as Notifications from "expo-notifications";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -26,6 +27,7 @@ import {
   scheduleForEvent,
   type ReminderPref,
 } from "../lib/reminders";
+import { syncSavedEvents } from "../lib/savedSync";
 import {
   DEFAULT_FILTERS,
   applyFilters,
@@ -47,7 +49,7 @@ export default function Home() {
   const { data: categories } = useCategories();
   const { location, status: locStatus, request: requestLocation } = useLocation();
   const { mapsApp, setMapsApp } = useMapsApp();
-  const { isSaved, toggle: rawToggleSave, saved } = useSavedEvents();
+  const { isSaved, toggle: rawToggleSave, saved, loaded: savedLoaded } = useSavedEvents();
   const { pref: reminderPref, setPref: setReminderPref } = useReminderPref();
 
   // Standort beim Start einmalig anfragen (opt-in System-Dialog) → Marker direkt sichtbar.
@@ -103,6 +105,35 @@ export default function Home() {
     }
     setDidInitialZoom(true);
   }, [location, allFeatures, didInitialZoom]);
+
+  // Einmaliger Abgleich gemerkter Events gegen frische Daten (entfällt / verschoben → lokale Mitteilung).
+  const didSync = useRef(false);
+  useEffect(() => {
+    if (didSync.current || !savedLoaded || allFeatures.length === 0) return;
+    didSync.current = true;
+    (async () => {
+      const ids = [...saved];
+      const res = await syncSavedEvents(ids, allFeatures);
+      // Reminder für entfallene/verschobene Events neu planen.
+      if ((res.removed.length || res.changed.length) && reminderPref !== "off") {
+        for (const id of res.removed) cancelForEvent(id);
+        for (const id of res.changed) {
+          cancelForEvent(id);
+          const f = allFeatures.find((x) => x.properties.id === id);
+          if (f) scheduleForEvent(f, reminderPref);
+        }
+      }
+    })();
+  }, [savedLoaded, allFeatures, saved, reminderPref]);
+
+  // Tap auf eine Mitteilung → zugehöriges Event öffnen (falls es noch existiert).
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((resp) => {
+      const id = resp.notification.request.content.data?.eventId;
+      if (typeof id === "number") setSelectedId(id);
+    });
+    return () => sub.remove();
+  }, []);
 
   const filtered = useMemo(
     () => sortByStart(applyFilters(allFeatures, filters, { location, bounds })),
@@ -211,31 +242,19 @@ export default function Home() {
     );
   }
 
-  const activeChips = [
-    filters.date !== "all" && {
-      key: "date",
-      label: { today: "Heute", week: "Diese Woche", weekend: "Wochenende" }[filters.date] ?? "",
-      onRemove: () => setFilters((f) => ({ ...f, date: "all" as const })),
-    },
-    filters.kirchspiel && {
-      key: "ks",
-      label: filters.kirchspiel,
-      onRemove: () => setFilters((f) => ({ ...f, kirchspiel: null, parish: null })),
-    },
-    filters.parish && {
-      key: "gem",
-      label: filters.parish,
-      onRemove: () => setFilters((f) => ({ ...f, parish: null })),
-    },
-    filters.category && {
-      key: "cat",
-      label: categoryTitles.find((c) => c.toLowerCase() === filters.category) ?? filters.category,
-      onRemove: () => setFilters((f) => ({ ...f, category: null })),
-    },
-  ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[];
+  // „Diese Woche“ ist der Standard → zählt NICHT als aktiver Filter (kein Badge dafür).
+  const activeCount =
+    (filters.date !== DEFAULT_FILTERS.date ? 1 : 0) +
+    (filters.kirchspiel ? 1 : 0) +
+    (filters.parish ? 1 : 0) +
+    (filters.category ? 1 : 0);
 
   const filterBar = (
-    <FilterBar onOpenFilters={() => setFiltersOpen(true)} activeChips={activeChips} />
+    <FilterBar
+      onOpenFilters={() => setFiltersOpen(true)}
+      activeCount={activeCount}
+      onJumpToLocation={locStatus !== "denied" ? onJumpToLocation : undefined}
+    />
   );
 
   const filterSheet = (
@@ -267,7 +286,6 @@ export default function Home() {
       onBoundsChange={setBounds}
       flyToUserToken={flyToken}
       dimmed={filtersOpen || profileOpen || selectedFeature !== null}
-      onJumpToLocation={locStatus !== "denied" ? onJumpToLocation : undefined}
     />
   );
 
@@ -298,12 +316,15 @@ export default function Home() {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {header}
-      {filterBar}
       <View
         style={styles.mapArea}
         onLayout={(e) => setMapAreaHeight(e.nativeEvent.layout.height)}
       >
         {map}
+        {/* Schwebende Steuerleiste ÜBER der Karte (kein eigener Hintergrund) */}
+        <View style={styles.floatingBar} pointerEvents="box-none">
+          {filterBar}
+        </View>
         {mapAreaHeight > 0 ? (
           <DraggableListSheet availableHeight={mapAreaHeight} topInset={0}>
             <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} />
@@ -335,6 +356,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   mapArea: { flex: 1, backgroundColor: colors.mapWater },
+  floatingBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",

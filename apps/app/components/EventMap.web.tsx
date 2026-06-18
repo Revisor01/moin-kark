@@ -28,8 +28,6 @@ export default function EventMap({
   userLocation,
   onBoundsChange,
   flyToUserToken,
-  dimmed,
-  onJumpToLocation,
 }: EventMapProps) {
   const mapRef = useRef<MapRef>(null);
 
@@ -146,32 +144,6 @@ export default function EventMap({
             aria-label="Du bist hier"
           />
         </Marker>
-      ) : null}
-
-      {/* „Zu meinem Standort"-Button */}
-      {onJumpToLocation && !dimmed ? (
-        <button
-          onClick={onJumpToLocation}
-          title="Zu meinem Standort"
-          aria-label="Zu meinem Standort"
-          style={{
-            position: "absolute",
-            right: 12,
-            bottom: 28,
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            background: "#FFFFFF",
-            border: "1px solid #E6DCCB",
-            boxShadow: "0 2px 8px rgba(28,43,43,0.18)",
-            cursor: "pointer",
-            fontSize: 20,
-            lineHeight: "44px",
-            padding: 0,
-          }}
-        >
-          ◎
-        </button>
       ) : null}
     </Map>
   );

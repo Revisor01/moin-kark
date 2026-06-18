@@ -10,6 +10,24 @@ import {
 } from "@kkd/shared";
 import type { CdEvent } from "./churchdesk.js";
 
+/**
+ * Erkennt das redaktionelle „KAT: …, Highlight, …"-Tag in Summary/Beschreibung.
+ * Gemeinden markieren so einzelne Events zur besonderen Hervorhebung (z.B. Wesselburen).
+ * Robust gegen HTML (<p>KAT: Blog</p>) und Komma-Listen (KAT: Highlight, Blog, …).
+ */
+function hasHighlightTag(summary?: string, description?: string): boolean {
+  const text = `${summary ?? ""}\n${description ?? ""}`
+    .replace(/<[^>]+>/g, "\n") // HTML-Tags zu Zeilenumbrüchen
+    .replace(/&nbsp;/g, " ");
+  for (const line of text.split("\n")) {
+    const m = line.match(/^\s*KAT\s*:\s*(.+)$/i);
+    if (!m) continue;
+    const tags = m[1].split(",").map((t) => t.trim().toLowerCase());
+    if (tags.includes("highlight")) return true;
+  }
+  return false;
+}
+
 /** Wählt die beste Bild-URL aus dem ChurchDesk-image-Objekt. */
 function pickImage(img: CdEvent["image"]): EventImage | undefined {
   if (!img) return undefined;
@@ -86,6 +104,7 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       zipcode: lo?.zipcode || undefined,
       price: event.price || undefined,
       coordSource: hasCoords ? "event" : "fallback",
+      highlight: hasHighlightTag(event.summary, event.description) || undefined,
     },
   };
 }
