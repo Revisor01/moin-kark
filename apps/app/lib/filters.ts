@@ -17,6 +17,8 @@ export interface Filters {
   kirchspiel: string | null;
   /** Kirchengemeinde (parish, exakt) oder null = alle. Nur sinnvoll mit gewähltem Kirchspiel. */
   parish: string | null;
+  /** „Tipps"-Modus: nur Highlight-Events, über ALLE Zeiten (Datumsfilter aus). */
+  highlightsOnly: boolean;
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -24,6 +26,7 @@ export const DEFAULT_FILTERS: Filters = {
   category: null,
   kirchspiel: null,
   parish: null,
+  highlightsOnly: false,
 };
 
 /** Umkreis-Radius für „In meiner Nähe" in Kilometern. */
@@ -126,7 +129,13 @@ export function applyFilters(
 ): EventFeature[] {
   const now = ctx.now ?? new Date();
   return features.filter((f) => {
-    if (!matchesDate(f.properties.startUtc, filters.date, now)) return false;
+    // Tipps-Modus: nur Highlights, ABER über alle Zeiten (Datumsfilter aus). Vergangenes raus.
+    if (filters.highlightsOnly) {
+      if (!f.properties.highlight) return false;
+      if (new Date(f.properties.startUtc).getTime() < now.getTime() - 12 * 3600_000) return false;
+    } else {
+      if (!matchesDate(f.properties.startUtc, filters.date, now)) return false;
+    }
     if (!matchesCategory(f, filters.category)) return false;
     if (filters.kirchspiel && f.properties.kirchspiel !== filters.kirchspiel) return false;
     if (filters.parish && f.properties.parish !== filters.parish) return false;

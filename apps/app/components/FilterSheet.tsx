@@ -101,7 +101,11 @@ export default function FilterSheet({
           </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+        >
           <Group label="Wann">
             {DATE_LABELS.map((d) => (
               <Chip key={d.key} label={d.label} active={date === d.key} onPress={() => onDate(d.key)} />
@@ -190,6 +194,7 @@ const styles = StyleSheet.create({
   },
   heading: { fontFamily: fonts.displayBold, fontSize: 22, color: colors.foreground },
   reset: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.primary },
+  scrollView: { flexShrink: 1 },
   scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.lg },
   group: { gap: spacing.sm, marginTop: spacing.md },
   groupLabel: {
