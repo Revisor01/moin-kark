@@ -1,13 +1,19 @@
 import {
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
+import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EventFeature } from "@kkd/shared";
 import { formatEventTime } from "../lib/filters";
@@ -70,6 +76,26 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   // Feste Sheet-Höhe (statt maxHeight%) — nur so bekommt die ScrollView einen
   // klar begrenzten Raum und scrollt zuverlässig intern bis zum Maps-Button.
   const sheetHeight = Math.min(winH * 0.88, winH - insets.top - 24);
+
+  // Swipe-down zum Schließen (nur Kopfbereich/Grabber, damit die desc-ScrollView frei bleibt).
+  const translateY = useSharedValue(0);
+  const closeSheet = () => {
+    translateY.value = 0;
+    onClose();
+  };
+  const swipeDown = Gesture.Pan()
+    .onUpdate((e) => {
+      translateY.value = Math.max(0, e.translationY);
+    })
+    .onEnd((e) => {
+      if (e.translationY > 120 || e.velocityY > 800) {
+        translateY.value = withTiming(sheetHeight, { duration: 180 }, () => runOnJS(closeSheet)());
+      } else {
+        translateY.value = withTiming(0, { duration: 150 });
+      }
+    });
+  const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+
   if (!feature) return null;
   const p = feature.properties;
   const cat = p.categories[0]?.title;
@@ -82,44 +108,23 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   const [lng, lat] = feature.geometry.coordinates;
   const price = formatPrice(p.price);
 
-  return (
-    <Pressable style={styles.backdrop} onPress={onClose}>
-      <Pressable style={[styles.sheet, { height: sheetHeight }]} onPress={(e) => e.stopPropagation()}>
-        {/* FIXES Bild — scrollt nicht mit. Kein Event-Bild → unser Marken-Motiv als Platzhalter. */}
-        {p.image?.url ? (
-          <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
-        ) : (
-          <Image
-            source={require("../assets/placeholder.png")}
-            style={styles.hero}
-            resizeMode="cover"
-          />
-        )}
-        <View style={styles.grabber} pointerEvents="none" />
+  // Kopfbereich (Bild + Grabber + Kopfsektion) — hier greift der Swipe-down.
+  const headerArea = (
+    <View>
+      {/* FIXES Bild — scrollt nicht mit. Kein Event-Bild → unser Marken-Motiv als Platzhalter. */}
+      {p.image?.url ? (
+        <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
+      ) : (
+        <Image
+          source={require("../assets/placeholder.png")}
+          style={styles.hero}
+          resizeMode="cover"
+        />
+      )}
+      <View style={styles.grabber} pointerEvents="none" />
 
-        {/* Merken (Herz) */}
-        <TouchableOpacity
-          style={styles.heart}
-          onPress={() => onToggleSave(p.id)}
-          accessibilityRole="button"
-          accessibilityLabel={isSaved ? "Nicht mehr merken" : "Merken"}
-        >
-          <Text style={[styles.heartIcon, isSaved && styles.heartActive]}>
-            {isSaved ? "♥" : "♡"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.close}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Schließen"
-        >
-          <Text style={styles.closeText}>×</Text>
-        </TouchableOpacity>
-
-        {/* Fixe Kopfsektion — scrollt NICHT. */}
-        <View style={styles.content}>
+      {/* Fixe Kopfsektion — scrollt NICHT. */}
+      <View style={styles.content}>
           <Text style={styles.time}>{time}</Text>
           <Text style={styles.title} numberOfLines={2}>
             {p.title}
@@ -149,40 +154,71 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             {p.locationName ? <Meta label="Ort" value={p.locationName} /> : null}
             {address ? <Meta label="Adresse" value={address} /> : null}
             {p.contributor ? <Meta label="Mitwirkung" value={p.contributor} /> : null}
-            {price ? <Meta label="Eintritt" value={price} highlight /> : null}
-          </View>
+          {price ? <Meta label="Eintritt" value={price} highlight /> : null}
         </View>
+      </View>
+    </View>
+  );
 
-        {/* NUR die Beschreibung scrollt — eigener flex:1-Container, Maps-Button bleibt fix unten. */}
-        <View style={styles.descArea}>
-          {desc ? (
-            <>
-              <View style={styles.descDivider} />
-              <ScrollView
-                style={styles.descScroll}
-                showsVerticalScrollIndicator
-                contentContainerStyle={styles.descScrollInner}
-                nestedScrollEnabled
-              >
-                <Text style={styles.desc}>{desc}</Text>
-              </ScrollView>
-            </>
-          ) : null}
-        </View>
+  return (
+    <Pressable style={styles.backdrop} onPress={onClose}>
+      <Animated.View style={[styles.sheet, { height: sheetHeight }, sheetAnim]}>
+        {/* Tap auf das Sheet schließt NICHT (stopPropagation), Swipe-down am Kopf schließt. */}
+        <Pressable onPress={(e) => e.stopPropagation()} style={styles.flex}>
+          {/* Swipe-down nur auf dem Kopfbereich → die desc-ScrollView behält ihre Geste. */}
+          <GestureDetector gesture={swipeDown}>{headerArea}</GestureDetector>
 
-        {/* Fixer Maps-Button unten. */}
-        <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
+          {/* Merken (Herz) */}
           <TouchableOpacity
-            style={styles.mapButton}
-            activeOpacity={0.85}
-            onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? p.title)}
+            style={styles.heart}
+            onPress={() => onToggleSave(p.id)}
+            accessibilityRole="button"
+            accessibilityLabel={isSaved ? "Nicht mehr merken" : "Merken"}
           >
-            <Text style={styles.mapButtonText}>
-              In {mapsApp === "google" ? "Google Maps" : "Apple Karten"} öffnen
+            <Text style={[styles.heartIcon, isSaved && styles.heartActive]}>
+              {isSaved ? "♥" : "♡"}
             </Text>
           </TouchableOpacity>
-        </View>
-      </Pressable>
+
+          <TouchableOpacity
+            style={styles.close}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Schließen"
+          >
+            <Text style={styles.closeText}>×</Text>
+          </TouchableOpacity>
+
+          {/* NUR die Beschreibung scrollt — eigener flex:1-Container, Maps-Button bleibt fix unten. */}
+          <View style={styles.descArea}>
+            {desc ? (
+              <>
+                <View style={styles.descDivider} />
+                <ScrollView
+                  style={styles.descScroll}
+                  showsVerticalScrollIndicator
+                  contentContainerStyle={styles.descScrollInner}
+                >
+                  <Text style={styles.desc}>{desc}</Text>
+                </ScrollView>
+              </>
+            ) : null}
+          </View>
+
+          {/* Fixer Maps-Button unten. */}
+          <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
+            <TouchableOpacity
+              style={styles.mapButton}
+              activeOpacity={0.85}
+              onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? p.title)}
+            >
+              <Text style={styles.mapButtonText}>
+                In {mapsApp === "google" ? "Google Maps" : "Apple Karten"} öffnen
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -208,6 +244,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1000, // über Karten-Controls (Attribution etc.)
   },
+  flex: { flex: 1 },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,
