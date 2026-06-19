@@ -1,6 +1,11 @@
 # Read-Only ChurchDesk-Aggregator (Hono + tsx, kein Build-Step).
 FROM node:22-alpine
 
+# tzdata, damit TZ=Europe/Berlin im Container wirklich greift (Alpine hat es sonst nicht →
+# new Date() bliebe UTC → nachts würden Events vom Vortag im Datumsfenster landen).
+RUN apk add --no-cache tzdata
+ENV TZ=Europe/Berlin
+
 WORKDIR /app
 
 # Monorepo-Manifeste zuerst (Layer-Caching).

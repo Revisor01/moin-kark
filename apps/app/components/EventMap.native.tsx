@@ -52,10 +52,13 @@ export default function EventMap({
 
   const onRegionDidChange = (e: any) => {
     if (!onBoundsChange) return;
-    const b = e?.nativeEvent?.bounds; // [west, south, east, north]
-    if (!b) return;
-    const [west, south, east, north] = b;
-    onBoundsChange({ west, south, east, north });
+    // MapLibre RN v11.3: ViewStateChangeEvent mit bounds = [west, south, east, north].
+    // Je nach RN-Bridge liegt es unter nativeEvent oder direkt am Event → beide prüfen.
+    const b = e?.nativeEvent?.bounds ?? e?.bounds;
+    if (b && b.length === 4) {
+      const [west, south, east, north] = b;
+      onBoundsChange({ west, south, east, north });
+    }
   };
 
   const userPointFC: EventFeatureCollection | any = userLocation
