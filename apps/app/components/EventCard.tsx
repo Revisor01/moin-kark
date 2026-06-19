@@ -33,15 +33,11 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
         style={styles.pressArea}
       >
         <View style={[styles.accent, { backgroundColor: accent }]} />
-        {p.image?.url ? (
-          <Image source={{ uri: p.image.url }} style={styles.thumb} resizeMode="cover" />
-        ) : (
-          <Image
-            source={require("../assets/splash-icon.png")}
-            style={styles.thumb}
-            resizeMode="cover"
-          />
-        )}
+        <Image
+          source={p.image?.url ? { uri: p.image.url } : require("../assets/placeholder.png")}
+          style={styles.thumb}
+          resizeMode="cover"
+        />
         <View style={styles.body}>
           <Text style={styles.time}>{time}</Text>
           <Text style={styles.title} numberOfLines={2}>
@@ -114,13 +110,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   accent: { width: 4 },
-  thumb: { width: 96, alignSelf: "stretch", minHeight: 96 },
-  thumbEmpty: {
-    backgroundColor: colors.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  thumbInitial: { fontFamily: fonts.display, fontSize: 30, color: colors.faint },
+  // alignSelf:stretch → Thumbnail folgt der vom Text bestimmten Kartenhöhe (cover füllt).
+  // KEIN minHeight → das Bild-Seitenverhältnis bläht die Karte nicht mehr auf (Listen-Bug).
+  thumb: { width: 96, alignSelf: "stretch" },
   body: { flex: 1, padding: spacing.md, gap: 2, justifyContent: "center" },
   time: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.primary },
   title: { fontFamily: fonts.serifBold, fontSize: 17, color: colors.foreground, lineHeight: 21 },

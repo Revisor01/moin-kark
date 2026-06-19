@@ -51,25 +51,59 @@ export async function getReminderPref(): Promise<ReminderPref> {
   return DEFAULT_REMINDER;
 }
 
+const BERLIN_TZ = "Europe/Berlin";
+
+/** „Fr, 19. Juni · 12:00 Uhr" in Berlin-Zeit. */
+function formatWhen(start: Date): string {
+  const day = new Intl.DateTimeFormat("de-DE", {
+    timeZone: BERLIN_TZ,
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+  }).format(start);
+  const time = new Intl.DateTimeFormat("de-DE", {
+    timeZone: BERLIN_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(start);
+  return `${day} · ${time} Uhr`;
+}
+
+/** „heute"/„morgen"/Wochentag relativ zu now — anhand des Kalendertags in Berlin. */
+function relativeDay(start: Date, now: Date): string {
+  const dayKey = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: BERLIN_TZ }).format(d); // YYYY-MM-DD
+  const sk = dayKey(start);
+  const today = dayKey(now);
+  const tomorrow = dayKey(new Date(now.getTime() + 86400_000));
+  if (sk === today) return "Heute";
+  if (sk === tomorrow) return "Morgen";
+  return new Intl.DateTimeFormat("de-DE", { timeZone: BERLIN_TZ, weekday: "long" }).format(start);
+}
+
 /** Plant die Erinnerung(en) für ein Event gemäß Präferenz. Vergangene Zeiten werden übersprungen. */
 export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Promise<void> {
   if (IS_WEB || pref === "off") return;
   const start = new Date(f.properties.startUtc);
   const now = Date.now();
-  const triggers: { date: Date; label: string }[] = [];
+  const triggers: { date: Date; lead: string }[] = [];
 
   if (pref === "evening" || pref === "both") {
-    // Tag vor Event, 18:00 Ortszeit. Bei Event am selben Tag: 3h vorher.
-    const ev = new Date(start);
-    const evening = new Date(ev);
-    evening.setDate(ev.getDate() - 1);
+    // Vorabend 18:00 Ortszeit; ist das schon vorbei (Event heute/gleich) → 3h vorher.
+    const evening = new Date(start);
+    evening.setDate(start.getDate() - 1);
     evening.setHours(18, 0, 0, 0);
     const chosen = evening.getTime() > now ? evening : new Date(start.getTime() - 3 * 3600_000);
-    triggers.push({ date: chosen, label: "Morgen" });
+    triggers.push({ date: chosen, lead: "" });
   }
   if (pref === "2h" || pref === "both") {
-    triggers.push({ date: new Date(start.getTime() - 2 * 3600_000), label: "In 2 Stunden" });
+    triggers.push({ date: new Date(start.getTime() - 2 * 3600_000), lead: "In 2 Stunden · " });
   }
+
+  // Titel: „Erinnerung: <Event>" — Body: relativer Tag + volles Datum/Uhrzeit + Ort.
+  const place = f.properties.locationName ?? f.properties.parish ?? f.properties.kirchspiel;
+  const when = formatWhen(start);
+  const rel = relativeDay(start, new Date(now));
 
   const map = await loadMap();
   const ids: string[] = map[f.properties.id] ?? [];
@@ -78,7 +112,9 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
     const id = await Notifications.scheduleNotificationAsync({
       content: {
         title: f.properties.title,
-        body: `${t.label}: ${f.properties.parish ?? f.properties.kirchspiel}`,
+        // z.B. „In 2 Stunden · Heute, Fr 19. Juni · 12:00 Uhr — Büsum, St. Clemens"
+        body: `${t.lead}${rel}, ${when}${place ? ` — ${place}` : ""}`,
+        data: { eventId: f.properties.id },
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: t.date },
     });

@@ -15,7 +15,7 @@ interface Props {
 
 /**
  * Schwebende Steuerleiste ÜBER der Karte — kein eigener Hintergrund, nur die
- * runden Buttons (mit Shadow) heben sich ab. Wird absolut positioniert.
+ * runden, farbigen Buttons (Icon in weiß) heben sich ab. Absolut positioniert.
  */
 export default function FilterBar({
   onOpenFilters,
@@ -27,7 +27,7 @@ export default function FilterBar({
   return (
     <View style={styles.bar} pointerEvents="box-none">
       <TouchableOpacity
-        style={styles.iconBtn}
+        style={[styles.iconBtn, styles.filterBtn]}
         onPress={onOpenFilters}
         activeOpacity={0.85}
         accessibilityRole="button"
@@ -52,14 +52,14 @@ export default function FilterBar({
         accessibilityState={{ selected: highlightsOnly }}
         accessibilityLabel={highlightsOnly ? "Nur Tipps – aktiv" : "Nur Tipps anzeigen"}
       >
-        <Text style={[styles.tipIcon, highlightsOnly && styles.tipIconActive]}>★</Text>
+        <Text style={styles.tipIcon}>★</Text>
       </TouchableOpacity>
 
       <View style={styles.spacer} pointerEvents="none" />
 
       {onJumpToLocation ? (
         <TouchableOpacity
-          style={styles.iconBtn}
+          style={[styles.iconBtn, styles.locBtn]}
           onPress={onJumpToLocation}
           activeOpacity={0.85}
           accessibilityRole="button"
@@ -86,24 +86,29 @@ const styles = StyleSheet.create({
     width: BTN,
     height: BTN,
     borderRadius: BTN / 2,
-    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     ...shadow.card,
   },
+  // Alle Buttons farbig, Icons in weiß.
+  filterBtn: { backgroundColor: colors.primary },
+  tipBtn: { backgroundColor: colors.accent, marginLeft: spacing.sm },
+  // Aktiv: weißer Ring → klares „an“, ohne neue Farbe.
+  tipBtnActive: { borderWidth: 2.5, borderColor: colors.onAccent },
+  locBtn: { backgroundColor: colors.primary },
+  // Lupe: kleiner + Box drumherum, damit die rotierte Glyphe nicht abgeschnitten wird.
   filterIcon: {
-    color: colors.primary,
-    fontSize: 22,
+    color: colors.onPrimary,
+    fontSize: 19,
+    lineHeight: 22,
     transform: [{ rotate: "45deg" }],
   },
-  tipBtn: { marginLeft: spacing.sm },
-  tipBtnActive: { backgroundColor: colors.accent },
-  tipIcon: { color: colors.accent, fontSize: 22, lineHeight: 24 },
-  tipIconActive: { color: colors.onAccent },
+  tipIcon: { color: colors.onAccent, fontSize: 20, lineHeight: 22 },
   // Pfeil leicht gedreht → zeigt nach oben-rechts wie das klassische „Locate me“-Icon.
   locIcon: {
-    color: colors.primary,
-    fontSize: 20,
+    color: colors.onPrimary,
+    fontSize: 18,
+    lineHeight: 20,
     transform: [{ rotate: "-45deg" }],
   },
   badge: {
@@ -118,7 +123,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 5,
     borderWidth: 2,
-    borderColor: colors.surface,
+    borderColor: colors.background,
   },
   badgeText: { fontFamily: fonts.bodySemibold, fontSize: 11, color: colors.onAccent },
   spacer: { flex: 1 },
