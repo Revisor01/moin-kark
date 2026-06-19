@@ -33,6 +33,8 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
         style={styles.pressArea}
       >
         <View style={[styles.accent, { backgroundColor: accent }]} />
+        {/* Kein Foto → dasselbe Querformat-Platzhalterbild wie im Detail, hier quadratisch
+            mittig zugeschnitten (cover zentriert, links/rechts wird weggeschnitten). */}
         <Image
           source={p.image?.url ? { uri: p.image.url } : require("../assets/placeholder.png")}
           style={styles.thumb}
@@ -83,7 +85,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadow.card,
   },
-  pressArea: { flexDirection: "row" },
+  // Feste Kartenhöhe → ALLE Karten gleich hoch, Bild wird per cover zentriert beschnitten
+  // (egal ob echtes Bild oder Querformat-Platzhalter). Behebt den Listen-Höhen-Bug endgültig.
+  pressArea: { flexDirection: "row", height: 104 },
   cardActive: {
     borderColor: colors.primary,
     borderWidth: 2,
@@ -112,7 +116,8 @@ const styles = StyleSheet.create({
   accent: { width: 4 },
   // alignSelf:stretch → Thumbnail folgt der vom Text bestimmten Kartenhöhe (cover füllt).
   // KEIN minHeight → das Bild-Seitenverhältnis bläht die Karte nicht mehr auf (Listen-Bug).
-  thumb: { width: 96, alignSelf: "stretch" },
+  // Feste Höhe (= Kartenhöhe) → cover beschneidet jedes Bild mittig auf 96×104 (kein Aufblähen).
+  thumb: { width: 96, height: 104 },
   body: { flex: 1, padding: spacing.md, gap: 2, justifyContent: "center" },
   time: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.primary },
   title: { fontFamily: fonts.serifBold, fontSize: 17, color: colors.foreground, lineHeight: 21 },
