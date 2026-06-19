@@ -106,7 +106,8 @@ function isWithinDays(startUtc: string, now: Date, days: number): boolean {
   const start = new Date(startUtc).getTime();
   const from = now.getTime();
   const to = from + days * 86400_000;
-  return start >= from - 12 * 3600_000 && start <= to; // -12h Toleranz für laufende Events heute
+  // Vergangenes filtert bereits isPast() (über die Endzeit) — hier nur das Fenster nach vorn.
+  return start <= to;
 }
 
 function matchesCategory(f: EventFeature, category: string | null): boolean {
@@ -122,6 +123,14 @@ export interface FilterContext {
   bounds?: Bounds | null;
 }
 
+/** Ist das Event vorbei? Maßgeblich ist die Endzeit; fehlt sie, Start + 2h Kulanz. */
+function isPast(f: EventFeature, now: Date): boolean {
+  const start = new Date(f.properties.startUtc).getTime();
+  const endRaw = f.properties.endUtc ? new Date(f.properties.endUtc).getTime() : NaN;
+  const end = Number.isFinite(endRaw) && endRaw > start ? endRaw : start + 2 * 3600_000;
+  return end < now.getTime();
+}
+
 export function applyFilters(
   features: EventFeature[],
   filters: Filters,
@@ -129,10 +138,11 @@ export function applyFilters(
 ): EventFeature[] {
   const now = ctx.now ?? new Date();
   return features.filter((f) => {
-    // Tipps-Modus: nur Highlights, ABER über alle Zeiten (Datumsfilter aus). Vergangenes raus.
+    // Vergangene Events IMMER raus (Endzeit liegt in der Vergangenheit).
+    if (isPast(f, now)) return false;
+    // Tipps-Modus: nur Highlights, über alle künftigen Termine (Datumsfilter aus).
     if (filters.highlightsOnly) {
       if (!f.properties.highlight) return false;
-      if (new Date(f.properties.startUtc).getTime() < now.getTime() - 12 * 3600_000) return false;
     } else {
       if (!matchesDate(f.properties.startUtc, filters.date, now)) return false;
     }

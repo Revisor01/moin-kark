@@ -146,9 +146,18 @@ export default function Home() {
     return () => sub.remove();
   }, []);
 
+  // Das Listen-Sheet verdeckt den unteren Teil der Karte. Die Liste soll sich aber NUR auf den
+  // SICHTBAREN Ausschnitt (über dem Sheet) beziehen → unteren Bounds-Anteil abschneiden.
+  // 0.45 ≈ Sheet im Standard-Snap (MID). Web hat kein Sheet → volle Bounds.
+  const visibleBounds = useMemo<Bounds | null>(() => {
+    if (!bounds || isWide) return bounds;
+    const span = bounds.north - bounds.south;
+    return { ...bounds, south: bounds.south + span * 0.45 };
+  }, [bounds, isWide]);
+
   const filtered = useMemo(
-    () => sortByStart(applyFilters(allFeatures, filters, { location, bounds })),
-    [allFeatures, filters, location, bounds]
+    () => sortByStart(applyFilters(allFeatures, filters, { location, bounds: visibleBounds })),
+    [allFeatures, filters, location, visibleBounds]
   );
 
   // Gemerkte Events als Feature-Liste (fürs Profil).

@@ -153,21 +153,22 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
           </View>
         </View>
 
-        {/* NUR die Beschreibung scrollt — nimmt den Restplatz, Maps-Button bleibt fix unten. */}
-        {desc ? (
-          <>
-            <View style={styles.descDivider} />
-            <ScrollView
-              style={styles.descScroll}
-              showsVerticalScrollIndicator
-              contentContainerStyle={styles.descScrollInner}
-            >
-              <Text style={styles.desc}>{desc}</Text>
-            </ScrollView>
-          </>
-        ) : (
-          <View style={styles.descSpacer} />
-        )}
+        {/* NUR die Beschreibung scrollt — eigener flex:1-Container, Maps-Button bleibt fix unten. */}
+        <View style={styles.descArea}>
+          {desc ? (
+            <>
+              <View style={styles.descDivider} />
+              <ScrollView
+                style={styles.descScroll}
+                showsVerticalScrollIndicator
+                contentContainerStyle={styles.descScrollInner}
+                nestedScrollEnabled
+              >
+                <Text style={styles.desc}>{desc}</Text>
+              </ScrollView>
+            </>
+          ) : null}
+        </View>
 
         {/* Fixer Maps-Button unten. */}
         <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
@@ -228,6 +229,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   // Nur die Beschreibung scrollt — nimmt den Restplatz zwischen fixer Kopf- und Fußsektion.
+  // descArea füllt den Restraum zwischen fixer Kopf- und Fußsektion; die ScrollView darin scrollt.
+  descArea: { flex: 1, minHeight: 0 },
   descScroll: { flex: 1 },
   descScrollInner: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
   descDivider: {
@@ -236,7 +239,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xl,
     marginBottom: spacing.md,
   },
-  descSpacer: { flex: 1 },
   footer: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
@@ -247,6 +249,7 @@ const styles = StyleSheet.create({
   hero: {
     width: "100%",
     height: 200,
+    flexShrink: 0, // fixes Bild — nicht zusammendrücken lassen
     // Bild selbst auf die obere Sheet-Rundung clippen (Web-Subpixel-Glitch vermeiden)
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
@@ -256,7 +259,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
   },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, gap: spacing.xs },
+  content: { flexShrink: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, gap: spacing.xs },
   time: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
   title: {
     fontFamily: fonts.serifBold,
