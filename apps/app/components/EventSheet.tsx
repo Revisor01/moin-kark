@@ -76,7 +76,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
           <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
         ) : (
           <Image
-            source={require("../assets/splash-icon.png")}
+            source={require("../assets/placeholder.png")}
             style={styles.hero}
             resizeMode="cover"
           />
@@ -104,74 +104,79 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
           <Text style={styles.closeText}>×</Text>
         </TouchableOpacity>
 
-        {/* ALLES außer Bild scrollbar. flexShrink:1 → ScrollView nimmt nur den Raum unter
-            dem fixen Bild und scrollt intern, statt den Sheet über maxHeight hinaus zu dehnen. */}
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingBottom: spacing.xl + insets.bottom },
-          ]}
-        >
-          <View style={styles.content}>
-            <Text style={styles.time}>{time}</Text>
-            <Text style={styles.title}>{p.title}</Text>
+        {/* Fixe Kopfsektion — scrollt NICHT. */}
+        <View style={styles.content}>
+          <Text style={styles.time}>{time}</Text>
+          <Text style={styles.title} numberOfLines={2}>
+            {p.title}
+          </Text>
 
-            <View style={styles.badges}>
-              {p.highlight ? (
-                <View style={styles.highlightBadge}>
-                  <Text style={styles.highlightBadgeText}>★ Tipp</Text>
-                </View>
-              ) : null}
-              {cat ? (
-                <View style={[styles.badge, { backgroundColor: accent }]}>
-                  <Text style={styles.badgeText}>{cat}</Text>
-                </View>
-              ) : null}
-              <View style={styles.badgeOutline}>
-                <Text style={styles.badgeOutlineText}>{p.kirchspiel}</Text>
+          <View style={styles.badges}>
+            {p.highlight ? (
+              <View style={styles.highlightBadge}>
+                <Text style={styles.highlightBadgeText}>★ Tipp</Text>
               </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.metaBlock}>
-              {p.parish ? <Meta label="Kirchengemeinde" value={p.parish} /> : null}
-              <Meta label="Kirchspiel" value={p.kirchspiel} />
-              {p.locationName ? <Meta label="Ort" value={p.locationName} /> : null}
-              {address ? <Meta label="Adresse" value={address} /> : null}
-              {p.contributor ? <Meta label="Mitwirkung" value={p.contributor} /> : null}
-            </View>
-
-            {desc ? (
-              <>
-                <View style={styles.divider} />
-                <Text style={styles.desc}>{desc}</Text>
-              </>
             ) : null}
-
-            <TouchableOpacity
-              style={styles.mapButton}
-              activeOpacity={0.85}
-              onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? p.title)}
-            >
-              <Text style={styles.mapButtonText}>
-                In {mapsApp === "google" ? "Google Maps" : "Apple Karten"} öffnen
-              </Text>
-            </TouchableOpacity>
+            {cat ? (
+              <View style={[styles.badge, { backgroundColor: accent }]}>
+                <Text style={styles.badgeText}>{cat}</Text>
+              </View>
+            ) : null}
+            <View style={styles.badgeOutline}>
+              <Text style={styles.badgeOutlineText}>{p.kirchspiel}</Text>
+            </View>
           </View>
-        </ScrollView>
+
+          <View style={styles.divider} />
+
+          <View style={styles.metaBlock}>
+            {p.parish ? <Meta label="Kirchengemeinde" value={p.parish} /> : null}
+            <Meta label="Kirchspiel" value={p.kirchspiel} />
+            {p.locationName ? <Meta label="Ort" value={p.locationName} /> : null}
+            {address ? <Meta label="Adresse" value={address} /> : null}
+            {p.contributor ? <Meta label="Mitwirkung" value={p.contributor} /> : null}
+            {p.price ? <Meta label="Eintritt" value={p.price} highlight /> : null}
+          </View>
+        </View>
+
+        {/* NUR die Beschreibung scrollt — nimmt den Restplatz, Maps-Button bleibt fix unten. */}
+        {desc ? (
+          <>
+            <View style={styles.descDivider} />
+            <ScrollView
+              style={styles.descScroll}
+              showsVerticalScrollIndicator
+              contentContainerStyle={styles.descScrollInner}
+            >
+              <Text style={styles.desc}>{desc}</Text>
+            </ScrollView>
+          </>
+        ) : (
+          <View style={styles.descSpacer} />
+        )}
+
+        {/* Fixer Maps-Button unten. */}
+        <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
+          <TouchableOpacity
+            style={styles.mapButton}
+            activeOpacity={0.85}
+            onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? p.title)}
+          >
+            <Text style={styles.mapButtonText}>
+              In {mapsApp === "google" ? "Google Maps" : "Apple Karten"} öffnen
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Pressable>
     </Pressable>
   );
 }
 
-function Meta({ label, value }: { label: string; value: string }) {
+function Meta({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <View style={styles.metaRow}>
       <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={styles.metaValue}>{value}</Text>
+      <Text style={[styles.metaValue, highlight && styles.metaValueHighlight]}>{value}</Text>
     </View>
   );
 }
@@ -208,8 +213,23 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.85)",
     zIndex: 2,
   },
-  scrollView: { flex: 1 },
-  scroll: { paddingBottom: spacing.xl },
+  // Nur die Beschreibung scrollt — nimmt den Restplatz zwischen fixer Kopf- und Fußsektion.
+  descScroll: { flex: 1 },
+  descScrollInner: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+  descDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  descSpacer: { flex: 1 },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+  },
   hero: {
     width: "100%",
     height: 200,
@@ -222,7 +242,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
   },
-  content: { padding: spacing.xl, gap: spacing.xs },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, gap: spacing.xs },
   time: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
   title: {
     fontFamily: fonts.serifBold,
@@ -264,6 +284,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "right",
   },
+  metaValueHighlight: { fontFamily: fonts.bodySemibold, color: colors.primary },
   desc: { fontFamily: fonts.serif, fontSize: 15, color: colors.foreground, lineHeight: 22 },
   mapButton: {
     marginTop: spacing.lg,

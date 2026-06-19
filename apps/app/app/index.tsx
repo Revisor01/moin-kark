@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -121,6 +122,16 @@ export default function Home() {
           cancelForEvent(id);
           const f = allFeatures.find((x) => x.properties.id === id);
           if (f) scheduleForEvent(f, reminderPref);
+        }
+      }
+      // Einmalig nach dem Update: ALLE Reminder neu planen, damit alte (falsch
+      // formatierte „Morgen"-) Benachrichtigungen durch die korrekte Variante ersetzt werden.
+      if (reminderPref !== "off") {
+        const KEY = "kkd:reminderFormatV2";
+        if (!(await AsyncStorage.getItem(KEY))) {
+          const savedNow = allFeatures.filter((f) => saved.has(f.properties.id));
+          await rescheduleAll(savedNow, reminderPref);
+          await AsyncStorage.setItem(KEY, "1");
         }
       }
     })();
