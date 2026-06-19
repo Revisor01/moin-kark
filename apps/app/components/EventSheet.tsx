@@ -51,6 +51,19 @@ function htmlToText(html?: string): string {
   return stripMarkers(text);
 }
 
+/**
+ * Bereitet das Preis-Feld auf. ChurchDesk liefert es uneinheitlich:
+ * „10,00 € / Monat" (hat schon €), „Eintritt frei …" (Text), oder „15" (nackte Zahl).
+ * → „€" NUR an reine Zahlen anhängen, sonst unverändert lassen (kein „€€"/„frei €").
+ */
+function formatPrice(raw?: string): string {
+  const v = raw?.trim();
+  if (!v) return "";
+  // Reine Zahl (ggf. mit Dezimalkomma/-punkt) → Euro anhängen.
+  if (/^\d+([.,]\d{1,2})?$/.test(v)) return `${v} €`;
+  return v;
+}
+
 export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggleSave }: Props) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
@@ -67,6 +80,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
     .filter(Boolean)
     .join(", ");
   const [lng, lat] = feature.geometry.coordinates;
+  const price = formatPrice(p.price);
 
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
@@ -135,7 +149,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             {p.locationName ? <Meta label="Ort" value={p.locationName} /> : null}
             {address ? <Meta label="Adresse" value={address} /> : null}
             {p.contributor ? <Meta label="Mitwirkung" value={p.contributor} /> : null}
-            {p.price ? <Meta label="Eintritt" value={p.price} highlight /> : null}
+            {price ? <Meta label="Eintritt" value={price} highlight /> : null}
           </View>
         </View>
 

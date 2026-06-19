@@ -16,6 +16,20 @@ function specificity(orgId: number): number {
   return 2; // Einzelgemeinden
 }
 
+/**
+ * Kategorien, die NICHT öffentlich auf der Karte erscheinen sollen (normalisiert, lowercase).
+ * → siehe knowledge: ausgeschlossene Inhalte.
+ * - "externe buchung": Fremdnutzungen der Räume (DRK-Yoga, SSV, Liedertafel-Proben etc.,
+ *   v.a. KG Nordhastedt) — keine kirchlichen Veranstaltungen. (Simon, 19.06.2026)
+ */
+const EXCLUDED_CATEGORIES = new Set<string>(["externe buchung"]);
+
+function isExcluded(ev: { categories?: { title: string }[] }): boolean {
+  return (ev.categories ?? []).some((c) =>
+    EXCLUDED_CATEGORIES.has(c.title.trim().toLowerCase())
+  );
+}
+
 export async function buildFeatureCollection(
   from: Date,
   to: Date
@@ -40,6 +54,7 @@ export async function buildFeatureCollection(
     orgsOk++;
     const { org, events } = r.value;
     for (const ev of events) {
+      if (isExcluded(ev)) continue; // ausgeschlossene Kategorien (z.B. „Externe Buchung")
       const spec = specificity(org.id);
       const existing = byId.get(ev.id);
       if (existing && existing.spec >= spec) continue; // schon spezifischer erfasst

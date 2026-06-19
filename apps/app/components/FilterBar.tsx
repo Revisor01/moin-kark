@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors, fonts, shadow, spacing } from "../lib/theme";
 
 interface Props {
@@ -13,9 +14,10 @@ interface Props {
   onToggleHighlights: () => void;
 }
 
+
 /**
- * Schwebende Steuerleiste ÜBER der Karte — kein eigener Hintergrund, nur die
- * runden, farbigen Buttons (Icon in weiß) heben sich ab. Absolut positioniert.
+ * Schwebende Steuerleiste ÜBER der Karte. Buttons im Stil des Herz-Icons:
+ * weißer Kreis + feine Umrandung + farbiges Icon. Jede Funktion eine eigene Icon-Farbe.
  */
 export default function FilterBar({
   onOpenFilters,
@@ -27,7 +29,7 @@ export default function FilterBar({
   return (
     <View style={styles.bar} pointerEvents="box-none">
       <TouchableOpacity
-        style={[styles.iconBtn, styles.filterBtn]}
+        style={styles.iconBtn}
         onPress={onOpenFilters}
         activeOpacity={0.85}
         accessibilityRole="button"
@@ -35,7 +37,7 @@ export default function FilterBar({
           activeCount > 0 ? `Filter (${activeCount} aktiv)` : "Filter öffnen"
         }
       >
-        <Text style={styles.filterIcon}>⚲</Text>
+        <Ionicons name="search" size={22} color={colors.primary} />
         {activeCount > 0 ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{activeCount}</Text>
@@ -52,21 +54,24 @@ export default function FilterBar({
         accessibilityState={{ selected: highlightsOnly }}
         accessibilityLabel={highlightsOnly ? "Nur Tipps – aktiv" : "Nur Tipps anzeigen"}
       >
-        <Text style={styles.tipIcon}>★</Text>
+        <Ionicons
+          name="star"
+          size={21}
+          color={highlightsOnly ? colors.onAccent : colors.accent}
+        />
       </TouchableOpacity>
 
       <View style={styles.spacer} pointerEvents="none" />
 
       {onJumpToLocation ? (
         <TouchableOpacity
-          style={[styles.iconBtn, styles.locBtn]}
+          style={styles.iconBtn}
           onPress={onJumpToLocation}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Zu meinem Standort"
         >
-          {/* Navigations-Pfeil wie in Apple/Google Maps */}
-          <Text style={styles.locIcon}>➤</Text>
+          <Ionicons name="navigate" size={22} color={colors.primary} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -82,35 +87,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
+  // Wie das Herz-Icon: weißer Kreis, feine Umrandung, kräftiger Schatten zur Karte.
   iconBtn: {
     width: BTN,
     height: BTN,
     borderRadius: BTN / 2,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
     ...shadow.card,
   },
-  // Alle Buttons farbig, Icons in weiß.
-  filterBtn: { backgroundColor: colors.primary },
-  tipBtn: { backgroundColor: colors.accent, marginLeft: spacing.sm },
-  // Aktiv: weißer Ring → klares „an“, ohne neue Farbe.
-  tipBtnActive: { borderWidth: 2.5, borderColor: colors.onAccent },
-  locBtn: { backgroundColor: colors.primary },
-  // Lupe: kleiner + Box drumherum, damit die rotierte Glyphe nicht abgeschnitten wird.
-  filterIcon: {
-    color: colors.onPrimary,
-    fontSize: 19,
-    lineHeight: 22,
-    transform: [{ rotate: "45deg" }],
-  },
-  tipIcon: { color: colors.onAccent, fontSize: 20, lineHeight: 22 },
-  // Pfeil leicht gedreht → zeigt nach oben-rechts wie das klassische „Locate me“-Icon.
-  locIcon: {
-    color: colors.onPrimary,
-    fontSize: 18,
-    lineHeight: 20,
-    transform: [{ rotate: "-45deg" }],
-  },
+  tipBtn: { marginLeft: spacing.sm },
+  tipBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   badge: {
     position: "absolute",
     top: -2,
@@ -123,7 +113,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 5,
     borderWidth: 2,
-    borderColor: colors.background,
+    borderColor: colors.surface,
   },
   badgeText: { fontFamily: fonts.bodySemibold, fontSize: 11, color: colors.onAccent },
   spacer: { flex: 1 },
