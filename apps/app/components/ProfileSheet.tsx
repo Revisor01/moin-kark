@@ -50,7 +50,11 @@ export default function ProfileSheet({
           </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+        >
           {/* Karten-App */}
           <Text style={styles.sectionLabel}>Karten-App</Text>
           <View style={styles.segment}>
@@ -188,6 +192,7 @@ const styles = StyleSheet.create({
   },
   heading: { fontFamily: fonts.displayBold, fontSize: 24, color: colors.foreground },
   close: { fontSize: 28, color: colors.muted, lineHeight: 30 },
+  scrollView: { flexShrink: 1 },
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   sectionLabel: {
     fontFamily: fonts.bodySemibold,

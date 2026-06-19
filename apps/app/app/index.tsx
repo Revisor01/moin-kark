@@ -254,6 +254,10 @@ export default function Home() {
       onOpenFilters={() => setFiltersOpen(true)}
       activeCount={activeCount}
       onJumpToLocation={locStatus !== "denied" ? onJumpToLocation : undefined}
+      highlightsOnly={filters.highlightsOnly}
+      onToggleHighlights={() =>
+        setFilters((f) => ({ ...f, highlightsOnly: !f.highlightsOnly }))
+      }
     />
   );
 

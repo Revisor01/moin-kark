@@ -71,11 +71,15 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
       <Pressable style={[styles.sheet, { height: sheetHeight }]} onPress={(e) => e.stopPropagation()}>
-        {/* FIXES Bild — scrollt nicht mit */}
+        {/* FIXES Bild — scrollt nicht mit. Kein Event-Bild → unser Marken-Motiv als Platzhalter. */}
         {p.image?.url ? (
           <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
         ) : (
-          <View style={[styles.hero, styles.heroEmpty, { backgroundColor: accent }]} />
+          <Image
+            source={require("../assets/splash-icon.png")}
+            style={styles.hero}
+            resizeMode="cover"
+          />
         )}
         <View style={styles.grabber} pointerEvents="none" />
 
@@ -260,7 +264,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "right",
   },
-  desc: { fontFamily: fonts.serif, fontSize: 17, color: colors.foreground, lineHeight: 25 },
+  desc: { fontFamily: fonts.serif, fontSize: 15, color: colors.foreground, lineHeight: 22 },
   mapButton: {
     marginTop: spacing.lg,
     backgroundColor: colors.primary,

@@ -36,9 +36,11 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
         {p.image?.url ? (
           <Image source={{ uri: p.image.url }} style={styles.thumb} resizeMode="cover" />
         ) : (
-          <View style={[styles.thumb, styles.thumbEmpty]}>
-            <Text style={styles.thumbInitial}>{p.title.slice(0, 1)}</Text>
-          </View>
+          <Image
+            source={require("../assets/splash-icon.png")}
+            style={styles.thumb}
+            resizeMode="cover"
+          />
         )}
         <View style={styles.body}>
           <Text style={styles.time}>{time}</Text>
