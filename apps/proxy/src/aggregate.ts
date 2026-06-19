@@ -18,11 +18,18 @@ function specificity(orgId: number): number {
 
 /**
  * Kategorien, die NICHT öffentlich auf der Karte erscheinen sollen (normalisiert, lowercase).
- * → siehe knowledge: ausgeschlossene Inhalte.
- * - "externe buchung": Fremdnutzungen der Räume (DRK-Yoga, SSV, Liedertafel-Proben etc.,
- *   v.a. KG Nordhastedt) — keine kirchlichen Veranstaltungen. (Simon, 19.06.2026)
+ * → siehe knowledge / Memory: ausgeschlossene Inhalte. Alle Stand 19.06.2026 (Simons Vorgabe).
+ * - "externe buchung": Fremdnutzungen der Räume (DRK-Yoga, SSV, Liedertafel-Proben etc., v.a. Nordhastedt).
+ * - "interne veranstaltungen": z.B. Kirchengemeinderatssitzung — nicht öffentlich.
+ * - "amtshandlungen -intern-": im Namen schon intern (NICHT die normalen „amtshandlungen" = öffentl. Tauffeste).
+ * - "konfirmanden": wiederkehrender Konfi-Unterricht für angemeldete Konfis, kein offenes Event.
  */
-const EXCLUDED_CATEGORIES = new Set<string>(["externe buchung"]);
+const EXCLUDED_CATEGORIES = new Set<string>([
+  "externe buchung",
+  "interne veranstaltungen",
+  "amtshandlungen -intern-",
+  "konfirmanden",
+]);
 
 function isExcluded(ev: { categories?: { title: string }[] }): boolean {
   return (ev.categories ?? []).some((c) =>
