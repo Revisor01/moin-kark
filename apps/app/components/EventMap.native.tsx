@@ -28,8 +28,13 @@ export default function EventMap({
 
   useEffect(() => {
     if (!flyToUserToken || !userLocation) return;
+    // Das Listen-Sheet verdeckt den unteren Kartenteil → Position NICHT in die Mitte der
+    // Gesamtkarte, sondern in die Mitte des SICHTBAREN oberen Bereichs setzen. Dazu das
+    // Kartenzentrum nach Süden verschieben (Position erscheint dadurch weiter oben).
+    // Offset ≈ Bruchteil der sichtbaren lat-Spanne bei Zoom 11.5 (empirisch ~0.06° passt).
+    const LAT_OFFSET = 0.055;
     cameraRef.current?.flyTo({
-      center: [userLocation.lng, userLocation.lat],
+      center: [userLocation.lng, userLocation.lat - LAT_OFFSET],
       zoom: 11.5,
       duration: 700,
     });
