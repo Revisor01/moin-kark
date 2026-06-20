@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Image,
   Pressable,
@@ -79,22 +80,25 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
 
   // Swipe-down zum Schließen (nur Kopfbereich/Grabber, damit die desc-ScrollView frei bleibt).
   const translateY = useSharedValue(0);
-  const closeSheet = () => {
-    translateY.value = 0;
-    onClose();
-  };
+  // translateY NICHT im close zurücksetzen → kein Aufblitzen (Sheet bliebe sonst 1 Frame oben sichtbar).
+  // Beim Öffnen eines neuen Events wieder auf 0 (s. Effect unten).
   const swipeDown = Gesture.Pan()
     .onUpdate((e) => {
       translateY.value = Math.max(0, e.translationY);
     })
     .onEnd((e) => {
       if (e.translationY > 120 || e.velocityY > 800) {
-        translateY.value = withTiming(sheetHeight, { duration: 180 }, () => runOnJS(closeSheet)());
+        translateY.value = withTiming(sheetHeight, { duration: 180 }, () => runOnJS(onClose)());
       } else {
         translateY.value = withTiming(0, { duration: 150 });
       }
     });
   const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+
+  // Neues Event geöffnet → Sheet von oben einsetzen (translateY zurück auf 0).
+  useEffect(() => {
+    if (feature) translateY.value = 0;
+  }, [feature, translateY]);
 
   if (!feature) return null;
   const p = feature.properties;
