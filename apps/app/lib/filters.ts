@@ -124,7 +124,7 @@ export interface FilterContext {
 }
 
 /** Ist das Event vorbei? Maßgeblich ist die Endzeit; fehlt sie, Start + 2h Kulanz. */
-function isPast(f: EventFeature, now: Date): boolean {
+export function isPast(f: EventFeature, now: Date = new Date()): boolean {
   const start = new Date(f.properties.startUtc).getTime();
   const endRaw = f.properties.endUtc ? new Date(f.properties.endUtc).getTime() : NaN;
   const end = Number.isFinite(endRaw) && endRaw > start ? endRaw : start + 2 * 3600_000;

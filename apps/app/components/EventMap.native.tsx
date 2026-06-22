@@ -8,6 +8,7 @@ import {
   GeoJSONSource,
   Layer,
   type CameraRef,
+  type GeoJSONSourceRef,
 } from "@maplibre/maplibre-react-native";
 import type { EventFeatureCollection } from "@kkd/shared";
 import { MAP_STYLE, SOURCE_ID, sourceConfig } from "../lib/mapStyle";
@@ -23,6 +24,7 @@ export default function EventMap({
   flyToUserToken,
 }: EventMapProps) {
   const cameraRef = useRef<CameraRef>(null);
+  const sourceRef = useRef<GeoJSONSourceRef>(null);
 
   const data: EventFeatureCollection = { type: "FeatureCollection", features };
 
@@ -41,16 +43,28 @@ export default function EventMap({
     });
   }, [flyToUserToken, userLocation]);
 
-  const onSourcePress = (e: any) => {
+  const onSourcePress = async (e: any) => {
     // MapLibre RN v11: Features liegen unter e.nativeEvent.features
     const feat = e?.nativeEvent?.features?.[0] ?? e?.features?.[0];
     if (!feat) return;
     if (feat.properties?.point_count) {
-      // Cluster (auch große) → auf nächste Ebene reinzoomen
+      // Cluster → exakt so weit reinzoomen, dass er sich in die nächste Ebene
+      // aufteilt (Sub-Cluster oder Einzel-Spots). Tippt man dann auf einen der
+      // kleineren, splittet er weiter — bis zum einzelnen Event.
       const coords = feat.geometry?.coordinates;
-      if (coords) {
-        cameraRef.current?.flyTo({ center: coords, zoom: 13, duration: 450 });
+      const clusterId = feat.properties?.cluster_id;
+      if (!coords) return;
+      let zoom = 13;
+      try {
+        if (clusterId != null && sourceRef.current) {
+          const exp = await sourceRef.current.getClusterExpansionZoom(Number(clusterId));
+          // Etwas über den Split-Zoom hinaus, damit die Aufteilung sicher sichtbar wird.
+          if (Number.isFinite(exp)) zoom = exp + 0.5;
+        }
+      } catch {
+        // Fallback bleibt zoom = 13.
       }
+      cameraRef.current?.flyTo({ center: coords, zoom, duration: 450 });
       return;
     }
     onSelect(Number(feat.properties?.id));
@@ -122,6 +136,7 @@ export default function EventMap({
 
         {/* Events */}
         <GeoJSONSource
+          ref={sourceRef}
           id={SOURCE_ID}
           data={data as any}
           cluster

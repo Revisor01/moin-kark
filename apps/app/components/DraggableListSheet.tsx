@@ -51,6 +51,21 @@ export default function DraggableListSheet({
     sheetHeight.value = withSpring(target, SPRING);
   };
 
+  // Tipp auf den Griff → nächstgrößere Stufe (small→mid→large), von large zurück auf small.
+  const tap = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd(() => {
+      const v = sheetHeight.value;
+      // Aktuelle Stufe grob bestimmen und eine hochschalten (wrap-around).
+      const midThreshold = (heights.small + heights.mid) / 2;
+      const largeThreshold = (heights.mid + heights.large) / 2;
+      let target: number;
+      if (v < midThreshold) target = heights.mid;
+      else if (v < largeThreshold) target = heights.large;
+      else target = heights.small;
+      snapTo(target);
+    });
+
   const pan = Gesture.Pan()
     .onStart(() => {
       startHeight.value = sheetHeight.value;
@@ -90,8 +105,8 @@ export default function DraggableListSheet({
     <Animated.View style={[styles.sheetShadow, animatedStyle]}>
       {/* Innere View: clippt die runden Ecken + Liste, trägt Rahmen/Hintergrund. */}
       <View style={styles.sheetInner}>
-        {/* Griffbereich (nur dieser reagiert auf Drag → Liste bleibt scrollbar) */}
-        <GestureDetector gesture={pan}>
+        {/* Griffbereich: Drag ODER Tipp (Tipp = eine Stufe größer) */}
+        <GestureDetector gesture={Gesture.Race(pan, tap)}>
           <View style={styles.handleArea}>
             <View style={styles.grabber} />
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}

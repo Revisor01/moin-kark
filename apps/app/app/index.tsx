@@ -18,6 +18,7 @@ import FilterBar from "../components/FilterBar";
 import FilterSheet from "../components/FilterSheet";
 import ProfileSheet from "../components/ProfileSheet";
 import DraggableListSheet from "../components/DraggableListSheet";
+import OnboardingOverlay from "../components/OnboardingOverlay";
 import { useCategories, useEvents } from "../lib/hooks/useEvents";
 import { useLocation } from "../lib/hooks/useLocation";
 import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
@@ -28,11 +29,12 @@ import {
   scheduleForEvent,
   type ReminderPref,
 } from "../lib/reminders";
-import { syncSavedEvents } from "../lib/savedSync";
+import { syncSavedEvents, loadSnapshotStartTimes } from "../lib/savedSync";
 import {
   DEFAULT_FILTERS,
   applyFilters,
   distanceKm,
+  isPast,
   sortByStart,
   type Bounds,
   type Filters,
@@ -50,7 +52,7 @@ export default function Home() {
   const { data: categories } = useCategories();
   const { location, status: locStatus, request: requestLocation } = useLocation();
   const { mapsApp, setMapsApp } = useMapsApp();
-  const { isSaved, toggle: rawToggleSave, saved, loaded: savedLoaded } = useSavedEvents();
+  const { isSaved, toggle: rawToggleSave, saved, removeMany, loaded: savedLoaded } = useSavedEvents();
   const { pref: reminderPref, setPref: setReminderPref } = useReminderPref();
 
   // Standort beim Start einmalig anfragen (opt-in System-Dialog) → Marker direkt sichtbar.
@@ -66,6 +68,19 @@ export default function Home() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const [didInitialZoom, setDidInitialZoom] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Onboarding nur beim allerersten Start zeigen.
+  const ONBOARDING_KEY = "kkd:onboardingSeen";
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((v) => {
+      if (!v) setShowOnboarding(true);
+    });
+  }, []);
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    AsyncStorage.setItem(ONBOARDING_KEY, "1").catch(() => {});
+  };
 
   const allFeatures = data?.features ?? [];
 
@@ -114,6 +129,26 @@ export default function Home() {
     didSync.current = true;
     (async () => {
       const ids = [...saved];
+
+      // Vergangene Likes dauerhaft aufräumen — sowohl Events, die noch im Feed
+      // stehen (über isPast) als auch verwaiste (nicht mehr im Feed), deren
+      // Startzeit aus dem Snapshot in der Vergangenheit liegt.
+      const byId = new Map(allFeatures.map((f) => [f.properties.id, f]));
+      const snapTimes = await loadSnapshotStartTimes();
+      const nowMs = Date.now();
+      const pastIds = ids.filter((id) => {
+        const f = byId.get(id);
+        if (f) return isPast(f);
+        const startUtc = snapTimes[id];
+        // Verwaist + Startzeit vorbei → war ein vergangenes Event → entfernen.
+        // Verwaist ohne bekannte Startzeit → in Ruhe lassen (kein Snapshot).
+        return startUtc ? new Date(startUtc).getTime() < nowMs : false;
+      });
+      if (pastIds.length) {
+        removeMany(pastIds);
+        for (const id of pastIds) cancelForEvent(id);
+      }
+
       const res = await syncSavedEvents(ids, allFeatures);
       // Reminder für entfallene/verschobene Events neu planen.
       if ((res.removed.length || res.changed.length) && reminderPref !== "off") {
@@ -160,11 +195,18 @@ export default function Home() {
     [allFeatures, filters, location, visibleBounds]
   );
 
-  // Gemerkte Events als Feature-Liste (fürs Profil).
+  // Gemerkte Events als Feature-Liste (fürs Profil) — vergangene fliegen sofort raus.
   const savedFeatures = useMemo(
-    () => sortByStart(allFeatures.filter((f) => saved.has(f.properties.id))),
+    () =>
+      sortByStart(
+        allFeatures.filter((f) => saved.has(f.properties.id) && !isPast(f))
+      ),
     [allFeatures, saved]
   );
+
+  // Counter zeigt nur künftige Likes. Solange die Daten noch nicht da sind,
+  // fällt er auf die rohe Set-Größe zurück (besser als 0).
+  const savedCount = allFeatures.length > 0 ? savedFeatures.length : saved.size;
 
 
   // Karten-Pins folgen denselben Filtern, aber NICHT dem Viewport (sonst verschwinden Pins
@@ -218,9 +260,9 @@ export default function Home() {
         accessibilityLabel="Profil"
       >
         <Text style={styles.profileIcon}>♥</Text>
-        {saved.size > 0 ? (
+        {savedCount > 0 ? (
           <View style={styles.profileBadge}>
-            <Text style={styles.profileBadgeText}>{saved.size}</Text>
+            <Text style={styles.profileBadgeText}>{savedCount}</Text>
           </View>
         ) : null}
       </TouchableOpacity>
@@ -333,6 +375,7 @@ export default function Home() {
           isSaved={selectedFeature ? isSaved(selectedFeature.properties.id) : false}
           onToggleSave={toggleSave}
         />
+        <OnboardingOverlay visible={showOnboarding} onDone={dismissOnboarding} />
       </View>
     );
   }
@@ -364,6 +407,7 @@ export default function Home() {
         isSaved={selectedFeature ? isSaved(selectedFeature.properties.id) : false}
         onToggleSave={toggleSave}
       />
+      <OnboardingOverlay visible={showOnboarding} onDone={dismissOnboarding} />
     </View>
   );
 }
