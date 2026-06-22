@@ -11,6 +11,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "de.godsapp.kkdithkarte",
+      "icon": {
+        "light": "./assets/icon-ios-light.png",
+        "dark": "./assets/icon-ios-dark.png",
+        "tinted": "./assets/icon-ios-tinted.png"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte.",
