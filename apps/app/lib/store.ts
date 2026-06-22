@@ -44,7 +44,22 @@ export function useSavedEvents() {
 
   const isSaved = useCallback((id: number) => saved.has(id), [saved]);
 
-  return { saved, isSaved, toggle, persist, loaded };
+  // Mehrere IDs auf einmal entfernen (z. B. vergangene Events automatisch aufräumen).
+  const removeMany = useCallback((ids: number[]) => {
+    if (ids.length === 0) return;
+    setSaved((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (next.delete(id)) changed = true;
+      }
+      if (!changed) return prev;
+      AsyncStorage.setItem(SAVED_KEY, JSON.stringify([...next])).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  return { saved, isSaved, toggle, persist, removeMany, loaded };
 }
 
 // --- Karten-App-Präferenz ---

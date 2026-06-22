@@ -111,6 +111,15 @@ export async function syncSavedEvents(
   return result;
 }
 
+/** Gemerkte Start-Zeiten aus dem letzten Snapshot (id -> startUtc), auch für Events,
+ *  die nicht mehr im Feed stehen. Dient dem Aufräumen vergangener Likes. */
+export async function loadSnapshotStartTimes(): Promise<Record<number, string>> {
+  const snap = await loadSnap();
+  const out: Record<number, string> = {};
+  for (const [id, s] of Object.entries(snap)) out[Number(id)] = s.startUtc;
+  return out;
+}
+
 /** Snapshot neu aufbauen: nur noch gemerkte, existierende Events. */
 async function rebuildSnapshot(savedIds: number[], all: EventFeature[]) {
   const byId = new Map(all.map((f) => [f.properties.id, f]));
