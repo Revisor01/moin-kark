@@ -32,8 +32,11 @@ export function useEvents() {
   // Spinner nur, wenn weder frische Daten noch Cache vorliegen
   // (und der Cache-Check schon gelaufen ist, damit kein Aufblitzen entsteht).
   const isLoading = !data && (!cacheChecked || query.isLoading);
+  // Fehlerseite NUR, wenn wir wirklich nichts zeigen können. Schlägt der
+  // Netz-Fetch fehl, wir haben aber Cache-Daten → still anzeigen statt „Nanu".
+  const isError = query.isError && !data;
 
-  return { ...query, data, isLoading };
+  return { ...query, data, isLoading, isError };
 }
 
 export function useCategories() {
