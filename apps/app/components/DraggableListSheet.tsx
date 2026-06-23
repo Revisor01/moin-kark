@@ -20,9 +20,13 @@ interface Props {
   subtitle?: string;
 }
 
-// Snap-Punkte als Anteil der verfügbaren Höhe, gemessen als „sichtbare Sheet-Höhe".
-const SNAP_SMALL = 0.16; // Karte groß, ~1 Event guckt raus
-const SNAP_MID = 0.5;
+// Drei feste Stufen (sichtbare Sheet-Höhe von unten gemessen):
+//  1) nur der Griff             → HANDLE_HEIGHT
+//  2) Griff + 1 voller Eintrag  → Handle + Listen-Top-Padding + 1 Karte (104) + etwas Luft
+//  3) groß (wie zuvor)          → Anteil der verfügbaren Höhe
+const HANDLE_HEIGHT = 44;
+const SNAP_SMALL_PX = HANDLE_HEIGHT; // nur Zieher
+const SNAP_MID_PX = HANDLE_HEIGHT + 16 + 104 + 28; // erster Eintrag voll lesbar ≈ 192
 const SNAP_LARGE = 0.92;
 
 const SPRING = { damping: 20, stiffness: 200, mass: 0.6 };
@@ -33,16 +37,15 @@ export default function DraggableListSheet({
   children,
   subtitle,
 }: Props) {
-  const heights = useMemo(
-    () => ({
-      small: availableHeight * SNAP_SMALL,
-      mid: availableHeight * SNAP_MID,
-      large: availableHeight * SNAP_LARGE,
-    }),
-    [availableHeight]
-  );
+  const heights = useMemo(() => {
+    const large = availableHeight * SNAP_LARGE;
+    // Stufe 2 nie größer als die große Stufe (kleine Screens).
+    const mid = Math.min(SNAP_MID_PX, large);
+    return { small: SNAP_SMALL_PX, mid, large };
+  }, [availableHeight]);
 
   // sheetHeight = aktuell sichtbare Höhe des Sheets (von unten gemessen).
+  // Start in Stufe 2 (erster Eintrag lesbar).
   const sheetHeight = useSharedValue(heights.mid);
   const startHeight = useSharedValue(heights.mid);
 
