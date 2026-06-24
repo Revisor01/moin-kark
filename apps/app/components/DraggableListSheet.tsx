@@ -15,34 +15,45 @@ interface Props {
   availableHeight: number;
   /** Headerhöhe oben (Titel + Filterleiste), bestimmt obere Grenze. */
   topInset: number;
+  /** Untere Safe-Area (Home-Indicator) — Griff muss darüber greifbar bleiben. */
+  bottomInset?: number;
   children: React.ReactNode;
   /** Optionaler Untertitel im Griffbereich (z.B. Anzahl). */
   subtitle?: string;
 }
 
-// Drei feste Stufen (sichtbare Sheet-Höhe von unten gemessen):
-//  1) nur der Griff             → HANDLE_HEIGHT
-//  2) Griff + 1 voller Eintrag  → Handle + Listen-Top-Padding + 1 Karte (104) + etwas Luft
-//  3) groß (wie zuvor)          → Anteil der verfügbaren Höhe
+// Maße der Liste (müssen zu EventCard/EventList passen):
 const HANDLE_HEIGHT = 44;
-const SNAP_SMALL_PX = HANDLE_HEIGHT; // nur Zieher
-const SNAP_MID_PX = HANDLE_HEIGHT + 16 + 104 + 28; // erster Eintrag voll lesbar ≈ 192
-const SNAP_LARGE = 0.92;
+const CARD_HEIGHT = 104; // EventCard.pressArea.height
+const CARD_GAP = 12; // EventList ItemSeparator (spacing.md)
+const LIST_PADDING_TOP = 16; // EventList content padding (spacing.lg)
+
+// Drei feste Stufen (sichtbare Sheet-Höhe von unten gemessen):
+//  1) nur der Griff (über der Safe Area greifbar)
+//  2) Griff + 1 voller Eintrag
+//  3) Griff + 3 volle Einträge (Karte NICHT verdeckt)
+const SNAP_MID_PX = HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT + 20; // ≈ 184
+const SNAP_LARGE_PX =
+  HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT * 3 + CARD_GAP * 2 + 20; // ≈ 412, 3 Einträge
 
 const SPRING = { damping: 20, stiffness: 200, mass: 0.6 };
 
 export default function DraggableListSheet({
   availableHeight,
   topInset,
+  bottomInset = 0,
   children,
   subtitle,
 }: Props) {
   const heights = useMemo(() => {
-    const large = availableHeight * SNAP_LARGE;
-    // Stufe 2 nie größer als die große Stufe (kleine Screens).
-    const mid = Math.min(SNAP_MID_PX, large);
-    return { small: SNAP_SMALL_PX, mid, large };
-  }, [availableHeight]);
+    // Stufe 1: nur Griff, aber über dem Home-Indicator (sonst nicht wischbar).
+    const small = HANDLE_HEIGHT + bottomInset;
+    // Obergrenze: nie höher als verfügbarer Platz (kleine Screens).
+    const cap = availableHeight * 0.92;
+    const large = Math.min(SNAP_LARGE_PX + bottomInset, cap);
+    const mid = Math.min(SNAP_MID_PX + bottomInset, large);
+    return { small, mid, large };
+  }, [availableHeight, bottomInset]);
 
   // sheetHeight = aktuell sichtbare Höhe des Sheets (von unten gemessen).
   // Start in Stufe 2 (erster Eintrag lesbar).

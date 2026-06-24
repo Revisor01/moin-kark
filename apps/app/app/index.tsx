@@ -183,12 +183,13 @@ export default function Home() {
 
   // Das Listen-Sheet verdeckt den unteren Teil der Karte. Die Liste soll sich aber NUR auf den
   // SICHTBAREN Ausschnitt (über dem Sheet) beziehen → unteren Bounds-Anteil abschneiden.
-  // 0.45 ≈ Sheet im Standard-Snap (MID). Web hat kein Sheet → volle Bounds.
+  // 0.28 ≈ Sheet im Standard-Snap (MID, ~184px bei ~660px Kartenhöhe). Web hat kein Sheet → volle Bounds.
   const visibleBounds = useMemo<Bounds | null>(() => {
     if (!bounds || isWide) return bounds;
     const span = bounds.north - bounds.south;
-    return { ...bounds, south: bounds.south + span * 0.45 };
-  }, [bounds, isWide]);
+    const frac = mapAreaHeight > 0 ? Math.min(0.5, 184 / mapAreaHeight) : 0.28;
+    return { ...bounds, south: bounds.south + span * frac };
+  }, [bounds, isWide, mapAreaHeight]);
 
   const filtered = useMemo(
     () => sortByStart(applyFilters(allFeatures, filters, { location, bounds: visibleBounds })),
@@ -393,7 +394,7 @@ export default function Home() {
           {filterBar}
         </View>
         {mapAreaHeight > 0 ? (
-          <DraggableListSheet availableHeight={mapAreaHeight} topInset={0}>
+          <DraggableListSheet availableHeight={mapAreaHeight} topInset={0} bottomInset={insets.bottom}>
             <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} />
           </DraggableListSheet>
         ) : null}
