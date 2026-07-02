@@ -126,8 +126,9 @@ export default function ProfileSheet({
             </View>
           )}
 
-          {/* Footer / Attribution */}
+          {/* Footer — drei klar getrennte Blöcke: Träger · Karte/Daten · Autor */}
           <View style={styles.footer}>
+            {/* 1) Träger: Kirchenkreis */}
             <TouchableOpacity
               onPress={() => Linking.openURL("https://www.kirche-dithmarschen.de")}
               accessibilityRole="link"
@@ -141,13 +142,9 @@ export default function ProfileSheet({
               />
             </TouchableOpacity>
             <Text style={styles.carrier}>Ein Projekt des Kirchenkreises Dithmarschen</Text>
-            <Text style={styles.author}>Idee und Umsetzung: Simon Luthe</Text>
-            <View style={styles.geistRow}>
-              <Text style={styles.geistText}>Made with </Text>
-              <Image source={require("../assets/bird.png")} style={styles.geistBird} resizeMode="contain" />
-              <Text style={styles.geistText}> in Hennstedt</Text>
-            </View>
-            <Text style={styles.geistBlessing}>Friede. Schalom. Salam.</Text>
+
+            {/* 2) Karte & Daten */}
+            <View style={styles.footerDivider} />
             <Text style={styles.attr}>
               Karte ©{" "}
               <Text
@@ -158,8 +155,22 @@ export default function ProfileSheet({
               </Text>
               -Mitwirkende · Tiles: OpenFreeMap · Daten: ChurchDesk
             </Text>
-            <Text style={styles.copyright}>
-              © {new Date().getFullYear()} Simon Luthe · kostenlos bereitgestellt
+
+            {/* 3) Autor */}
+            <View style={styles.footerDivider} />
+            <View style={styles.geistRow}>
+              <Text style={styles.geistText}>Made with </Text>
+              <Image source={require("../assets/bird.png")} style={styles.geistBird} resizeMode="contain" />
+              <Text style={styles.geistText}> in Hennstedt</Text>
+            </View>
+            <Text style={styles.geistBlessing}>Friede. Schalom. Salam.</Text>
+            <Text
+              style={styles.copyright}
+              onPress={() => Linking.openURL("https://simonluthe.de")}
+              accessibilityRole="link"
+            >
+              © {new Date().getFullYear()}{" "}
+              <Text style={styles.copyrightLink}>Simon Luthe</Text>
             </Text>
           </View>
         </ScrollView>
@@ -252,18 +263,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
+  footerDivider: {
+    width: 32,
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+  },
   kkdLogo: { width: 168, height: 59, marginBottom: spacing.xs },
   carrier: {
     fontFamily: fonts.bodyMedium,
     fontSize: 13,
     color: colors.foreground,
     textAlign: "center",
-  },
-  author: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: spacing.sm,
   },
   geistRow: { flexDirection: "row", alignItems: "center" },
   geistText: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
@@ -289,4 +300,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: spacing.xs,
   },
+  copyrightLink: { color: colors.primary, textDecorationLine: "underline" },
 });
