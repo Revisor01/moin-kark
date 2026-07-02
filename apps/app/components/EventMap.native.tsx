@@ -22,6 +22,7 @@ export default function EventMap({
   userLocation,
   onBoundsChange,
   flyToUserToken,
+  flyToOverviewToken,
 }: EventMapProps) {
   const cameraRef = useRef<CameraRef>(null);
   const sourceRef = useRef<GeoJSONSourceRef>(null);
@@ -42,6 +43,16 @@ export default function EventMap({
       duration: 700,
     });
   }, [flyToUserToken, userLocation]);
+
+  // Fallback: auf die Dithmarschen-Übersicht fliegen (ferner Standort → nicht ins Leere fliegen).
+  useEffect(() => {
+    if (!flyToOverviewToken) return;
+    cameraRef.current?.flyTo({
+      center: DITHMARSCHEN.center,
+      zoom: DITHMARSCHEN.zoom,
+      duration: 700,
+    });
+  }, [flyToOverviewToken]);
 
   const onSourcePress = async (e: any) => {
     // MapLibre RN v11: Features liegen unter e.nativeEvent.features

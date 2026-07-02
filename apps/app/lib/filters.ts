@@ -51,6 +51,16 @@ export interface Bounds {
   north: number;
 }
 
+/**
+ * Liegt ein Punkt (grob) im Kreis Dithmarschen? Bounding-Box aus theme.DITHMARSCHEN.bounds
+ * (SW [8.3, 53.8] → NE [9.6, 54.5]), etwas gepuffert. Für ferne Standorte (Reviewer aus
+ * USA/Indien, Urlauber von weit weg) → „Zu meinem Standort" fällt dann auf die Übersicht zurück,
+ * statt ins Leere zu fliegen und die (Bounds-gefilterte) Liste zu leeren.
+ */
+export function isInDithmarschen(loc: LatLng): boolean {
+  return loc.lat >= 53.7 && loc.lat <= 54.6 && loc.lng >= 8.2 && loc.lng <= 9.7;
+}
+
 function inBounds(f: EventFeature, b: Bounds): boolean {
   const [lng, lat] = f.geometry.coordinates;
   return lng >= b.west && lng <= b.east && lat >= b.south && lat <= b.north;

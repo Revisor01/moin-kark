@@ -34,6 +34,7 @@ import {
   DEFAULT_FILTERS,
   applyFilters,
   distanceKm,
+  isInDithmarschen,
   isPast,
   sortByStart,
   type Bounds,
@@ -64,6 +65,7 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [flyToken, setFlyToken] = useState(0);
+  const [overviewToken, setOverviewToken] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
@@ -103,10 +105,14 @@ export default function Home() {
     rescheduleAll(savedFeatures, p);
   };
 
-  // „Zu meinem Standort"-Button: Position holen + hinfliegen.
+  // „Zu meinem Standort"-Button: Position holen + hinfliegen. Liegt der Standort außerhalb
+  // Dithmarschens (ferner Tester/Reviewer, Urlauber von weit weg), NICHT ins Leere fliegen —
+  // sonst filtert die Karten-Bounds die Event-Liste auf 0. Stattdessen auf die Übersicht.
   const onJumpToLocation = async () => {
     const loc = location ?? (await requestLocation());
-    if (loc) setFlyToken((t) => t + 1);
+    if (!loc) return;
+    if (isInDithmarschen(loc)) setFlyToken((t) => t + 1);
+    else setOverviewToken((t) => t + 1);
   };
 
   // Dynamischer Start-Zoom: ist der User nah an Events (≤8 km) → reinzoomen, sonst Übersicht.
@@ -352,6 +358,7 @@ export default function Home() {
       userLocation={location}
       onBoundsChange={setBounds}
       flyToUserToken={flyToken}
+      flyToOverviewToken={overviewToken}
       dimmed={filtersOpen || profileOpen || selectedFeature !== null}
     />
   );

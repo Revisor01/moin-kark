@@ -28,6 +28,7 @@ export default function EventMap({
   userLocation,
   onBoundsChange,
   flyToUserToken,
+  flyToOverviewToken,
 }: EventMapProps) {
   const mapRef = useRef<MapRef>(null);
 
@@ -57,6 +58,16 @@ export default function EventMap({
       duration: 700,
     });
   }, [flyToUserToken, userLocation]);
+
+  // Fallback: auf die Dithmarschen-Übersicht (ferner Standort → nicht ins Leere).
+  useEffect(() => {
+    if (!flyToOverviewToken) return;
+    mapRef.current?.easeTo({
+      center: [DITHMARSCHEN.center[0], DITHMARSCHEN.center[1]],
+      zoom: DITHMARSCHEN.zoom,
+      duration: 700,
+    });
+  }, [flyToOverviewToken]);
 
   const onClick = useCallback(
     (e: MapLayerMouseEvent) => {
