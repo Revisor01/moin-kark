@@ -128,6 +128,20 @@ export default function ProfileSheet({
 
           {/* Footer / Attribution */}
           <View style={styles.footer}>
+            <TouchableOpacity
+              onPress={() => Linking.openURL("https://www.kirche-dithmarschen.de")}
+              accessibilityRole="link"
+              accessibilityLabel="Zur Website des Kirchenkreises Dithmarschen"
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require("../assets/kkd-logo.png")}
+                style={styles.kkdLogo}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <Text style={styles.carrier}>Ein Projekt des Kirchenkreises Dithmarschen</Text>
+            <Text style={styles.author}>Idee und Umsetzung: Simon Luthe</Text>
             <View style={styles.geistRow}>
               <Text style={styles.geistText}>Made with </Text>
               <Image source={require("../assets/bird.png")} style={styles.geistBird} resizeMode="contain" />
@@ -143,6 +157,9 @@ export default function ProfileSheet({
                 OpenStreetMap
               </Text>
               -Mitwirkende · Tiles: OpenFreeMap · Daten: ChurchDesk
+            </Text>
+            <Text style={styles.copyright}>
+              © {new Date().getFullYear()} Simon Luthe · kostenlos bereitgestellt
             </Text>
           </View>
         </ScrollView>
@@ -235,6 +252,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
+  kkdLogo: { width: 168, height: 59, marginBottom: spacing.xs },
+  carrier: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.foreground,
+    textAlign: "center",
+  },
+  author: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.muted,
+    marginBottom: spacing.sm,
+  },
   geistRow: { flexDirection: "row", alignItems: "center" },
   geistText: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
   geistBird: { width: 14, height: 14 },
@@ -252,4 +282,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   link: { color: colors.primary, textDecorationLine: "underline" },
+  copyright: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.faint,
+    textAlign: "center",
+    marginTop: spacing.xs,
+  },
 });

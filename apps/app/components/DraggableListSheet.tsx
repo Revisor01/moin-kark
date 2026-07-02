@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -60,6 +60,18 @@ export default function DraggableListSheet({
   const sheetHeight = useSharedValue(heights.mid);
   const startHeight = useSharedValue(heights.mid);
 
+  // Reanimated 4.3.x hat beim allerersten Frame einen Race zwischen dem
+  // AnimationFrameBatchinator (DisplayLink) und dem noch nicht registrierten
+  // ShadowNode → EXC_BAD_ACCESS in REANodesManager::performOperations beim Start
+  // (software-mansion/react-native-reanimated#9293 / #9402). Wir halten das Sheet
+  // deshalb einen Frame lang statisch (feste Höhe, kein animierter Style), bis der
+  // native View sicher gemountet ist, und lassen erst dann Animationen zu.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const snapTo = (target: number) => {
     "worklet";
     sheetHeight.value = withSpring(target, SPRING);
@@ -67,6 +79,7 @@ export default function DraggableListSheet({
 
   // Tipp auf den Griff → nächstgrößere Stufe (small→mid→large), von large zurück auf small.
   const tap = Gesture.Tap()
+    .enabled(ready)
     .maxDuration(250)
     .onEnd(() => {
       const v = sheetHeight.value;
@@ -81,6 +94,7 @@ export default function DraggableListSheet({
     });
 
   const pan = Gesture.Pan()
+    .enabled(ready)
     .onStart(() => {
       startHeight.value = sheetHeight.value;
     })
@@ -116,7 +130,8 @@ export default function DraggableListSheet({
 
   return (
     // Äußere View: trägt Schatten + Position, KEIN overflow:hidden (sonst wird Schatten weggeclippt).
-    <Animated.View style={[styles.sheetShadow, animatedStyle]}>
+    // Vor `ready` feste Höhe (kein shared-value-getriebener Style) → umgeht den Reanimated-Start-Race.
+    <Animated.View style={[styles.sheetShadow, ready ? animatedStyle : { height: heights.mid }]}>
       {/* Innere View: clippt die runden Ecken + Liste, trägt Rahmen/Hintergrund. */}
       <View style={styles.sheetInner}>
         {/* Griffbereich: Drag ODER Tipp (Tipp = eine Stufe größer) */}
