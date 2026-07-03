@@ -47,7 +47,7 @@ export default function EventList({
       }
       initialNumToRender={12}
       windowSize={11}
-      removeClippedSubviews
+      showsVerticalScrollIndicator
     />
   );
 }
