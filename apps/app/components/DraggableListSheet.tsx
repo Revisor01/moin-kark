@@ -141,7 +141,9 @@ export default function DraggableListSheet({
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
         </GestureDetector>
-        <View style={styles.body}>{children}</View>
+        {/* paddingBottom = Safe Area, damit die letzten Listen-Einträge nicht hinter
+            dem Home-Indicator verschwinden (Liste konnte sonst nicht ganz nach unten). */}
+        <View style={[styles.body, { paddingBottom: bottomInset }]}>{children}</View>
       </View>
     </Animated.View>
   );
