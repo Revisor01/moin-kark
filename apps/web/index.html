@@ -46,6 +46,11 @@
 
   /* Hero */
   .hero{padding:48px 0 56px; position:relative; overflow:hidden}
+  .launch{
+    display:inline-block;margin:0 0 18px;padding:7px 15px;border-radius:999px;
+    background:rgba(228,87,46,.12);color:#B8431F;
+    font-size:13.5px;font-weight:700;letter-spacing:.02em;
+  }
   .hero h1{font-size:clamp(2.4rem,6.2vw,4.2rem); font-weight:800; max-width:16ch}
   .hero h1 em{font-style:normal;color:var(--primary)}
   .lead{font-size:clamp(1.06rem,2.2vw,1.3rem); color:var(--muted); max-width:56ch; margin:22px 0 0}
@@ -61,6 +66,21 @@
   .btn-ghost{background:transparent;color:var(--primary);border-color:var(--border)}
   .btn-ghost:hover{background:var(--surface);border-color:var(--primary)}
   .note{margin-top:16px;font-size:14.5px;color:var(--faint)}
+
+  /* Store-Badges: noch nicht verlinkt (Launch steht bevor), daher bewusst
+     gedämpft und ohne href — sie zeigen an, was kommt, statt ins Leere zu führen. */
+  .stores{margin-top:30px}
+  .stores-hint{display:block;font-size:14px;color:var(--faint);margin-bottom:11px}
+  .store-row{display:flex;flex-wrap:wrap;gap:12px}
+  .store-badge{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:9px 17px 9px 14px;border-radius:11px;
+    border:1px solid var(--border);background:var(--surface);
+    color:var(--muted);opacity:.72;cursor:default;
+  }
+  .store-badge svg{width:22px;height:22px;flex:none}
+  .store-badge span{display:flex;flex-direction:column;line-height:1.15;font-weight:700;font-size:15px}
+  .store-badge small{font-weight:500;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--faint)}
 
   /* Wave */
   .wave{display:block;width:100%;height:auto;margin-bottom:-6px}
@@ -83,18 +103,14 @@
   .info p{color:var(--muted);margin:0 0 15px}
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px}
   .panel h3{font-size:1rem;font-weight:700;margin-bottom:14px}
-  .panel dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:9px 16px;font-size:15px}
-  .panel dt{color:var(--faint)}
-  .panel dd{margin:0;font-weight:500}
-  code{background:var(--surface-muted);padding:2px 7px;border-radius:6px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 
   /* Footer */
   footer{background:var(--fg);color:#D9E2E2;padding:52px 0 40px;font-size:15px}
   footer a{color:#8FD3D3}
   footer a:hover{color:#B6E4E4}
   .f-grid{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start}
-  .f-logo{background:#fff;border-radius:10px;padding:11px 15px;display:inline-block}
-  .f-logo img{height:36px;display:block}
+  .f-logo{background:#fff;border-radius:12px;padding:16px 22px;display:inline-block}
+  .f-logo img{height:64px;display:block}
   .carrier{margin:14px 0 0;font-weight:500;color:#EDF2F2}
   .attr{margin:16px 0 0;color:#9FB0B0;font-size:14px;max-width:56ch}
   .made{margin:0;text-align:right;color:#9FB0B0;font-size:14px}
@@ -125,6 +141,7 @@
 <main id="inhalt">
   <section class="hero">
     <div class="wrap">
+      <p class="launch">In etwa zwei Wochen geht’s los</p>
       <h1>Was ist los in <em>Dithmarschen</em>?</h1>
       <p class="lead">
         Gottesdienste, Konzerte, Gruppen, Yoga — alles aus dem Kirchenkreis
@@ -132,13 +149,25 @@
         und Kirchspiel. Kostenlos, ohne Konto, ohne Werbung.
       </p>
       <div class="cta">
-        <a class="btn btn-primary" href="https://apps.apple.com/de/app/moin-kark/id6748234860">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.9c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.6-1.9-1.5-.2-3 .9-3.7.9-.8 0-2-.9-3.2-.8-1.7 0-3.2 1-4 2.5-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.4 0 1.9.8 3.2.8 1.3 0 2.1-1.2 2.9-2.4.9-1.3 1.3-2.7 1.3-2.7s-2.4-1-2.4-3.9zM14.1 5.6c.7-.8 1.1-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1 0 2.2-.6 2.9-1.4z"/></svg>
-          Für iPhone laden
+        <a class="btn btn-primary" href="https://karte.moin-kark.de">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Karte jetzt öffnen
         </a>
-        <a class="btn btn-ghost" href="https://karte.moin-kark.de">Direkt im Browser öffnen</a>
       </div>
-      <p class="note">Die Android-Fassung ist in Vorbereitung.</p>
+
+      <div class="stores" aria-label="Bald in den App-Stores">
+        <span class="stores-hint">Als App in etwa zwei Wochen:</span>
+        <div class="store-row">
+          <span class="store-badge" aria-disabled="true">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.9c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.6-1.9-1.5-.2-3 .9-3.7.9-.8 0-2-.9-3.2-.8-1.7 0-3.2 1-4 2.5-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.4 0 1.9.8 3.2.8 1.3 0 2.1-1.2 2.9-2.4.9-1.3 1.3-2.7 1.3-2.7s-2.4-1-2.4-3.9zM14.1 5.6c.7-.8 1.1-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1 0 2.2-.6 2.9-1.4z"/></svg>
+            <span><small>Bald im</small>App Store</span>
+          </span>
+          <span class="store-badge" aria-disabled="true">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 2.3c-.3.3-.5.8-.5 1.4v16.6c0 .6.2 1.1.5 1.4l.1.1 9.3-9.3v-.2L3.7 2.2l-.1.1zm12.5 6.2L13.6 6 4.9 1.3c-.3-.2-.6-.2-.8-.1l12 12zM4.1 22.8c.2.1.5.1.8-.1L13.6 18l2.5-2.5-12 12c0 .1 0 .2 0 .3zm13.5-9.4 2.9-1.6c.8-.5.8-1.2 0-1.7l-2.9-1.6-2.7 2.5 2.7 2.4z"/></svg>
+            <span><small>Bald bei</small>Google Play</span>
+          </span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -205,16 +234,13 @@
         </p>
       </div>
       <div class="panel">
-        <h3>Technisches</h3>
-        <dl>
-          <dt>Daten</dt><dd>ChurchDesk API v3</dd>
-          <dt>Karte</dt><dd>MapLibre · OpenFreeMap</dd>
-          <dt>App</dt><dd>Web · iOS · Android</dd>
-          <dt>API</dt><dd><code>api.moin-kark.de</code></dd>
-        </dl>
-        <p style="margin:16px 0 0;font-size:14.5px;color:var(--muted)">
-          Die Schnittstelle liefert die Termine als GeoJSON und ist offen nutzbar.
+        <h3>Direkt loslegen</h3>
+        <p style="margin:0 0 18px;font-size:15px;color:var(--muted)">
+          Die Karte läuft im Browser — ohne Installation, ohne Konto.
         </p>
+        <a class="btn btn-primary" style="width:100%;justify-content:center" href="https://karte.moin-kark.de">
+          Karte öffnen
+        </a>
       </div>
     </div>
   </section>
