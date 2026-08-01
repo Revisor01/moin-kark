@@ -141,9 +141,12 @@ export default function DraggableListSheet({
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
         </GestureDetector>
-        {/* paddingBottom = Safe Area, damit die letzten Listen-Einträge nicht hinter
-            dem Home-Indicator verschwinden (Liste konnte sonst nicht ganz nach unten). */}
-        <View style={[styles.body, { paddingBottom: bottomInset }]}>{children}</View>
+        {/* KEIN paddingBottom hier: Padding am Container einer FlatList verkleinert
+            den sichtbaren Bereich dauerhaft, statt am Listenende Platz zu schaffen —
+            die letzten Einträge lagen dadurch im abgeschnittenen Bereich und waren
+            nicht erreichbar. Die Safe-Area-Reserve gehört in contentContainerStyle
+            der Liste (s. EventList: bottomInset). */}
+        <View style={styles.body}>{children}</View>
       </View>
     </Animated.View>
   );
