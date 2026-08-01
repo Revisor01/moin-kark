@@ -160,23 +160,22 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    // Kräftiger, klar sichtbarer Schatten nach OBEN — das Sheet schwebt über der Karte
-    // ohne Backdrop, also muss die Kante allein durch Schatten + Linie deutlich werden.
+    // Weicher Schatten nach OBEN — setzt das Sheet gegen die Karte ab, ohne als
+    // harte Linie zu lesen (die Rahmenkante ist bewusst entfallen).
     shadowColor: "#0A1F1F",
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 28,
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -6 },
+    elevation: 16,
   },
   sheetInner: {
     flex: 1,
     backgroundColor: colors.background,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: colors.borderStrong,
+    // Keine Rahmenlinie: Der warme Sand-Hintergrund setzt das Sheet gegen die
+    // Karte schon deutlich genug ab. Zusammen mit dem Schatten wirkte die
+    // 1.5pt-Kante wie ein dunkler Strich quer über dem Sheet.
     overflow: "hidden",
   },
   handleArea: {

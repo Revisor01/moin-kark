@@ -367,12 +367,14 @@ export default function Home() {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]}>
         {header}
+        {/* Liste links, Karte rechts — die Liste ist der Einstieg, die Karte der
+            große Anzeigebereich daneben. */}
         <View style={styles.wideRow}>
-          <View style={styles.mapPane}>{map}</View>
           <View style={styles.listPane}>
             {filterBar}
             <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} />
           </View>
+          <View style={styles.mapPane}>{map}</View>
         </View>
         {filterSheet}
         {profileSheet}
@@ -429,8 +431,9 @@ const styles = StyleSheet.create({
   listPane: {
     flex: 1,
     maxWidth: 460,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.border,
+    // Trennlinie rechts — die Liste steht links, die Karte daneben.
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
     backgroundColor: colors.background,
   },
   mapArea: { flex: 1, backgroundColor: colors.mapWater },
