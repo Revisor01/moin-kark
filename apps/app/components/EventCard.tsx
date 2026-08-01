@@ -2,6 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import { placeholderFor } from "../lib/placeholders";
 
 interface Props {
   feature: EventFeature;
@@ -33,10 +34,10 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
         style={styles.pressArea}
       >
         <View style={[styles.accent, { backgroundColor: accent }]} />
-        {/* Kein Foto → dasselbe Querformat-Platzhalterbild wie im Detail, hier quadratisch
-            mittig zugeschnitten (cover zentriert, links/rechts wird weggeschnitten). */}
+        {/* Kein Foto → wechselndes Dithmarschen-Motiv (stabil pro Event, s.
+            lib/placeholders.ts), hier quadratisch mittig zugeschnitten. */}
         <Image
-          source={p.image?.url ? { uri: p.image.url } : require("../assets/placeholder.png")}
+          source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id)}
           style={styles.thumb}
           resizeMode="cover"
         />

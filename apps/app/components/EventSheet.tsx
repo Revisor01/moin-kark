@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
+import { placeholderFor } from "../lib/placeholders";
 import type { MapsApp } from "../lib/store";
 import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
 
@@ -143,16 +144,12 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   // Kopfbereich (Bild + Grabber + Kopfsektion).
   const headerArea = (
     <View>
-      {/* Kein Event-Bild → unser Marken-Motiv als Platzhalter. */}
-      {p.image?.url ? (
-        <Image source={{ uri: p.image.url }} style={styles.hero} resizeMode="cover" />
-      ) : (
-        <Image
-          source={require("../assets/placeholder.png")}
-          style={styles.hero}
-          resizeMode="cover"
-        />
-      )}
+      {/* Kein Event-Bild → wechselndes Dithmarschen-Motiv, stabil pro Event. */}
+      <Image
+        source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id)}
+        style={styles.hero}
+        resizeMode="cover"
+      />
       <View style={styles.grabber} pointerEvents="none" />
 
       {/* Kopfsektion (Titel, Badges, Meta). */}
