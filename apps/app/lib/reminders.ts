@@ -2,7 +2,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { EventFeature } from "@kkd/shared";
+import type { EventFeature } from "@moinkark/shared";
 
 export type ReminderPref = "evening" | "2h" | "both" | "off";
 export const REMINDER_KEY = "kkd:reminderPref";

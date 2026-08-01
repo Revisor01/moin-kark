@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import type { EventFeature } from "@kkd/shared";
+import type { EventFeature } from "@moinkark/shared";
 import type { MapsApp } from "../lib/store";
 import type { ReminderPref } from "../lib/reminders";
 import { colors, fonts, radius, shadow, spacing } from "../lib/theme";

@@ -1,5 +1,5 @@
 import { FlatList, StyleSheet, Text, View } from "react-native";
-import type { EventFeature } from "@kkd/shared";
+import type { EventFeature } from "@moinkark/shared";
 import EventCard from "./EventCard";
 import { colors, fonts, spacing } from "../lib/theme";
 

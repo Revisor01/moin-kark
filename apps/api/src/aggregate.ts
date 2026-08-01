@@ -1,7 +1,7 @@
 // Aggregiert Events über alle 14 Orgs parallel, dedupliziert über event.id,
 // baut eine GeoJSON-FeatureCollection.
 
-import type { EventFeature, EventFeatureCollection } from "@kkd/shared";
+import type { EventFeature, EventFeatureCollection } from "@moinkark/shared";
 import { fetchOrgEvents } from "./churchdesk.js";
 import { toFeature } from "./geojson.js";
 import { loadOrgs } from "./orgs.js";

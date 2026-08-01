@@ -1,11 +1,11 @@
 {
-  "name": "kkdith",
+  "name": "moin-kark",
   "private": true,
   "version": "1.0.0",
   "description": "Was ist los in Dithmarschen — Kirchenkreis-Event-Karte (Web + iOS + Android)",
   "workspaces": [
     "packages/*",
-    "apps/proxy",
+    "apps/api",
     "apps/app"
   ],
   "engines": {

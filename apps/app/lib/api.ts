@@ -1,8 +1,8 @@
-import type { EventFeatureCollection } from "@kkd/shared";
+import type { EventFeatureCollection } from "@moinkark/shared";
 
 // Proxy-URL: in Prod die Subdomain, in Dev lokal überschreibbar via EXPO_PUBLIC_API_URL.
 export const API_BASE =
-  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? "https://kkkarte.godsapp.de";
+  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? "https://api.moin-kark.de";
 
 export async function fetchEvents(): Promise<EventFeatureCollection> {
   const res = await fetch(`${API_BASE}/events.geojson`);

@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import type { EventFeature } from "@kkd/shared";
+import type { EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
 

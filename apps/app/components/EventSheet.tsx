@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EventFeature } from "@kkd/shared";
+import type { EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
 import type { MapsApp } from "../lib/store";

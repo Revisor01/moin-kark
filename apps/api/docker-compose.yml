@@ -1,19 +1,22 @@
-# Deployment-Stack für den Read-Proxy auf server.godsapp.de (Apache → Traefik → Container).
+# Deployment-Stack für die Moin-Kark-API auf server.godsapp.de
+# (Apache/KeyHelp → Traefik:8888 → Container).
 # Build-Kontext ist der Monorepo-Root, damit packages/shared mitkommt.
 services:
-  kkdith-proxy:
+  moinkark-api:
     build:
       context: ../..
-      dockerfile: apps/proxy/Dockerfile
-    image: kkdith-proxy:latest
-    container_name: kkdith-proxy
+      dockerfile: apps/api/Dockerfile
+    image: moinkark-api:latest
+    container_name: moinkark-api
     restart: unless-stopped
     environment:
       PORT: "8787"
       CACHE_TTL_MS: "1200000"
       DEFAULT_WINDOW_DAYS: "60"
       MAX_WINDOW_DAYS: "90"
-      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://kkkarte.godsapp.de}"
+      # karte.* = Web-App, moin-kark.de = Landingpage. Die Alt-Domain bleibt
+      # vorerst erlaubt, damit bereits ausgelieferte App-Builds weiterlaufen.
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://karte.moin-kark.de,https://moin-kark.de,https://kkkarte.godsapp.de}"
       # Tokens werden über Portainer-Stack-ENV / .env injiziert (NIE im Repo).
       CD_TOKEN_2596: "${CD_TOKEN_2596:-}"
       CD_TOKEN_2619: "${CD_TOKEN_2619:-}"
@@ -33,8 +36,8 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.kkdith-proxy.rule=Host(`kkkarte.godsapp.de`)"
-      - "traefik.http.services.kkdith-proxy.loadbalancer.server.port=8787"
+      - "traefik.http.routers.moinkark-api.rule=Host(`api.moin-kark.de`)"
+      - "traefik.http.services.moinkark-api.loadbalancer.server.port=8787"
 
 networks:
   traefik:

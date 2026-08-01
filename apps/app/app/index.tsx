@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { KIRCHSPIELE } from "@kkd/shared";
+import { KIRCHSPIELE } from "@moinkark/shared";
 import EventMap from "../components/EventMap";
 import EventList from "../components/EventList";
 import EventSheet from "../components/EventSheet";

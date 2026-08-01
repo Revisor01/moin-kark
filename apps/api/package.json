@@ -1,5 +1,5 @@
 {
-  "name": "@kkd/proxy",
+  "name": "@moinkark/api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.12",
-    "@kkd/shared": "*",
+    "@moinkark/shared": "*",
     "hono": "^4.12.33",
     "tsx": "^4.19.2"
   },

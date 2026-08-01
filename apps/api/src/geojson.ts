@@ -7,7 +7,7 @@ import {
   resolveKirchspiel,
   type EventFeature,
   type EventImage,
-} from "@kkd/shared";
+} from "@moinkark/shared";
 import type { CdEvent } from "./churchdesk.js";
 
 /**

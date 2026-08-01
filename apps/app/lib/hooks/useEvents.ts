@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { EventFeatureCollection } from "@kkd/shared";
+import type { EventFeatureCollection } from "@moinkark/shared";
 import { fetchCategories, fetchEvents } from "../api";
 import { loadCachedEvents, saveCachedEvents } from "../eventCache";
 

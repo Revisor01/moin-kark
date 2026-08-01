@@ -1,7 +1,7 @@
 // Die 14 ChurchDesk-Organisationen. Tokens kommen AUSSCHLIESSLICH aus ENV-Variablen
 // (CD_TOKEN_<orgId>) — niemals im Code/Repo. Orgs ohne gesetzten Token werden übersprungen.
 
-import { orgName } from "@kkd/shared";
+import { orgName } from "@moinkark/shared";
 
 /** Alle bekannten Org-IDs des Kirchenkreises Dithmarschen. */
 export const ALL_ORG_IDS = [
