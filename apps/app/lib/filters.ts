@@ -1,6 +1,6 @@
 // Reine, testbare Filterlogik. Wirkt clientseitig auf das gecachte GeoJSON — kein Refetch.
 
-import type { EventFeature } from "@kkd/shared";
+import type { EventFeature } from "@moinkark/shared";
 
 export type DateFilter = "all" | "today" | "week" | "weekend";
 

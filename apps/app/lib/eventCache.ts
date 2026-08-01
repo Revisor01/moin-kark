@@ -2,7 +2,7 @@
 // Beim App-Start gibt es so SOFORT die zuletzt geladenen Events (kein Spinner);
 // im Hintergrund lädt React Query frische Daten und ersetzt sie still.
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { EventFeatureCollection } from "@kkd/shared";
+import type { EventFeatureCollection } from "@moinkark/shared";
 
 const CACHE_KEY = "kkd:eventsCache";
 

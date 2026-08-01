@@ -7,7 +7,7 @@ import Map, {
   type MapLayerMouseEvent,
 } from "@vis.gl/react-maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { EventFeatureCollection } from "@kkd/shared";
+import type { EventFeatureCollection } from "@moinkark/shared";
 import {
   CLUSTER_LAYER,
   POINT_LAYER,

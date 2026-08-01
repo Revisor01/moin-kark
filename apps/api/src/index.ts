@@ -1,10 +1,10 @@
-// Read-Only Aggregator für die Kirchenkreis-Dithmarschen-Eventkarte.
+// Moin Kark API — Read-Only Aggregator für die Kirchenkreis-Dithmarschen-Eventkarte.
 // Hält die 14 ChurchDesk-Read-Tokens server-seitig, liefert ein dedupliziertes GeoJSON.
 
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { EventFeatureCollection } from "@kkd/shared";
+import type { EventFeatureCollection } from "@moinkark/shared";
 import { buildFeatureCollection, extractCategories } from "./aggregate.js";
 import { SwrCache } from "./cache.js";
 
@@ -50,7 +50,7 @@ app.use(
   })
 );
 
-app.get("/", (c) => c.json({ service: "kkdith-proxy", status: "ok" }));
+app.get("/", (c) => c.json({ service: "moinkark-api", status: "ok" }));
 app.get("/healthz", (c) => c.json({ status: "ok" }));
 
 app.get("/events.geojson", async (c) => {
@@ -76,6 +76,6 @@ app.get("/categories.json", async (c) => {
 });
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.log(`[kkdith-proxy] hört auf http://0.0.0.0:${info.port}`);
-  console.log(`[kkdith-proxy] CORS erlaubt: ${ALLOWED_ORIGINS.join(", ")}`);
+  console.log(`[moinkark-api] hört auf http://0.0.0.0:${info.port}`);
+  console.log(`[moinkark-api] CORS erlaubt: ${ALLOWED_ORIGINS.join(", ")}`);
 });

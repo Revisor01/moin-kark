@@ -1,6 +1,6 @@
 // Plattform-neutraler Typ-Vertrag. Metro/Webpack wählen automatisch
 // EventMap.web.tsx (react-maplibre) bzw. EventMap.native.tsx (maplibre-react-native).
-import type { EventFeature } from "@kkd/shared";
+import type { EventFeature } from "@moinkark/shared";
 import type { Bounds, LatLng } from "../lib/filters";
 
 export interface EventMapProps {

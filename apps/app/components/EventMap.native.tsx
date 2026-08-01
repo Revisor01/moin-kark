@@ -10,7 +10,7 @@ import {
   type CameraRef,
   type GeoJSONSourceRef,
 } from "@maplibre/maplibre-react-native";
-import type { EventFeatureCollection } from "@kkd/shared";
+import type { EventFeatureCollection } from "@moinkark/shared";
 import { MAP_STYLE, SOURCE_ID, sourceConfig } from "../lib/mapStyle";
 import { DITHMARSCHEN, colors } from "../lib/theme";
 import { DITHMARSCHEN_MASK, DITHMARSCHEN_OUTLINE } from "../lib/dithmarschen-boundary";
