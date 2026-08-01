@@ -7,6 +7,29 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Landingpage `apps/web/` für `moin-kark.de` — statisches HTML ohne Build-Step,
+  im Branding der App (Bricolage Grotesque + DM Sans, Nordsee-Teal/Koralle).
+- Web-App unter `karte.moin-kark.de` (Expo-Web-Export).
+
+### Geändert
+
+- **Umzug auf die eigene Domain `moin-kark.de`.** Die API läuft ab sofort unter
+  `api.moin-kark.de` statt `kkkarte.godsapp.de`.
+- `apps/proxy` → `apps/api`; Container und Image `kkdith-proxy` → `moinkark-api`;
+  npm-Scope `@kkd/*` → `@moinkark/*`; Root-Paket `kkdith` → `moin-kark`.
+- CORS erlaubt jetzt `karte.moin-kark.de` und `moin-kark.de`. Die Alt-Domain
+  `kkkarte.godsapp.de` bleibt vorerst zugelassen, damit bereits ausgelieferte
+  TestFlight-Builds weiterlaufen.
+- DNS bei Netcup vollständig eingerichtet (A/AAAA, Wildcard, MX, SPF, DKIM,
+  DMARC, MTA-STS, TLS-RPT, CAA) — nach demselben Muster wie die übrigen
+  KeyHelp-Domains.
+
+Nicht geändert: `slug`, `scheme` und `bundleIdentifier` der App. Sie hängen am
+EAS-Projekt und an ausgelieferten Builds; eine Änderung würde die App im Store
+zu einer anderen App machen und Deep-Links brechen.
+
 ### Sicherheit
 
 - `brace-expansion` auf 5.0.9 und `shell-quote` auf 1.10.0 angehoben (beides
