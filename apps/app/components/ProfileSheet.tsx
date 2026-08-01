@@ -1,6 +1,7 @@
 import {
   Image,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,8 @@ import type { MapsApp } from "../lib/store";
 import type { ReminderPref } from "../lib/reminders";
 import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
 import EventCard from "./EventCard";
+
+const IS_WEB = Platform.OS === "web";
 
 interface Props {
   visible: boolean;
@@ -75,31 +78,43 @@ export default function ProfileSheet({
             Wird verwendet, wenn du in einer Veranstaltung „Auf Karte öffnen" tippst.
           </Text>
 
-          {/* Erinnerungen */}
+          {/* Erinnerungen — im Web gibt es keine: expo-notifications kann dort nicht
+              planen (s. lib/reminders.ts, alle Funktionen sind auf Web No-ops). Den
+              Wähler dort trotzdem zu zeigen, würde eine Funktion versprechen, die
+              nicht stattfindet — deshalb an seiner Stelle die ehrliche Erklärung. */}
           <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Erinnerung</Text>
-          <View style={styles.segment}>
-            {(
-              [
-                ["evening", "Vorabend"],
-                ["2h", "2 Std vorher"],
-                ["both", "Beides"],
-                ["off", "Aus"],
-              ] as [ReminderPref, string][]
-            ).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                style={[styles.segmentBtn, reminderPref === val && styles.segmentBtnActive]}
-                onPress={() => onReminderPref(val)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[styles.segmentSmall, reminderPref === val && styles.segmentTextActive]}
+          {IS_WEB ? (
+            <View style={styles.webNote}>
+              <Text style={styles.webNoteText}>
+                Erinnerungen gibt es nur in der App für iPhone und Android. Gemerkte
+                Veranstaltungen bleiben hier auf diesem Gerät gespeichert.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.segment}>
+              {(
+                [
+                  ["evening", "Vorabend"],
+                  ["2h", "2 Std vorher"],
+                  ["both", "Beides"],
+                  ["off", "Aus"],
+                ] as [ReminderPref, string][]
+              ).map(([val, label]) => (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.segmentBtn, reminderPref === val && styles.segmentBtnActive]}
+                  onPress={() => onReminderPref(val)}
+                  activeOpacity={0.8}
                 >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text
+                    style={[styles.segmentSmall, reminderPref === val && styles.segmentTextActive]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Merkliste */}
           <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>
@@ -248,6 +263,16 @@ const styles = StyleSheet.create({
   segmentSmall: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.muted },
   segmentTextActive: { color: colors.foreground },
   hint: { fontFamily: fonts.body, fontSize: 13, color: colors.faint, marginTop: spacing.sm },
+  // Web-Hinweis an Stelle des Erinnerungs-Wählers.
+  webNote: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  webNoteText: { fontFamily: fonts.body, fontSize: 13.5, color: colors.muted, lineHeight: 19 },
   empty: {
     fontFamily: fonts.body,
     fontSize: 14,
