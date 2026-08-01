@@ -7,6 +7,18 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.1.1] – 2026-08-01
+
+### Behoben
+
+- **Event-Modal auf iOS bis zum Ende scrollbar.** Bisher scrollte nur die
+  Beschreibung — und zwar in dem Rest, der nach dem fixen Kopfbereich (Bild
+  200pt + Titel + bis zu 6 Meta-Zeilen) und dem Maps-Button übrig blieb. Auf
+  iPhone-Höhe waren das oft nur ~130pt, auf dem iPhone SE sogar ~37pt: die
+  letzten Zeilen waren faktisch unerreichbar. Im Browser fiel es nicht auf, weil
+  dort mehr Höhe zur Verfügung steht. Jetzt scrollt der gesamte Inhalt in einer
+  ScrollView, nur der Maps-Button bleibt fix.
+
 ## [1.1.0] – 2026-08-01
 
 ### Hinzugefügt
@@ -100,6 +112,7 @@ markiert ihn als stabiles Release.
   Root-Lock maßgeblich. Die Datei war auf einem veralteten Stand und erzeugte
   doppelte, irreführende Alerts.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/Revisor01/moin-kark/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Revisor01/moin-kark/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Revisor01/moin-kark/releases/tag/v1.0.0
