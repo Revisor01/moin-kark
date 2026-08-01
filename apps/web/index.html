@@ -22,11 +22,11 @@
 <style>
   :root{
     --primary:#0E6E6E; --primary-dark:#0A5252; --accent:#E4572E;
-    --bg:#FBF6EE; --surface:#FFFFFF; --surface-muted:#F3ECE0;
+    --bg:#FBF2E3; --surface:#FFFFFF; --surface-muted:#F3ECE0;
     --fg:#1C2B2B; --muted:#5C6B6B; --faint:#8A9595;
     --border:#E6DCCB; --water:#A9D6D6;
     /* Dithmarscher Grün — aus dem Kartenstil der App (mapGreen/success). */
-    --green:#2E7D5B; --green-soft:#E4EBDA; --marsch:#75AA9A;
+    --green:#2E7D5B; --green-soft:#E4EBDA; --marsch:#73A89A;
     --maxw:1080px;
   }
   *{box-sizing:border-box}
@@ -56,10 +56,10 @@
   .hero-pin{
     position:absolute; right:-90px; top:-70px;
     width:min(560px,52vw); height:auto;
-    opacity:.13; pointer-events:none; user-select:none; z-index:1;
+    opacity:.42; pointer-events:none; user-select:none; z-index:1;
     transform:rotate(-8deg);
   }
-  @media (max-width:900px){ .hero-pin{right:-150px; opacity:.08} }
+  @media (max-width:900px){ .hero-pin{right:-150px; opacity:.24} }
   @media (max-width:640px){ .hero-pin{display:none} }
   .launch{
     display:inline-block;margin:0 0 18px;padding:7px 15px;border-radius:999px;
@@ -97,20 +97,17 @@
   .store-badge span{display:flex;flex-direction:column;line-height:1.15;font-weight:700;font-size:15px}
   .store-badge small{font-weight:500;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--faint)}
 
-  /* Landschaftsband statt abstrakter Welle: Deich mit Schafen, dahinter Dorf
-     und Kirche. object-position blendet den weiten leeren Himmel oben aus,
-     sodass nur der Landschaftsstreifen im Band steht. */
+  /* Landschaftsband: Deich mit Schafen, dahinter Dorf und Kirche. */
   .band{
-    display:block; width:100%; height:clamp(170px,22vw,270px);
-    object-fit:cover;
-    /* 72% zeigt den Deich mit Schafen und das Dorf; der weite leere Himmel
-       oben bleibt außerhalb des Ausschnitts. */
-    object-position:center 72%;
-    margin-bottom:-1px; /* 1px Überlappung: verhindert eine Haarlinie durch Subpixel-Rundung */
+    display:block; width:100%; height:auto;
+    /* Vollständig zeigen statt zuschneiden — sonst fehlen oben rechts die
+       Windräder und der Leuchtturm. Der Himmel des Bildes hat denselben
+       Beigeton wie der Seitenhintergrund, der Übergang bleibt unsichtbar. */
+    margin-bottom:-1px;
   }
-  /* Das Band sitzt auf dem Marschton der Illustration auf — so bleibt der
-     Übergang zum Features-Block auch dann nahtlos, wenn das Bild noch lädt. */
-  .band-wrap{background:var(--marsch);line-height:0}
+  /* Wrapper im Seiten-Beige (= Himmelston des Bildes): kein sichtbarer
+     Übergang, auch während das Bild noch lädt. */
+  .band-wrap{background:var(--bg);line-height:0}
 
   /* Features — sanfter Grünton als Fortsetzung des Landschaftsbandes. */
   .features{
@@ -172,15 +169,19 @@
   .f-logo img{height:64px;display:block}
   .carrier{margin:14px 0 0;font-weight:500;color:#EDF2F2}
   .attr{margin:16px 0 0;color:#9FB0B0;font-size:14px;max-width:56ch}
-  .made{margin:0;text-align:right;color:#9FB0B0;font-size:14px}
-  .blessing{margin:6px 0 0;text-align:right;color:#8FD3D3;font-size:14px}
+  /* Branding-Pattern: Zeile 1 App+Version, Zeile 2 mit rotem Vogel,
+     Zeile 3 kursiv und am gedämpftesten. Abstände 4px wie in der Spec. */
+  .appver{margin:0;text-align:right;color:#9FB0B0;font-size:14px}
+  .made{margin:4px 0 0;text-align:right;color:#9FB0B0;font-size:14px}
+  .bird{display:inline-block;vertical-align:-2px;margin:0 3px}
+  .blessing{margin:4px 0 0;text-align:right;color:#8FD3D3;font-size:12px;font-style:italic;opacity:.85}
   .copy{margin:10px 0 0;text-align:right;font-size:14px}
   hr.f-div{border:0;border-top:1px solid rgba(255,255,255,.13);margin:30px 0 22px}
 
   @media (max-width:820px){
     .info-grid{grid-template-columns:1fr;gap:32px}
     .f-grid{grid-template-columns:1fr}
-    .made,.blessing,.copy{text-align:left}
+    .appver,.made,.blessing,.copy{text-align:left}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -358,7 +359,11 @@
         </p>
       </div>
       <div>
-        <p class="made">Made with ♥ in Hennstedt</p>
+        <!-- Branding-Pattern (app-branding-pattern.md): drei Zeilen, in Zeile 2
+             der rote Vogel (Taube = Heiliger Geist), Zeile 3 kursiv und
+             gedämpfter. Kein Herz — das war hier falsch. -->
+        <p class="appver">Moin Kark v1.2.2</p>
+        <p class="made">Made with <img class="bird" src="/bird.png" alt="Spirit" width="14" height="14"> in Hennstedt</p>
         <p class="blessing">Friede. Schalom. Salam.</p>
         <p class="copy">© <span id="jahr">2026</span> <a href="https://simonluthe.de">Simon Luthe</a></p>
       </div>

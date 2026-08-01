@@ -13,6 +13,7 @@ import type { EventFeature } from "@moinkark/shared";
 import type { MapsApp } from "../lib/store";
 import type { ReminderPref } from "../lib/reminders";
 import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import Constants from "expo-constants";
 import EventCard from "./EventCard";
 
 const IS_WEB = Platform.OS === "web";
@@ -171,8 +172,11 @@ export default function ProfileSheet({
               -Mitwirkende · Tiles: OpenFreeMap · Daten: ChurchDesk
             </Text>
 
-            {/* 3) Autor */}
+            {/* 3) Autor — Branding-Pattern: App+Version, roter Vogel, Friedensgruß. */}
             <View style={styles.footerDivider} />
+            <Text style={styles.appVersion}>
+              Moin Kark v{Constants.expoConfig?.version ?? "1.0"}
+            </Text>
             <View style={styles.geistRow}>
               <Text style={styles.geistText}>Made with </Text>
               <Image source={require("../assets/bird.png")} style={styles.geistBird} resizeMode="contain" />
@@ -302,6 +306,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   geistRow: { flexDirection: "row", alignItems: "center" },
+  appVersion: { fontFamily: fonts.body, fontSize: 13, color: colors.muted, marginBottom: spacing.xs },
   geistText: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
   geistBird: { width: 14, height: 14 },
   geistBlessing: {
