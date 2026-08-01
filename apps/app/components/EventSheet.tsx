@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import {
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -71,6 +72,19 @@ function formatPrice(raw?: string): string {
   return v;
 }
 
+const IS_WEB = Platform.OS === "web";
+
+// Maße für die Abschätzung, ob die Beschreibung genug Platz hat (müssen grob zu
+// den Styles unten passen — kleine Abweichungen sind unkritisch, es geht nur um
+// die Entscheidung „fixer Kopf" vs. „alles scrollt").
+const HERO_HEIGHT = 200; // styles.hero
+const HEAD_BASE = 130; // Padding + Zeit + Titel + Badges + Trenner
+const META_ROW = 24; // eine Meta-Zeile inkl. Abstand
+const FOOTER_BASE = 86; // Maps-Button + Padding (ohne Safe Area)
+// Darunter lohnt der fixe Kopf nicht mehr: weniger als ~6 Textzeilen im
+// Scrollfenster liest sich schlechter, als das ganze Sheet zu scrollen.
+const DESC_MIN_HEIGHT = 132;
+
 export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggleSave }: Props) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
@@ -113,7 +127,20 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   const [lng, lat] = feature.geometry.coordinates;
   const price = formatPrice(p.price);
 
-  // Kopfbereich (Bild + Grabber + Kopfsektion) — scrollt jetzt mit dem Rest.
+  // Höhe des fixen Kopfbereichs abschätzen: Bild + Kopfsektion (Zeit, Titel, Badges,
+  // Trenner) + eine Zeile je Meta-Angabe. Danach entscheidet sich, ob für die
+  // Beschreibung genug Platz bleibt.
+  const metaCount =
+    (p.parish ? 1 : 0) + 1 + (p.locationName ? 1 : 0) + (address ? 1 : 0) +
+    (p.contributor ? 1 : 0) + (price ? 1 : 0);
+  const headerEstimate = HERO_HEIGHT + HEAD_BASE + metaCount * META_ROW;
+  const footerHeight = FOOTER_BASE + insets.bottom;
+  const descSpace = sheetHeight - headerEstimate - footerHeight;
+  // Zu wenig Raum für den Text → lieber das ganze Sheet scrollen lassen, sonst
+  // wären die letzten Zeilen praktisch unerreichbar (der Fehler aus v1.1.1).
+  const scrollAll = !!desc && descSpace < DESC_MIN_HEIGHT;
+
+  // Kopfbereich (Bild + Grabber + Kopfsektion).
   const headerArea = (
     <View>
       {/* Kein Event-Bild → unser Marken-Motiv als Platzhalter. */}
@@ -161,6 +188,17 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             {p.contributor ? <Meta label="Mitwirkung" value={p.contributor} /> : null}
           {price ? <Meta label="Eintritt" value={price} highlight /> : null}
         </View>
+
+        {/* Im Web merkt das Herz nur lokal — es gibt dort keine Erinnerung
+            (expo-notifications kann im Browser nicht planen). Der Hinweis
+            erscheint erst nach dem Merken, damit er nicht ungefragt stört. */}
+        {IS_WEB && isSaved ? (
+          <View style={styles.savedNote}>
+            <Text style={styles.savedNoteText}>
+              Auf diesem Gerät gemerkt. Erinnerungen gibt es in der App.
+            </Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -198,23 +236,45 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             <Text style={styles.closeText}>×</Text>
           </TouchableOpacity>
 
-          {/* Der GESAMTE Inhalt scrollt (Bild, Kopf, Beschreibung) — nur der Maps-Button
-              bleibt fix. Vorher scrollte allein die Beschreibung in dem, was nach dem
-              fixen Kopf übrig blieb: auf iPhone-Höhe oft nur ~130pt, sodass die letzten
-              Zeilen faktisch unerreichbar waren. */}
-          <ScrollView
-            style={styles.descScroll}
-            showsVerticalScrollIndicator
-            contentContainerStyle={styles.descScrollInner}
-          >
-            {headerArea}
-            {desc ? (
-              <>
-                <View style={styles.descDivider} />
-                <Text style={styles.desc}>{desc}</Text>
-              </>
-            ) : null}
-          </ScrollView>
+          {/* Kopfbereich fix, NUR die Beschreibung scrollt.
+              Wichtig: descArea bekommt eine Mindesthöhe (DESC_MIN_HEIGHT). Ohne die
+              blieb auf kleinen Geräten fast kein Platz für den Text übrig (iPhone SE:
+              ~37pt = keine zwei Zeilen), weil Bild + Meta-Block den Kopf sehr hoch
+              machen. Reicht die Höhe nicht, scrollt stattdessen das ganze Sheet —
+              so bleibt der Text immer erreichbar. */}
+          {scrollAll ? (
+            <ScrollView
+              style={styles.descScroll}
+              showsVerticalScrollIndicator
+              contentContainerStyle={styles.descScrollInner}
+            >
+              {headerArea}
+              {desc ? (
+                <>
+                  <View style={styles.descDivider} />
+                  <Text style={styles.desc}>{desc}</Text>
+                </>
+              ) : null}
+            </ScrollView>
+          ) : (
+            <>
+              {headerArea}
+              <View style={styles.descArea}>
+                {desc ? (
+                  <>
+                    <View style={styles.descDivider} />
+                    <ScrollView
+                      style={styles.descScroll}
+                      showsVerticalScrollIndicator
+                      contentContainerStyle={styles.descOnlyInner}
+                    >
+                      <Text style={styles.desc}>{desc}</Text>
+                    </ScrollView>
+                  </>
+                ) : null}
+              </View>
+            </>
+          )}
 
           {/* Fixer Maps-Button unten. */}
           <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
@@ -279,6 +339,21 @@ const styles = StyleSheet.create({
   // Nur die Beschreibung scrollt — nimmt den Restplatz zwischen fixer Kopf- und Fußsektion.
   // Die ScrollView füllt den Restraum über dem fixen Maps-Button.
   descScroll: { flex: 1 },
+  // Bereich zwischen fixem Kopf und Footer; minHeight:0 ist nötig, damit die
+  // ScrollView darin überhaupt scrollt statt sich aufzublähen.
+  descArea: { flex: 1, minHeight: 0 },
+  // Nur-Beschreibung-Modus: hier braucht der Text sein eigenes Seitenpadding
+  // nicht doppelt (styles.desc bringt es mit), unten etwas Luft zum Footer.
+  descOnlyInner: { paddingBottom: spacing.md },
+  // Web-Hinweis unter den Meta-Angaben, sobald das Event gemerkt ist.
+  savedNote: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceMuted,
+  },
+  savedNoteText: { fontFamily: fonts.body, fontSize: 12.5, color: colors.muted, lineHeight: 17 },
   // Bild und Kopfsektion bringen ihr eigenes Padding mit → hier nur unten Luft,
   // damit die letzte Textzeile nicht am Footer klebt.
   descScrollInner: { paddingBottom: spacing.xl },
