@@ -7,6 +7,19 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.1.2] – 2026-08-01
+
+### Behoben
+
+- **Event-Liste im Sheet bis zum letzten Eintrag scrollbar.** Das
+  Safe-Area-Padding sass am Container der FlatList statt im Scroll-Inhalt.
+  Container-Padding verkleinert bei einer Liste aber den sichtbaren Bereich
+  dauerhaft, statt am Ende Platz zu schaffen: die unteren 34pt des Sheets waren
+  tote Fläche, in Stufe „mid" blieben nur 105 statt 139pt Sichtfenster. Die
+  letzten Einträge lagen dadurch im abgeschnittenen Bereich und liessen sich
+  nicht erreichen. Im Browser fiel es nicht auf, weil die Safe-Area-Insets dort
+  0 sind.
+
 ## [1.1.1] – 2026-08-01
 
 ### Behoben
@@ -112,7 +125,8 @@ markiert ihn als stabiles Release.
   Root-Lock maßgeblich. Die Datei war auf einem veralteten Stand und erzeugte
   doppelte, irreführende Alerts.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/Revisor01/moin-kark/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Revisor01/moin-kark/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Revisor01/moin-kark/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Revisor01/moin-kark/releases/tag/v1.0.0
