@@ -7,6 +7,19 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.2.1] – 2026-08-01
+
+### Geändert
+
+- **Landingpage grafisch aufgewertet.** Die abstrakte SVG-Welle ist dem
+  Marschland-Motiv aus der App gewichen (Dörfer, Kirchen, Fluss, Bahnlinie).
+  Im Hero steht der Kirchen-Pin groß und angeschnitten im Hintergrund — auf
+  schmalen Screens ausgeblendet, damit der Text lesbar bleibt.
+- **Dithmarscher Grün** in der Palette (`--green`, `--marsch`, aus dem
+  Kartenstil der App): Der Features-Block startet im Marschton des
+  Landschaftsbandes und läuft in den Sand aus, einzelne Feature-Icons und die
+  Panel-Oberkante nehmen den Ton auf.
+
 ## [1.2.0] – 2026-08-01
 
 ### Hinzugefügt
@@ -154,7 +167,8 @@ markiert ihn als stabiles Release.
   Root-Lock maßgeblich. Die Datei war auf einem veralteten Stand und erzeugte
   doppelte, irreführende Alerts.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/Revisor01/moin-kark/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Revisor01/moin-kark/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/Revisor01/moin-kark/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Revisor01/moin-kark/compare/v1.1.0...v1.1.1
