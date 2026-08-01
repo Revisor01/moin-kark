@@ -7,6 +7,21 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.2.2] – 2026-08-02
+
+### Geändert
+
+- **Landingpage mit sechs Dithmarschen-Illustrationen.** Die generischen Motive
+  sind durch ortsbezogene ersetzt: Deich mit Schafen als Hero-Band, dazu ein
+  neuer Abschnitt „Von der Küste bis in die Marsch" mit Büsumer Hafen,
+  Meldorfer Dom, St. Bartholomäus Wesselburen, St. Secundus Hennstedt und den
+  Kohlfeldern. Die Bauwerke sind architektonisch treffend — Wesselburens
+  Zwiebelhaube sitzt korrekt mittig auf dem Dach statt auf einem Seitenturm.
+- Social-Vorschau (`og:image`) zeigt jetzt die Deich-Illustration statt des
+  App-Icons.
+- Alle Bilder auf 1600px skaliert und als JPEG komprimiert (629 KB statt 34 MB
+  PNG); die Kacheln laden verzögert, nur das Hero-Band sofort.
+
 ## [1.2.1] – 2026-08-01
 
 ### Geändert
@@ -167,7 +182,8 @@ markiert ihn als stabiles Release.
   Root-Lock maßgeblich. Die Datei war auf einem veralteten Stand und erzeugte
   doppelte, irreführende Alerts.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/Revisor01/moin-kark/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/Revisor01/moin-kark/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Revisor01/moin-kark/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/Revisor01/moin-kark/compare/v1.1.1...v1.1.2
