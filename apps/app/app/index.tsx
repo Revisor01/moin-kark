@@ -371,7 +371,7 @@ export default function Home() {
           <View style={styles.mapPane}>{map}</View>
           <View style={styles.listPane}>
             {filterBar}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} />
           </View>
         </View>
         {filterSheet}
@@ -402,7 +402,9 @@ export default function Home() {
         </View>
         {mapAreaHeight > 0 ? (
           <DraggableListSheet availableHeight={mapAreaHeight} topInset={0} bottomInset={insets.bottom}>
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} />
+            {/* bottomInset an die Liste: als Scroll-Inhalt-Reserve, nicht als
+                Container-Padding — sonst sind die letzten Einträge nicht erreichbar. */}
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} />
           </DraggableListSheet>
         ) : null}
       </View>

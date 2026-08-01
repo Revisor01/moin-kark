@@ -10,6 +10,12 @@ interface Props {
   header?: React.ReactElement;
   isSaved?: (id: number) => boolean;
   onToggleSave?: (id: number) => void;
+  /**
+   * Zusätzliche Reserve am Listenende (Safe Area / Home-Indicator). Gehört in den
+   * Scroll-Inhalt — als Container-Padding würde es den sichtbaren Bereich
+   * verkleinern und die letzten Einträge unerreichbar machen.
+   */
+  bottomInset?: number;
 }
 
 export default function EventList({
@@ -19,6 +25,7 @@ export default function EventList({
   header,
   isSaved,
   onToggleSave,
+  bottomInset = 0,
 }: Props) {
   return (
     <FlatList
@@ -36,7 +43,7 @@ export default function EventList({
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: spacing.xxl + bottomInset }]}
       ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Nichts gefunden</Text>
