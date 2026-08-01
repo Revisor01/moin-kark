@@ -7,6 +7,35 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.2.0] – 2026-08-01
+
+### Hinzugefügt
+
+- **Landingpage überarbeitet**: Haupt-Handlung ist jetzt die Karte selbst
+  („Karte jetzt öffnen"), dazu ein zweiter Karten-Einstieg im Seitenpanel.
+  App Store und Google Play sind als Badges vorbereitet — bewusst ohne Link,
+  solange die Apps nicht veröffentlicht sind. Launch-Hinweis im Hero,
+  Kirchenkreis-Logo im Footer von 36 auf 64px.
+- **Web-Hinweise zu Erinnerungen.** Im Profil steht an Stelle des
+  Erinnerungs-Wählers eine Erklärung, im Event-Modal erscheint nach dem Merken
+  „Auf diesem Gerät gemerkt. Erinnerungen gibt es in der App."
+
+### Geändert
+
+- **Breitansicht: Liste links, Karte rechts** (vorher umgekehrt).
+- **Event-Modal**: Der Kopfbereich ist wieder fix, nur die Beschreibung scrollt.
+  Damit der Fehler aus 1.1.1 nicht zurückkehrt, fällt das Sheet automatisch auf
+  „gesamter Inhalt scrollt" zurück, wenn für den Text weniger als ~132pt bliebe.
+- **Technik-Panel von der Landingpage entfernt** (ChurchDesk, MapLibre,
+  API-Adresse). Die API-Adresse zu bewerben lädt zu Fremdnutzung der
+  server-seitigen Tokens ein.
+
+### Behoben
+
+- **Dunkler Strich über dem Listen-Sheet.** Die 1,5pt-Rahmenkante wirkte
+  zusammen mit dem kräftigen Schatten wie ein schwarzer Balken. Kante entfernt,
+  Schatten weicher — der Sand-Hintergrund setzt das Sheet ausreichend ab.
+
 ## [1.1.2] – 2026-08-01
 
 ### Behoben
@@ -125,7 +154,8 @@ markiert ihn als stabiles Release.
   Root-Lock maßgeblich. Die Datei war auf einem veralteten Stand und erzeugte
   doppelte, irreführende Alerts.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Revisor01/moin-kark/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/Revisor01/moin-kark/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Revisor01/moin-kark/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Revisor01/moin-kark/compare/v1.0.0...v1.1.0
