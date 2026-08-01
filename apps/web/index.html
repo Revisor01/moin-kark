@@ -11,7 +11,9 @@
 <meta property="og:description" content="Gottesdienste, Konzerte, Gruppen und mehr aus dem Kirchenkreis Dithmarschen — als Karte.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://moin-kark.de">
-<meta property="og:image" content="https://moin-kark.de/icon.png">
+<meta property="og:image" content="https://moin-kark.de/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:locale" content="de_DE">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +26,7 @@
     --fg:#1C2B2B; --muted:#5C6B6B; --faint:#8A9595;
     --border:#E6DCCB; --water:#A9D6D6;
     /* Dithmarscher Grün — aus dem Kartenstil der App (mapGreen/success). */
-    --green:#2E7D5B; --green-soft:#E4EBDA; --marsch:#6FB2A5;
+    --green:#2E7D5B; --green-soft:#E4EBDA; --marsch:#75AA9A;
     --maxw:1080px;
   }
   *{box-sizing:border-box}
@@ -95,13 +97,15 @@
   .store-badge span{display:flex;flex-direction:column;line-height:1.15;font-weight:700;font-size:15px}
   .store-badge small{font-weight:500;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--faint)}
 
-  /* Landschaftsband statt abstrakter Welle: Marschland mit Dörfern, Kirchen,
-     Fluss und Bahnlinie — dieselbe Illustration wie in der App.
-     object-position blendet den leeren Himmel oben aus, sodass nur der
-     Landschaftsstreifen sichtbar bleibt. */
+  /* Landschaftsband statt abstrakter Welle: Deich mit Schafen, dahinter Dorf
+     und Kirche. object-position blendet den weiten leeren Himmel oben aus,
+     sodass nur der Landschaftsstreifen im Band steht. */
   .band{
-    display:block; width:100%; height:clamp(150px,20vw,250px);
-    object-fit:cover; object-position:center 82%;
+    display:block; width:100%; height:clamp(170px,22vw,270px);
+    object-fit:cover;
+    /* 72% zeigt den Deich mit Schafen und das Dorf; der weite leere Himmel
+       oben bleibt außerhalb des Ausschnitts. */
+    object-position:center 72%;
     margin-bottom:-1px; /* 1px Überlappung: verhindert eine Haarlinie durch Subpixel-Rundung */
   }
   /* Das Band sitzt auf dem Marschton der Illustration auf — so bleibt der
@@ -129,6 +133,23 @@
   .card:nth-child(3) .ico svg, .card:nth-child(5) .ico svg{stroke:var(--green)}
   .card:nth-child(4) .ico{background:rgba(228,87,46,.11)}
   .card:nth-child(4) .ico svg{stroke:var(--accent)}
+
+  /* Orte — die Illustrationen als eigener Abschnitt. Vier Kacheln im Raster,
+     das Kohlfeld darunter über die volle Breite als Abschluss. */
+  .places{padding:62px 0 8px}
+  .places h2{font-size:clamp(1.6rem,3.4vw,2.2rem);font-weight:700;margin-bottom:8px}
+  .places .sub{color:var(--muted);margin:0 0 34px;max-width:52ch}
+  .place-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .place{margin:0;border-radius:16px;overflow:hidden;background:var(--surface);border:1px solid var(--border)}
+  .place img{display:block;width:100%;height:clamp(130px,17vw,190px);object-fit:cover;object-position:center 62%}
+  .place figcaption{
+    padding:11px 16px;font-weight:700;font-size:15px;color:var(--fg);
+    border-top:1px solid var(--border);
+  }
+  .place-wide{grid-column:1 / -1}
+  .place-wide img{height:clamp(150px,19vw,220px);object-position:center 70%}
+  .place-wide figcaption{color:var(--muted);font-weight:500}
+  @media (max-width:640px){ .place-grid{grid-template-columns:1fr} }
 
   /* Info */
   .info{padding:66px 0}
@@ -211,7 +232,8 @@
   </section>
 
   <div class="band-wrap">
-    <img class="band" src="/landschaft.jpg" alt="" aria-hidden="true" width="1400" height="763">
+    <img class="band" src="/deich.jpg" alt="Deich mit Schafen, dahinter ein Dorf mit Kirche"
+         width="1600" height="679" fetchpriority="high">
   </div>
 
   <section class="features">
@@ -249,6 +271,43 @@
           <h3>Datensparsam</h3>
           <p>Kein Konto, kein Tracking, keine Werbung. Der Standort verlässt das Gerät nicht.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="places">
+    <div class="wrap">
+      <h2>Von der Küste bis in die Marsch</h2>
+      <p class="sub">
+        18 Kirchengemeinden zwischen Büsum und Meldorf, zwischen Deich und
+        Kohlfeld — alle auf einer Karte.
+      </p>
+      <div class="place-grid">
+        <figure class="place">
+          <img src="/buesum.jpg" alt="Büsumer Hafen mit Krabbenkuttern und Leuchtturm"
+               width="1600" height="679" loading="lazy">
+          <figcaption>Büsum</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/meldorf.jpg" alt="Der Meldorfer Dom über den Dächern der Stadt"
+               width="1600" height="679" loading="lazy">
+          <figcaption>Meldorf</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/wesselburen.jpg" alt="St. Bartholomäus in Wesselburen mit seiner Zwiebelhaube"
+               width="1600" height="679" loading="lazy">
+          <figcaption>Wesselburen</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/hennstedt.jpg" alt="St. Secundus in Hennstedt"
+               width="1600" height="679" loading="lazy">
+          <figcaption>Hennstedt</figcaption>
+        </figure>
+        <figure class="place place-wide">
+          <img src="/kohl.jpg" alt="Kohlfelder in der Dithmarscher Marsch"
+               width="1600" height="679" loading="lazy">
+          <figcaption>Und dazwischen: Kohl, so weit das Auge reicht</figcaption>
+        </figure>
       </div>
     </div>
   </section>
