@@ -7,6 +7,8 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.1.0] – 2026-08-01
+
 ### Hinzugefügt
 
 - Landingpage `apps/web/` für `moin-kark.de` — statisches HTML ohne Build-Step,
@@ -98,5 +100,6 @@ markiert ihn als stabiles Release.
   Root-Lock maßgeblich. Die Datei war auf einem veralteten Stand und erzeugte
   doppelte, irreführende Alerts.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Revisor01/moin-kark/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Revisor01/moin-kark/releases/tag/v1.0.0
