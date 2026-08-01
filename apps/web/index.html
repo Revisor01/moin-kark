@@ -51,8 +51,19 @@
   /* Hero — großer, angeschnittener Pin rechts im Hintergrund. Er sitzt hinter
      dem Text (z-index/opacity) und wird auf schmalen Screens ausgeblendet,
      damit er die Lesbarkeit nicht stört. */
-  .hero{padding:48px 0 56px; position:relative; overflow:hidden}
-  .hero .wrap{position:relative; z-index:2}
+  /* Unten so viel Raum, dass das Landschaftsband dort Platz hat; der Text
+     sitzt im beigen Himmel des Bildes. */
+  .hero{padding:40px 0 clamp(150px,21vw,300px); position:relative; overflow:hidden}
+  .hero .wrap{position:relative; z-index:3}
+  /* Das Landschaftsband liegt HINTER dem Hero-Text und schließt unten bündig
+     an den nächsten Abschnitt an. Der beige Himmel des Bildes ist zugleich der
+     Hintergrund von Überschrift und Buttons — dadurch kein leerer Block
+     zwischen Text und Landschaft. */
+  .hero-band{
+    position:absolute; left:0; right:0; bottom:-1px;
+    display:block; width:100%; height:auto;
+    z-index:1; pointer-events:none;
+  }
   .hero-pin{
     position:absolute; right:-90px; top:-70px;
     width:min(560px,52vw); height:auto;
@@ -97,17 +108,6 @@
   .store-badge span{display:flex;flex-direction:column;line-height:1.15;font-weight:700;font-size:15px}
   .store-badge small{font-weight:500;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--faint)}
 
-  /* Landschaftsband: Deich mit Schafen, dahinter Dorf und Kirche. */
-  .band{
-    display:block; width:100%; height:auto;
-    /* Vollständig zeigen statt zuschneiden — sonst fehlen oben rechts die
-       Windräder und der Leuchtturm. Der Himmel des Bildes hat denselben
-       Beigeton wie der Seitenhintergrund, der Übergang bleibt unsichtbar. */
-    margin-bottom:-1px;
-  }
-  /* Wrapper im Seiten-Beige (= Himmelston des Bildes): kein sichtbarer
-     Übergang, auch während das Bild noch lädt. */
-  .band-wrap{background:var(--bg);line-height:0}
 
   /* Features — sanfter Grünton als Fortsetzung des Landschaftsbandes. */
   .features{
@@ -230,12 +230,9 @@
         </div>
       </div>
     </div>
-  </section>
-
-  <div class="band-wrap">
-    <img class="band" src="/deich.jpg" alt="Deich mit Schafen, dahinter ein Dorf mit Kirche"
+    <img class="hero-band" src="/deich.jpg" alt="Deich mit Schafen, dahinter ein Dorf mit Kirche"
          width="1600" height="679" fetchpriority="high">
-  </div>
+  </section>
 
   <section class="features">
     <div class="wrap">
@@ -362,7 +359,7 @@
         <!-- Branding-Pattern (app-branding-pattern.md): drei Zeilen, in Zeile 2
              der rote Vogel (Taube = Heiliger Geist), Zeile 3 kursiv und
              gedämpfter. Kein Herz — das war hier falsch. -->
-        <p class="appver">Moin Kark v1.2.2</p>
+        <p class="appver">Moin Kark v<span id="ver">1.0.0</span></p>
         <p class="made">Made with <img class="bird" src="/bird.png" alt="Spirit" width="14" height="14"> in Hennstedt</p>
         <p class="blessing">Friede. Schalom. Salam.</p>
         <p class="copy">© <span id="jahr">2026</span> <a href="https://simonluthe.de">Simon Luthe</a></p>
@@ -377,5 +374,6 @@
 </footer>
 
 <script>document.getElementById('jahr').textContent=new Date().getFullYear()</script>
+<!-- Version wird beim Deploy aus package.json gesetzt (s. README) -->
 </body>
 </html>

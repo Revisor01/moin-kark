@@ -7,128 +7,12 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [1.2.2] – 2026-08-02
-
-### Geändert
-
-- **Landingpage mit sechs Dithmarschen-Illustrationen.** Die generischen Motive
-  sind durch ortsbezogene ersetzt: Deich mit Schafen als Hero-Band, dazu ein
-  neuer Abschnitt „Von der Küste bis in die Marsch" mit Büsumer Hafen,
-  Meldorfer Dom, St. Bartholomäus Wesselburen, St. Secundus Hennstedt und den
-  Kohlfeldern. Die Bauwerke sind architektonisch treffend — Wesselburens
-  Zwiebelhaube sitzt korrekt mittig auf dem Dach statt auf einem Seitenturm.
-- Social-Vorschau (`og:image`) zeigt jetzt die Deich-Illustration statt des
-  App-Icons.
-- Alle Bilder auf 1600px skaliert und als JPEG komprimiert (629 KB statt 34 MB
-  PNG); die Kacheln laden verzögert, nur das Hero-Band sofort.
-
-## [1.2.1] – 2026-08-01
-
-### Geändert
-
-- **Landingpage grafisch aufgewertet.** Die abstrakte SVG-Welle ist dem
-  Marschland-Motiv aus der App gewichen (Dörfer, Kirchen, Fluss, Bahnlinie).
-  Im Hero steht der Kirchen-Pin groß und angeschnitten im Hintergrund — auf
-  schmalen Screens ausgeblendet, damit der Text lesbar bleibt.
-- **Dithmarscher Grün** in der Palette (`--green`, `--marsch`, aus dem
-  Kartenstil der App): Der Features-Block startet im Marschton des
-  Landschaftsbandes und läuft in den Sand aus, einzelne Feature-Icons und die
-  Panel-Oberkante nehmen den Ton auf.
-
-## [1.2.0] – 2026-08-01
+Noch nicht veröffentlicht. Die erste Store-Fassung wird **1.0.0** — bis dahin
+sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Hinzugefügt
 
-- **Landingpage überarbeitet**: Haupt-Handlung ist jetzt die Karte selbst
-  („Karte jetzt öffnen"), dazu ein zweiter Karten-Einstieg im Seitenpanel.
-  App Store und Google Play sind als Badges vorbereitet — bewusst ohne Link,
-  solange die Apps nicht veröffentlicht sind. Launch-Hinweis im Hero,
-  Kirchenkreis-Logo im Footer von 36 auf 64px.
-- **Web-Hinweise zu Erinnerungen.** Im Profil steht an Stelle des
-  Erinnerungs-Wählers eine Erklärung, im Event-Modal erscheint nach dem Merken
-  „Auf diesem Gerät gemerkt. Erinnerungen gibt es in der App."
-
-### Geändert
-
-- **Breitansicht: Liste links, Karte rechts** (vorher umgekehrt).
-- **Event-Modal**: Der Kopfbereich ist wieder fix, nur die Beschreibung scrollt.
-  Damit der Fehler aus 1.1.1 nicht zurückkehrt, fällt das Sheet automatisch auf
-  „gesamter Inhalt scrollt" zurück, wenn für den Text weniger als ~132pt bliebe.
-- **Technik-Panel von der Landingpage entfernt** (ChurchDesk, MapLibre,
-  API-Adresse). Die API-Adresse zu bewerben lädt zu Fremdnutzung der
-  server-seitigen Tokens ein.
-
-### Behoben
-
-- **Dunkler Strich über dem Listen-Sheet.** Die 1,5pt-Rahmenkante wirkte
-  zusammen mit dem kräftigen Schatten wie ein schwarzer Balken. Kante entfernt,
-  Schatten weicher — der Sand-Hintergrund setzt das Sheet ausreichend ab.
-
-## [1.1.2] – 2026-08-01
-
-### Behoben
-
-- **Event-Liste im Sheet bis zum letzten Eintrag scrollbar.** Das
-  Safe-Area-Padding sass am Container der FlatList statt im Scroll-Inhalt.
-  Container-Padding verkleinert bei einer Liste aber den sichtbaren Bereich
-  dauerhaft, statt am Ende Platz zu schaffen: die unteren 34pt des Sheets waren
-  tote Fläche, in Stufe „mid" blieben nur 105 statt 139pt Sichtfenster. Die
-  letzten Einträge lagen dadurch im abgeschnittenen Bereich und liessen sich
-  nicht erreichen. Im Browser fiel es nicht auf, weil die Safe-Area-Insets dort
-  0 sind.
-
-## [1.1.1] – 2026-08-01
-
-### Behoben
-
-- **Event-Modal auf iOS bis zum Ende scrollbar.** Bisher scrollte nur die
-  Beschreibung — und zwar in dem Rest, der nach dem fixen Kopfbereich (Bild
-  200pt + Titel + bis zu 6 Meta-Zeilen) und dem Maps-Button übrig blieb. Auf
-  iPhone-Höhe waren das oft nur ~130pt, auf dem iPhone SE sogar ~37pt: die
-  letzten Zeilen waren faktisch unerreichbar. Im Browser fiel es nicht auf, weil
-  dort mehr Höhe zur Verfügung steht. Jetzt scrollt der gesamte Inhalt in einer
-  ScrollView, nur der Maps-Button bleibt fix.
-
-## [1.1.0] – 2026-08-01
-
-### Hinzugefügt
-
-- Landingpage `apps/web/` für `moin-kark.de` — statisches HTML ohne Build-Step,
-  im Branding der App (Bricolage Grotesque + DM Sans, Nordsee-Teal/Koralle).
-- Web-App unter `karte.moin-kark.de` (Expo-Web-Export).
-
-### Geändert
-
-- **Umzug auf die eigene Domain `moin-kark.de`.** Die API läuft ab sofort unter
-  `api.moin-kark.de` statt `kkkarte.godsapp.de`.
-- `apps/proxy` → `apps/api`; Container und Image `kkdith-proxy` → `moinkark-api`;
-  npm-Scope `@kkd/*` → `@moinkark/*`; Root-Paket `kkdith` → `moin-kark`.
-- CORS erlaubt jetzt `karte.moin-kark.de` und `moin-kark.de`. Die Alt-Domain
-  `kkkarte.godsapp.de` bleibt vorerst zugelassen, damit bereits ausgelieferte
-  TestFlight-Builds weiterlaufen.
-- DNS bei Netcup vollständig eingerichtet (A/AAAA, Wildcard, MX, SPF, DKIM,
-  DMARC, MTA-STS, TLS-RPT, CAA) — nach demselben Muster wie die übrigen
-  KeyHelp-Domains.
-
-Nicht geändert: `slug`, `scheme` und `bundleIdentifier` der App. Sie hängen am
-EAS-Projekt und an ausgelieferten Builds; eine Änderung würde die App im Store
-zu einer anderen App machen und Deep-Links brechen.
-
-### Sicherheit
-
-- `brace-expansion` auf 5.0.9 und `shell-quote` auf 1.10.0 angehoben (beides
-  DoS-Advisories in transitiven Build-Abhängigkeiten, via Dependabot-PRs #1/#2).
-  Web-Build, Proxy-Typecheck und Live-Abruf danach unverändert grün.
-
-## [1.0.0] – 2026-08-01
-
-Erste offiziell versionierte Fassung. Die App lief bis hierher unversioniert als
-`0.1.0` durch TestFlight; dieser Eintrag fasst den gesamten Stand zusammen und
-markiert ihn als stabiles Release.
-
-### Hinzugefügt
-
-- **Read-Proxy** (`apps/proxy`, Node + Hono): aggregiert die ChurchDesk-REST-API v3
+- **Read-Only-API** (`apps/api`, Node + Hono): aggregiert die ChurchDesk-REST-API v3
   über 14 Kirchengemeinde-Organisationen, dedupliziert und liefert ein GeoJSON.
   Die 14 Read-Tokens bleiben server-seitig. Endpoints: `/events.geojson`,
   `/categories.json`, `/healthz`. SWR-Cache, serverseitig gedeckeltes Zeitfenster
@@ -138,55 +22,53 @@ markiert ihn als stabiles Release.
   nativ via `@maplibre/maplibre-react-native`).
 - **Geteiltes Paket** (`packages/shared`): TypeScript-Typen, Kirchspiel-Mapping,
   Kirchen-Koordinaten als Fallback.
-- Standort & Umkreis: Live-Standort, der Marker folgt der Bewegung
-  (`watchPositionAsync`); „Zu meinem Standort“ fällt bei fernem Standort auf die
-  Dithmarschen-Übersicht zurück.
-- Ziehbares Listen-Sheet mit drei Snap-Stufen (nur Griff / ein Eintrag lesbar /
-  groß, Karte weiter sichtbar).
-- Filter: Gemeinde, Kategorie, Wochen-Vorauswahl, Viewport („Liste zeigt den
-  sichtbaren Kartenausschnitt“), schwebende Filterleiste mit Chips.
+- **Landingpage** (`apps/web`) auf `moin-kark.de`, Web-App auf
+  `karte.moin-kark.de` — mit sechs eigens erstellten Dithmarschen-Illustrationen
+  (Deich mit Schafen, Büsumer Hafen, Meldorfer Dom, St. Bartholomäus
+  Wesselburen, St. Secundus Hennstedt, Kohlfelder).
+- Standort & Umkreis: Live-Standort, der Marker folgt der Bewegung; „Zu meinem
+  Standort“ fällt bei fernem Standort auf die Dithmarschen-Übersicht zurück.
+- Ziehbares Listen-Sheet mit drei Snap-Stufen.
+- Filter: Gemeinde, Kategorie, Wochen-Vorauswahl, sichtbarer Kartenausschnitt.
 - Merken & Erinnerungen: gemerkte Events persistent, lokale Benachrichtigungen
-  on-device (kein Server).
+  on-device (kein Server). Im Web weisen Profil und Event-Modal darauf hin, dass
+  es dort keine Erinnerungen gibt und nur lokal gemerkt wird.
 - Event-Cache für Offline-Start, Onboarding-Overlay, Cluster-Tap.
-- Kartenwahl: Apple/Google Maps nativ, auf Web/Desktop immer Google Maps im Browser.
-- Branding: App-Name „Moin Kark“, Bricolage-Grotesque + DM Sans, Küsten-Kartenstil,
-  „Fog of War“ außerhalb Dithmarschens, App-Icon (Terracotta-Pin auf hellem
-  Aqua-Teal, iOS light/dark/tinted + Android adaptiv) und passender Splash.
-- Profil-Sheet mit Kirchenkreis-Trägerschaft, Copyright und Kartenattribution.
+- Kartenwahl: Apple/Google Maps nativ, auf Web/Desktop Google Maps im Browser.
+- Branding: App-Name „Moin Kark“, Bricolage Grotesque + DM Sans,
+  Küsten-Kartenstil, „Fog of War“ außerhalb Dithmarschens, App-Icon
+  (Terracotta-Pin mit Kirche) in allen Varianten für iOS, Android und Web.
+- Footer nach dem projektübergreifenden Branding-Pattern: App + Version,
+  „Made with 🐦 in Hennstedt“, Friedensgruß.
 
-### Geändert
+### Infrastruktur
 
-- Proxy: Zeitzone via `tzdata` im Container korrigiert.
-- Kategorien werden nach Titel dedupliziert; `0/0`-Koordinaten gelten als Fallback.
-- Vergangene Events werden ausgefiltert.
-- Ausgeschlossen: interne Veranstaltungen, Amtshandlungen (intern), Konfirmanden,
-  extern gebuchte Termine.
-
-### Behoben
-
-- Reanimated-Crash beim Start.
-- Kein Fehler-Screen mehr beim Offline-Start, solange Cache-Daten vorliegen.
-- Listen-Sheet bis zum Ende scrollbar — letzte Einträge werden nicht mehr abgeschnitten.
-- Erinnerungen brechen im Web nicht mehr ab (Platform-Guard).
-- Kein Flackern beim Schließen des Modals; Position wird im sichtbaren Bereich zentriert.
-- Detail-Beschreibung scrollt korrekt; EventSheet per Swipe schließbar.
+- Eigene Domain `moin-kark.de` mit vollständigem DNS (A/AAAA, Wildcard, MX, SPF,
+  DKIM, DMARC, MTA-STS, TLS-RPT, CAA) und Let's-Encrypt-Zertifikaten.
+- API unter `api.moin-kark.de` (Container `moinkark-api`, Apache/KeyHelp →
+  Traefik). Die Alt-Domain `kkkarte.godsapp.de` bleibt vorerst in der
+  CORS-Allowlist, solange Builds mit der alten URL im Umlauf sind.
+- Mail-Weiterleitung `moin@moin-kark.de`.
 
 ### Sicherheit
 
-- `@hono/node-server` auf `2.x` und `hono` auf `4.12.x` angehoben (behebt die
-  gemeldeten Advisories im Proxy). Verifiziert gegen die Live-ChurchDesk-API:
-  861 Events, CORS-Allowlist und Fehlerpfad unverändert korrekt.
-- `expo` auf `56.0.18` gepatcht (Web-Build verifiziert).
-- Dependabot-Alerts und Security-Updates für das Repository aktiviert.
-- `apps/app/package-lock.json` entfernt: In einem npm-Workspace ist allein der
-  Root-Lock maßgeblich. Die Datei war auf einem veralteten Stand und erzeugte
-  doppelte, irreführende Alerts.
+- `@hono/node-server` auf 2.x, `hono` auf 4.12.x, `expo` auf 56.0.18,
+  `brace-expansion` auf 5.0.9, `shell-quote` auf 1.10.0.
+- Dependabot-Alerts und Security-Updates aktiviert (17 → 1 offener Alert; der
+  verbleibende betrifft `uuid` im Expo-Build-Tooling, kein Patch verfügbar).
+- `apps/app/package-lock.json` entfernt — im npm-Workspace ist allein der
+  Root-Lock maßgeblich.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/v1.2.2...HEAD
-[1.2.2]: https://github.com/Revisor01/moin-kark/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/Revisor01/moin-kark/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/Revisor01/moin-kark/compare/v1.1.2...v1.2.0
-[1.1.2]: https://github.com/Revisor01/moin-kark/compare/v1.1.1...v1.1.2
-[1.1.1]: https://github.com/Revisor01/moin-kark/compare/v1.1.0...v1.1.1
-[1.1.0]: https://github.com/Revisor01/moin-kark/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/Revisor01/moin-kark/releases/tag/v1.0.0
+### Behoben
+
+- Event-Modal: Kopfbereich fix, nur die Beschreibung scrollt; bei zu wenig Platz
+  scrollt automatisch das gesamte Sheet (sonst waren die letzten Zeilen auf
+  kleinen Geräten unerreichbar).
+- Event-Liste im Sheet bis zum letzten Eintrag scrollbar — das Safe-Area-Padding
+  saß am Container statt im Scroll-Inhalt und verkleinerte den sichtbaren
+  Bereich dauerhaft.
+- Reanimated-Crash beim Start; kein Fehler-Screen beim Offline-Start mit Cache.
+- Erinnerungen brechen im Web nicht mehr ab (Platform-Guard).
+- Dunkler Strich über dem Listen-Sheet (Rahmenkante + zu kräftiger Schatten).
+
+[Unreleased]: https://github.com/Revisor01/moin-kark/commits/main
