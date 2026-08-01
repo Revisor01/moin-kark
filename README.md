@@ -33,7 +33,13 @@ Die 14 ChurchDesk-Read-Tokens sind **geheim** und dürfen **nie** ins Repo oder 
 App-Bundle. Sie leben ausschließlich als Container-ENV des Proxys (`apps/proxy/.env`,
 gitignored). Die App kennt nur die Proxy-URL.
 
-## Quickstart (Proxy lokal)
+## Quickstart
+
+Voraussetzung: Node ≥ 20. Das Repo ist ein npm-Workspace — `npm install` läuft
+**im Root** und installiert alle drei Pakete. Maßgeblich ist allein die
+`package-lock.json` im Root (die Apps haben bewusst keine eigene).
+
+### Proxy lokal
 
 ```bash
 npm install
@@ -42,6 +48,25 @@ cp .env.example .env   # 14 Tokens eintragen
 npm run dev
 curl localhost:8787/events.geojson | python3 -m json.tool
 ```
+
+Ohne Tokens startet der Proxy zwar, liefert aber ein leeres GeoJSON.
+
+### App lokal
+
+```bash
+cd apps/app
+npm run web       # Browser
+npm run ios       # Simulator (erfordert vorheriges expo prebuild)
+npm run android
+```
+
+Die App zieht ihre Daten vom Proxy. Für lokale Entwicklung muss die Proxy-URL
+erreichbar und die eigene Origin in `ALLOWED_ORIGINS` eingetragen sein.
+
+## Versionierung
+
+[SemVer](https://semver.org/lang/de/); Änderungen stehen im [CHANGELOG.md](CHANGELOG.md).
+Jede ausgelieferte Version bekommt einen Tag `vX.Y.Z` und ein GitHub-Release.
 
 ## Deployment (Proxy)
 

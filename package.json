@@ -1,7 +1,7 @@
 {
   "name": "kkdith",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Was ist los in Dithmarschen — Kirchenkreis-Event-Karte (Web + iOS + Android)",
   "workspaces": [
     "packages/*",
