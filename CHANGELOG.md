@@ -7,6 +7,12 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Sicherheit
+
+- `brace-expansion` auf 5.0.9 und `shell-quote` auf 1.10.0 angehoben (beides
+  DoS-Advisories in transitiven Build-Abhängigkeiten, via Dependabot-PRs #1/#2).
+  Web-Build, Proxy-Typecheck und Live-Abruf danach unverändert grün.
+
 ## [1.0.0] – 2026-08-01
 
 Erste offiziell versionierte Fassung. Die App lief bis hierher unversioniert als
