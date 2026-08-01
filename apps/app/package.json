@@ -1,6 +1,6 @@
 {
   "name": "@kkd/app",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
@@ -13,7 +13,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@tanstack/react-query": "^5.101.0",
     "@vis.gl/react-maplibre": "^8.1.1",
-    "expo": "~56.0.12",
+    "expo": "~56.0.18",
     "expo-constants": "~56.0.18",
     "expo-font": "~56.0.7",
     "expo-linking": "~56.0.14",

@@ -43,5 +43,12 @@ apps/app/dist-cert.p12
 apps/app/moinkark.mobileprovision
 apps/app/credentials.json
 
-# Quell-Bilder (nicht committen)
-Gemini_Generated_*.png
+# Design-Quellgrafiken (lokal, nicht committen)
+design/
+
+# Claude Code Session-Artefakte
+.claude/scheduled_tasks.lock
+.claude/*.lock
+
+# Workspace: nur der Root-Lock ist maßgeblich
+apps/app/package-lock.json
