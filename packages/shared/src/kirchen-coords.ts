@@ -133,6 +133,29 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
 };
 
 /**
+ * Zuordnung über den TITEL — Notnagel für Termine, die in ChurchDesk weder ein
+ * Ort-Objekt noch einen Ortsnamen haben. Ohne das landen sie auf dem
+ * Gemeindepunkt (Urlauberseelsorge Büsum: 31 Termine auf einer Nadel).
+ *
+ * Greift NUR, wenn kein Ortsname vorhanden ist — eine gepflegte Ortsangabe hat
+ * immer Vorrang. Der Vergleich ist ein Präfix-Match auf dem normalisierten Titel,
+ * damit Varianten wie „Kirchenkiste" / „Kirchenkiste!" beide erfasst werden.
+ */
+export const TITLE_COORD_FIXES: Array<{ prefix: string; coords: LatLng }> = [
+  // Eigener Ort an der Nordseestraße 79X — NICHT die Familienlagune.
+  { prefix: "willkommen in der kirchenkiste", coords: { lat: 54.1334736, lng: 8.8382318 } },
+  // Treffpunkt ist die Fischerkirche St. Clemens.
+  { prefix: "pilgern in büsum", coords: { lat: 54.1296131, lng: 8.861221 } },
+];
+
+/** Titel-basierte Zuordnung (nur wenn kein Ortsname gepflegt ist). */
+export function coordFixForTitle(title: string | undefined): LatLng | undefined {
+  if (!title) return undefined;
+  const t = normalize(title);
+  return TITLE_COORD_FIXES.find((e) => t.startsWith(e.prefix))?.coords;
+}
+
+/**
  * Liefert eine korrigierte Koordinate für einen Ort — oder undefined, wenn der
  * Ort nicht in der Korrekturtabelle steht (dann gilt die ChurchDesk-Angabe).
  */

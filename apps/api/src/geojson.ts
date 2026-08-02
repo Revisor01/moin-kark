@@ -3,6 +3,7 @@
 
 import {
   coordFixFor,
+  coordFixForTitle,
   fallbackCoords,
   orgName,
   resolveKirchspiel,
@@ -76,8 +77,13 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
   // aufeinander und ein Pin verdeckt den anderen). Die Korrektur hat Vorrang.
   const fix = coordFixFor(locationName);
 
+  // Kein Ort und keine Koordinate in ChurchDesk → über den Titel zuordnen, bevor
+  // der Gemeindepunkt greift (sonst liegen ganze Serien auf einer Nadel).
+  const titleFix = !locationName && !hasCoords ? coordFixForTitle(event.title) : undefined;
+
   const coords =
     fix ??
+    titleFix ??
     (hasCoords
       ? { lat: lo!.latitude as number, lng: lo!.longitude as number }
       : fallbackCoords(parish, orgId));
@@ -113,7 +119,7 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       city: lo?.city || undefined,
       zipcode: lo?.zipcode || undefined,
       price: event.price || undefined,
-      coordSource: fix ? "fix" : hasCoords ? "event" : "fallback",
+      coordSource: fix || titleFix ? "fix" : hasCoords ? "event" : "fallback",
       highlight: hasHighlightTag(event.summary, event.description) || undefined,
     },
   };
