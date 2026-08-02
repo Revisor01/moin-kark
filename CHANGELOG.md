@@ -78,6 +78,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Ursache: ChurchDesk geokodiert über die Adresse, und beide Orte sind unter
   „Marktstr. 2“ gepflegt. Neue Korrekturtabelle `LOCATION_COORD_FIXES` setzt die
   echte Position (Quelle: OpenStreetMap); `coordSource` kennt dafür den Wert `fix`.
+- Neuenkirchen fehlte in der Fallback-Koordinaten-Tabelle: ChurchDesk liefert für
+  diese Termine keine Koordinaten, und ohne Eintrag fiel die Gemeinde auf die
+  orgId 2729 (Kirchspiel West) zurück — die Termine landeten rund 10 km entfernt
+  in Büsum. St. Jacobi ist jetzt in `PARISH_COORDS` und `LOCATION_COORD_FIXES`.
 - Tap auf einen Ort mit mehreren Terminen öffnete ein beliebiges Event: Bei
   deckungsgleichen Pins (St. Bartholomäus: 13 Termine) ist die vom Renderer
   gemeldete Reihenfolge zufällig. Jetzt öffnet der Tap den zeitlich nächsten
