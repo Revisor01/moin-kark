@@ -97,6 +97,52 @@ Die App zieht ihre Daten aus der API. Für lokale Entwicklung die eigene Origin 
 Optional `?from=` / `?to=` (ISO oder `YYYY-MM-DD`). Das Fenster wird serverseitig
 auf `MAX_WINDOW_DAYS` gedeckelt — das schützt die Tokens vor Abfrage-Exzessen.
 
+## iOS-Build: MapLibre-Workaround (wichtig)
+
+Xcodes SwiftPM hängt auf diesem Rechner beim Laden des MapLibre-Binärartefakts:
+`xcodebuild -resolvePackageDependencies` bleibt bei 0 % CPU in
+`BinaryArtifactsManager.download` stehen — ohne offene Verbindung, ohne Timeout,
+reproduzierbar auch ohne EAS. Der Download selbst funktioniert (per `curl` in
+Sekunden, Prüfsumme korrekt), es ist ein Xcode-Problem.
+
+Abhilfe ist ein lokaler SwiftPM-Mirror, der bereits eingerichtet ist:
+
+| Was | Wo |
+|---|---|
+| Mirror-Repo (enthält das XCFramework als Datei) | `~/.local/share/moinkark-spm-mirror` |
+| Mirror-Konfiguration | `~/.swiftpm/configuration/mirrors.json` |
+| Gepinnter Commit | in `ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved` |
+
+Beides liegt **außerhalb des Repos** und muss auf einem neuen Rechner neu
+angelegt werden:
+
+```bash
+# 1. Original-Repo klonen, auf die benötigte Version wechseln
+git clone https://github.com/maplibre/maplibre-gl-native-distribution ~/.local/share/moinkark-spm-mirror
+cd ~/.local/share/moinkark-spm-mirror && git checkout 6.26.0
+
+# 2. Artefakt herunterladen (URL steht in Package.swift des Tags)
+curl -L -o MapLibre.dynamic.xcframework.zip \
+  https://github.com/maplibre/maplibre-native/releases/download/ios-v6.26.0/MapLibre.dynamic.xcframework.zip
+
+# 3. In Package.swift url+checksum durch path ersetzen:
+#    .binaryTarget(name: "MapLibre", path: "MapLibre.dynamic.xcframework.zip")
+git add -A && git commit -m "local artifact" && git tag -f 6.26.0
+
+# 4. Mirror registrieren
+mkdir -p ~/.swiftpm/configuration
+cat > ~/.swiftpm/configuration/mirrors.json <<EOF
+{"object":[{"original":"https://github.com/maplibre/maplibre-gl-native-distribution",
+ "mirror":"$HOME/.local/share/moinkark-spm-mirror"}],"version":1}
+EOF
+
+# 5. Den neuen Commit-Hash in Package.resolved eintragen (git rev-parse HEAD)
+```
+
+Achtung: Das Format der `mirrors.json` ist ein **Objekt** mit `object`/`version`,
+kein Array — ein Array wird stillschweigend ignoriert und die Auflösung meldet
+fälschlich Erfolg mit leerem Ergebnis.
+
 ## Deployment
 
 ### API

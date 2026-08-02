@@ -25,7 +25,7 @@
   "submit": {
     "production": {
       "ios": {
-        "ascApiKeyPath": "../../../.claude/secrets/AuthKey_REPLACE_WITH_ASC_KEY_ID.p8",
+        "ascApiKeyPath": "~/secrets/AuthKey_REPLACE_WITH_ASC_KEY_ID.p8",
         "ascApiKeyId": "REPLACE_WITH_ASC_KEY_ID",
         "ascApiKeyIssuerId": "REPLACE_WITH_ASC_ISSUER_ID",
         "ascAppId": "6781438884"
