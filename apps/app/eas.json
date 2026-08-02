@@ -25,7 +25,7 @@
   "submit": {
     "production": {
       "ios": {
-        "ascApiKeyPath": "../../../.claude/secrets/AuthKey_6JGT8ZLHRJ.p8",
+        "ascApiKeyPath": "/Users/simonluthe/.claude/secrets/AuthKey_6JGT8ZLHRJ.p8",
         "ascApiKeyId": "6JGT8ZLHRJ",
         "ascApiKeyIssuerId": "408ad2bb-fb61-43b2-a974-805dae7843a6",
         "ascAppId": "6781438884"
