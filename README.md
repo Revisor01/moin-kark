@@ -164,6 +164,23 @@ Achtung: Das Format der `mirrors.json` ist ein **Objekt** mit `object`/`version`
 kein Array — ein Array wird stillschweigend ignoriert und die Auflösung meldet
 fälschlich Erfolg mit leerem Ergebnis.
 
+## iOS-Build: fastlane-Timeout
+
+`xcodebuild -showBuildSettings` braucht auf diesem Rechner **~18 Sekunden**.
+fastlane startet mit 3 s und gibt nach vier Versuchen bei 24 s auf — der Build
+bricht dann mit „Run fastlane step failed with an unknown error" ab, obwohl
+weder Code noch Signierung ein Problem haben. Darum vor dem Build setzen:
+
+```bash
+export FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT=120
+export FASTLANE_XCODEBUILD_SETTINGS_RETRIES=5
+```
+
+`expo-doctor` meldet außerdem einige Pakete, die ein paar Patch-Versionen hinter
+dem SDK-Soll liegen (u.a. `expo-location`, `expo-notifications`). Der Schritt
+schlägt fehl, **stoppt den Build aber nicht** — nicht mitten im Release
+aktualisieren, sondern separat mit `npx expo install --check`.
+
 ## Deployment
 
 ### API
