@@ -181,6 +181,43 @@ dem SDK-Soll liegen (u.a. `expo-location`, `expo-notifications`). Der Schritt
 schlägt fehl, **stoppt den Build aber nicht** — nicht mitten im Release
 aktualisieren, sondern separat mit `npx expo install --check`.
 
+## iOS-Build: „Your session has expired" beim Export
+
+Der Build läuft durch, dann bricht `exportArchive` ab mit
+`resultString = "Your session has expired. Please log in."` → `** EXPORT FAILED **`.
+Ursache ist **nicht** die Signierung, sondern `uploadSymbols`: Das Hochladen der
+dSYMs braucht eine gültige Xcode-Sitzung bei Apple, und die läuft still ab.
+
+Das Archiv ist zu dem Zeitpunkt fertig — die IPA lässt sich ohne Apple-Kontakt
+daraus exportieren:
+
+```bash
+cat > /tmp/export.plist <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>method</key><string>app-store-connect</string>
+  <key>teamID</key><string>J459G9CJT5</string>
+  <key>signingStyle</key><string>manual</string>
+  <key>provisioningProfiles</key>
+  <dict><key>de.godsapp.kkdithkarte</key><string>Moin Kark AppStore 2</string></dict>
+  <key>uploadSymbols</key><false/>
+  <key>manageAppVersionAndBuildNumber</key><false/>
+</dict></plist>
+PLIST
+
+xcodebuild -exportArchive \
+  -archivePath ~/Library/Developer/Xcode/Archives/<datum>/MoinKark*.xcarchive \
+  -exportPath /tmp/export -exportOptionsPlist /tmp/export.plist
+```
+
+Wichtig: **kein** `-allowProvisioningUpdates` — der Schalter erzwingt den
+Apple-Kontakt und lässt den Export erneut scheitern. `uploadSymbols=false`
+kostet nur die Crash-Symbolisierung in App Store Connect.
+
+Danach normal hochladen:
+`npx eas-cli submit --platform ios --profile production --path /tmp/export/MoinKark.ipa`
+
 ## Deployment
 
 ### API
