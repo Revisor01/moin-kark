@@ -27,6 +27,9 @@ export const PARISH_COORDS: Record<string, LatLng> = {
   Lunden: { lat: 54.333612, lng: 9.024191 },
   Marne: { lat: 53.95351, lng: 9.012812 },
   Meldorf: { lat: 54.090562, lng: 9.074945 },
+  // St. Jacobi. Fehlte hier — ohne Eintrag fiel Neuenkirchen auf die orgId 2729
+  // (Kirchspiel West) zurück und landete rund 10 km entfernt in Büsum.
+  Neuenkirchen: { lat: 54.23672, lng: 8.9898787 },
   Schlichting: { lat: 54.313782, lng: 9.091838 },
   "St. Annen": { lat: 54.352585, lng: 9.074589 },
   "St. Michaelisdonn": { lat: 53.984218, lng: 9.114378 },
@@ -79,6 +82,10 @@ export const DITHMARSCHEN_CENTER: LatLng = { lat: 54.12, lng: 9.05 };
 export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // Kirche liegt 63 m südöstlich des Pastorats (beide „Marktstr. 2" in ChurchDesk).
   "wesselburen | st. bartholomäus": { lat: 54.2120945, lng: 8.9225438 },
+  // ChurchDesk liefert für diese Termine gar keine Koordinaten. Der Fallback über
+  // PARISH_COORDS greift zwar, aber nur solange „Neuenkirchen" als parish gesetzt
+  // ist — hier zusätzlich am Ortsnamen festmachen.
+  "neuenkirchen | st. jacobi": { lat: 54.23672, lng: 8.9898787 },
 };
 
 /**
