@@ -86,6 +86,37 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // PARISH_COORDS greift zwar, aber nur solange „Neuenkirchen" als parish gesetzt
   // ist — hier zusätzlich am Ortsnamen festmachen.
   "neuenkirchen | st. jacobi": { lat: 54.23672, lng: 8.9898787 },
+
+  // --- Meldorf: Orte OHNE Ort-Objekt in ChurchDesk ---------------------------
+  // Der Ortsname steht dort nur im Freitextfeld, es gibt keine Koordinate. Alle
+  // neun Orte landeten deshalb über den Gemeinde-Fallback auf demselben Punkt
+  // (Meldorfer Dom) — quer über den Kreis verteilte Termine auf einer Nadel.
+  "ev. gemeinschaft, bütjestraße 8, meldorf": { lat: 54.0919128, lng: 9.0730915 },
+  "friedrich-holm-weg 1, meldorf": { lat: 54.0905292, lng: 9.0854063 }, // Altenhilfezentrum
+  "meldorf, brüttstraße 6": { lat: 54.0879819, lng: 9.0769762 }, // Tagespflege „Mook we gern"
+  'hotel "zur linde", meldorf, südermarkt 1': { lat: 54.0903521, lng: 9.0725095 },
+  "bargenstedt, dellbrück 15": { lat: 54.0997656, lng: 9.1828896 }, // Friesenhaus Dellbrück
+  "bargenstedt, smeedbarg 2a": { lat: 54.0936708, lng: 9.1473061 },
+  "gemeindehaus epenwöhrden": { lat: 54.1084099, lng: 9.051996 },
+  "sarzbüttel, an der blockhütte": { lat: 54.1167, lng: 9.18333 }, // Ortsmitte (Blockhütte nicht in OSM)
+
+  // --- Tellingstedt: drei verschiedene Kirchen auf einem Punkt ----------------
+  // Alle drei ohne Koordinate in ChurchDesk → Gemeinde-Fallback Tellingstedt.
+  // Wrohm liegt ~7 km östlich, Albersdorf ~9 km südlich.
+  "friedenskirche wrohm": { lat: 54.2123552, lng: 9.3790302 },
+  "st. remigius-kirche": { lat: 54.1479562, lng: 9.2822733 }, // Albersdorf
+  "albersdorf | st. remigius kirche": { lat: 54.1479562, lng: 9.2822733 },
+
+  // --- Albersdorf: Fremdorte über den Gemeinde-Fallback -----------------------
+  "schafstedt grundschule": { lat: 54.0770405, lng: 9.3001471 },
+
+  // --- Pahlen und Delve: bisher EIN grober Geest-Punkt für vier Orte ---------
+  // ORG_COORDS[2723] war mit „grobe Region" kommentiert und lag ~10 km neben
+  // allen vier Orten. Hier die tatsächlichen Kirchen bzw. Ortsmitten.
+  pahlen: { lat: 54.2627663, lng: 9.296868 },
+  delve: { lat: 54.3033433, lng: 9.2539684 }, // St. Marien
+  "dörpling, wronbarg": { lat: 54.2601522, lng: 9.3042373 },
+  tellingstedt: { lat: 54.218911, lng: 9.274758 }, // St. Martins (Gemeinde-Punkt, korrekt)
 };
 
 /**
