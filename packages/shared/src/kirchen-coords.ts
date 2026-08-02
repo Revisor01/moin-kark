@@ -123,6 +123,21 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // Kirchenpunkt. Koordinate vom Nutzer geprüft.
   "kleine turnhalle, hennstedt": { lat: 54.2874327, lng: 9.1630927 },
 
+  // --- Weitere Orte ohne Ort-Objekt in ChurchDesk (vom Nutzer eingemessen) ----
+  // Christuskirche, Kirchenallee 14. Der bisherige Punkt war im Code nur als
+  // „nahe Heide, kein eigenes Event-Sample" geschätzt.
+  "lohe-rickelshof, kirche": { lat: 54.1873944, lng: 9.0706326 },
+  // Watt'n Meer School, Ekenesch 15 Wesselburen. Nur DIESER eine Einschulungs-
+  // gottesdienst ist in der Schule — die anderen sind in St. Bartholomäus bzw.
+  // St. Jacobi (s. TITLE_COORD_FIXES unten).
+  "schulhof watt´n meer school, wesselburen": { lat: 54.2119931, lng: 8.9166402 },
+  // Trauercafé „Salzblüte", An d. Mühle 2, Büsum.
+  salzblüte: { lat: 54.1352669, lng: 8.8667353 },
+  // Marktandacht auf dem Rathausplatz Meldorf (Zingelstraße 2).
+  "rathausplatz meldorf": { lat: 54.0893979, lng: 9.0738847 },
+  // Andacht bei Boies im Garten, Osterhof 19 (Nordermeldorf/Thalingburen).
+  "osterhof 19": { lat: 54.106539, lng: 9.037766 },
+
   // --- Pahlen und Delve: bisher EIN grober Geest-Punkt für vier Orte ---------
   // ORG_COORDS[2723] war mit „grobe Region" kommentiert und lag ~10 km neben
   // allen vier Orten. Hier die tatsächlichen Kirchen bzw. Ortsmitten.
@@ -153,6 +168,24 @@ export const TITLE_COORD_FIXES: Array<{ prefix: string; coords: LatLng }> = [
   // Nicht bei der Kirchenkiste, sondern bei den Salzwiesen ganz im Westen der
   // Watt'n Insel („Nördlicher Aufgang zur Lagune", s. Beschreibung im Termin).
   { prefix: "abendsegen bei sonnenuntergang", coords: { lat: 54.13673, lng: 8.8351529 } },
+
+  // Termine ohne Ort-Objekt, deren Ort nur im Titel steht:
+  // Trauercafé in der „Salzblüte", An d. Mühle 2, Büsum.
+  { prefix: "kaffee, licht & leben", coords: { lat: 54.1352669, lng: 8.8667353 } },
+  // Marktandacht auf dem Rathausplatz Meldorf.
+  { prefix: "marktandacht auf dem rathausplatz", coords: { lat: 54.0893979, lng: 9.0738847 } },
+  // Andacht bei Boies im Garten, Osterhof 19.
+  { prefix: "andacht bei boies im garten", coords: { lat: 54.106539, lng: 9.037766 } },
+  // Nur die DaZ-Klassen feiern in der Schule (Ekenesch 15). Die beiden anderen
+  // Einschulungsgottesdienste sind in St. Bartholomäus bzw. St. Jacobi — die
+  // laufen ueber die Gemeinde-Fallbacks korrekt und brauchen keinen Eintrag.
+  { prefix: "einschulungsgottesdienst daz-klassen", coords: { lat: 54.2119931, lng: 8.9166402 } },
+  // Der Wesselburener Einschulungsgottesdienst ist in St. Bartholomäus. Ohne
+  // Eintrag landet er über den Gemeinde-Fallback am Gemeindehaus (200 m daneben).
+  {
+    prefix: "einschulungsgottesdienst watt´n meer school wesselburen",
+    coords: { lat: 54.2120945, lng: 8.9225438 },
+  },
 ];
 
 /**
