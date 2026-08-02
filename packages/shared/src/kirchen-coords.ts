@@ -23,7 +23,12 @@ export const PARISH_COORDS: Record<string, LatLng> = {
   Heide: { lat: 54.195713, lng: 9.09261 },
   "Kirche Wesseln": { lat: 54.210174, lng: 9.0756 },
   Wesseln: { lat: 54.210174, lng: 9.0756 },
-  "Kirchenkreis Dithmarschen": { lat: 54.010993, lng: 9.056248 },
+  // Kirchenkreis-Termine (Freizeiten, Fortbildungen, überörtliche Angebote) haben
+  // oft gar keinen Ort in Dithmarschen — Schweden, Bispingen, wechselnde Häuser.
+  // Sie werden bewusst am Kirchenkreis-Sitz Meldorf angesiedelt: So bleiben sie in
+  // Karte UND Liste sichtbar und damit buchbar, statt an einem willkürlichen Punkt
+  // südlich der Stadt zu hängen.
+  "Kirchenkreis Dithmarschen": { lat: 54.090562, lng: 9.074945 },
   Lunden: { lat: 54.333612, lng: 9.024191 },
   Marne: { lat: 53.95351, lng: 9.012812 },
   Meldorf: { lat: 54.090562, lng: 9.074945 },
@@ -45,7 +50,7 @@ export const PARISH_COORDS: Record<string, LatLng> = {
 
 /** ChurchDesk-orgId → Koordinate (zweite Fallback-Stufe). */
 export const ORG_COORDS: Record<number, LatLng> = {
-  2596: { lat: 54.010993, lng: 9.056248 },
+  2596: { lat: 54.090562, lng: 9.074945 }, // Kirchenkreis Dithmarschen → Sitz Meldorf
   2619: { lat: 54.090562, lng: 9.074945 },
   2715: { lat: 54.045977, lng: 9.115475 },
   2718: { lat: 54.165051, lng: 8.997713 },
@@ -104,6 +109,9 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // Alle drei ohne Koordinate in ChurchDesk → Gemeinde-Fallback Tellingstedt.
   // Wrohm liegt ~7 km östlich, Albersdorf ~9 km südlich.
   "friedenskirche wrohm": { lat: 54.2123552, lng: 9.3790302 },
+  // Beide Schreibweisen aus ChurchDesk auf denselben geprüften Punkt.
+  "st. martins-kirche": { lat: 54.219352, lng: 9.2752847 },
+  "st. martins-kirche tellingstedt": { lat: 54.219352, lng: 9.2752847 },
   "st. remigius-kirche": { lat: 54.1479562, lng: 9.2822733 }, // Albersdorf
   "albersdorf | st. remigius kirche": { lat: 54.1479562, lng: 9.2822733 },
 
@@ -118,10 +126,10 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // --- Pahlen und Delve: bisher EIN grober Geest-Punkt für vier Orte ---------
   // ORG_COORDS[2723] war mit „grobe Region" kommentiert und lag ~10 km neben
   // allen vier Orten. Hier die tatsächlichen Kirchen bzw. Ortsmitten.
-  pahlen: { lat: 54.2627663, lng: 9.296868 },
+  pahlen: { lat: 54.2628322, lng: 9.2956512 }, // Kirche, vom Nutzer geprüft
   delve: { lat: 54.3033433, lng: 9.2539684 }, // St. Marien
   "dörpling, wronbarg": { lat: 54.2601522, lng: 9.3042373 },
-  tellingstedt: { lat: 54.218911, lng: 9.274758 }, // St. Martins (Gemeinde-Punkt, korrekt)
+  tellingstedt: { lat: 54.219352, lng: 9.2752847 }, // St. Martin, vom Nutzer geprüft
 };
 
 /**
