@@ -4,6 +4,7 @@
 import {
   coordFixFor,
   coordFixForTitle,
+  coordOverrideForTitle,
   fallbackCoords,
   orgName,
   resolveKirchspiel,
@@ -81,7 +82,13 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
   // der Gemeindepunkt greift (sonst liegen ganze Serien auf einer Nadel).
   const titleFix = !locationName && !hasCoords ? coordFixForTitle(event.title) : undefined;
 
+  // Wenige Reihen ueberstimmen bewusst auch eine gepflegte ChurchDesk-Koordinate:
+  // Auf dem Gelaende der Familienlagune tragen alle Termine dieselbe Adresse,
+  // finden aber an verschiedenen Stellen statt (Kirchenkiste vs. Salzwiesen).
+  const titleOverride = coordOverrideForTitle(event.title);
+
   const coords =
+    titleOverride ??
     fix ??
     titleFix ??
     (hasCoords
@@ -119,7 +126,7 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       city: lo?.city || undefined,
       zipcode: lo?.zipcode || undefined,
       price: event.price || undefined,
-      coordSource: fix || titleFix ? "fix" : hasCoords ? "event" : "fallback",
+      coordSource: fix || titleFix || titleOverride ? "fix" : hasCoords ? "event" : "fallback",
       highlight: hasHighlightTag(event.summary, event.description) || undefined,
     },
   };

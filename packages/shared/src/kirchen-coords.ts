@@ -142,16 +142,47 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
  * damit Varianten wie „Kirchenkiste" / „Kirchenkiste!" beide erfasst werden.
  */
 export const TITLE_COORD_FIXES: Array<{ prefix: string; coords: LatLng }> = [
-  // Eigener Ort an der Nordseestraße 79X — NICHT die Familienlagune.
+  // Die Kirchenkiste steht auf der „Watt'n Insel" in der Familienlagune. ChurchDesk
+  // setzt für alle Termine dort die Gelände-Adresse (Nordseestraße 79X) — die
+  // Kiste selbst steht aber an einer bestimmten Stelle. Diese Koordinate ist die
+  // genauere (vom Nutzer eingemessen) und gilt für ALLE Kirchenkiste-Termine,
+  // auch die mit gepflegtem Ortsnamen (s. TITLE_OVERRIDES unten).
   { prefix: "willkommen in der kirchenkiste", coords: { lat: 54.1334736, lng: 8.8382318 } },
   // Treffpunkt ist die Fischerkirche St. Clemens.
   { prefix: "pilgern in büsum", coords: { lat: 54.1296131, lng: 8.861221 } },
+  // Nicht bei der Kirchenkiste, sondern bei den Salzwiesen ganz im Westen der
+  // Watt'n Insel („Nördlicher Aufgang zur Lagune", s. Beschreibung im Termin).
+  { prefix: "abendsegen bei sonnenuntergang", coords: { lat: 54.13673, lng: 8.8351529 } },
+];
+
+/**
+ * Titel-Präfixe, deren Koordinate auch eine gepflegte ChurchDesk-Angabe ÜBERSTIMMT.
+ *
+ * Normalerweise gewinnt die Ortsangabe aus ChurchDesk. Hier ist es umgekehrt: Auf
+ * dem Gelände der Familienlagune tragen alle Termine dieselbe Adresse, obwohl sie
+ * an verschiedenen Stellen stattfinden (Kirchenkiste vs. Salzwiesen im Westen).
+ * Für die hier genannten Reihen ist die eingemessene Koordinate die verlässlichere.
+ */
+export const TITLE_OVERRIDES = [
+  "willkommen in der kirchenkiste",
+  "abendsegen bei sonnenuntergang",
 ];
 
 /** Titel-basierte Zuordnung (nur wenn kein Ortsname gepflegt ist). */
 export function coordFixForTitle(title: string | undefined): LatLng | undefined {
   if (!title) return undefined;
   const t = normalize(title);
+  return TITLE_COORD_FIXES.find((e) => t.startsWith(e.prefix))?.coords;
+}
+
+/**
+ * Titel-Zuordnung, die auch eine gepflegte ChurchDesk-Koordinate überstimmt.
+ * Nur für Reihen aus TITLE_OVERRIDES — sonst undefined.
+ */
+export function coordOverrideForTitle(title: string | undefined): LatLng | undefined {
+  if (!title) return undefined;
+  const t = normalize(title);
+  if (!TITLE_OVERRIDES.some((p) => t.startsWith(p))) return undefined;
   return TITLE_COORD_FIXES.find((e) => t.startsWith(e.prefix))?.coords;
 }
 
