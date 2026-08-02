@@ -65,7 +65,7 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 ### Geändert
 
 - Redaktionelle Änderungen kommen zeitnah an: Der Server erneuert seinen Cache
-  jetzt alle 20 Minuten von selbst (vorher nur, wenn jemand die API aufrief), und
+  jetzt alle 5 Minuten von selbst (vorher nur, wenn jemand die API aufrief), und
   die App fragt alle 5 Minuten still über den neuen Endpunkt `/version.json` nach,
   ob sich etwas geändert hat. Die Antwort ist **42 Bytes** statt 688 KB — das
   volle GeoJSON wird nur bei einer echten Änderung nachgeladen. Zusätzlich

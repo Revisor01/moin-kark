@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8787"
-      CACHE_TTL_MS: "1200000"
+      CACHE_TTL_MS: "300000"
       DEFAULT_WINDOW_DAYS: "60"
       MAX_WINDOW_DAYS: "90"
       # karte.* = Web-App, moin-kark.de = Landingpage. Die Alt-Domain bleibt
