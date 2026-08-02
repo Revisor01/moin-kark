@@ -186,6 +186,9 @@ export const TITLE_COORD_FIXES: Array<{ prefix: string; coords: LatLng }> = [
     prefix: "einschulungsgottesdienst watt´n meer school wesselburen",
     coords: { lat: 54.2120945, lng: 8.9225438 },
   },
+  // „Kirche bewegt!" mit der Landjugend und dem SSV — auf dem Sportplatz
+  // Hennstedt (OSM: benannte Sportanlage, ~500 m westlich der Turnhalle).
+  { prefix: "spendenlauf", coords: { lat: 54.2879255, lng: 9.1559349 } },
 ];
 
 /**
