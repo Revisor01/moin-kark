@@ -110,6 +110,11 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // --- Albersdorf: Fremdorte über den Gemeinde-Fallback -----------------------
   "schafstedt grundschule": { lat: 54.0770405, lng: 9.3001471 },
 
+  // --- Hennstedt -------------------------------------------------------------
+  // Turnhalle am Schulgelände (Eider-Nordsee-Schule), lag vorher auf dem
+  // Kirchenpunkt. Koordinate vom Nutzer geprüft.
+  "kleine turnhalle, hennstedt": { lat: 54.2874327, lng: 9.1630927 },
+
   // --- Pahlen und Delve: bisher EIN grober Geest-Punkt für vier Orte ---------
   // ORG_COORDS[2723] war mit „grobe Region" kommentiert und lag ~10 km neben
   // allen vier Orten. Hier die tatsächlichen Kirchen bzw. Ortsmitten.
