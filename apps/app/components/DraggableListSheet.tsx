@@ -28,13 +28,18 @@ const CARD_HEIGHT = 104; // EventCard.pressArea.height
 const CARD_GAP = 12; // EventList ItemSeparator (spacing.md)
 const LIST_PADDING_TOP = 16; // EventList content padding (spacing.lg)
 
-// Drei feste Stufen (sichtbare Sheet-Höhe von unten gemessen):
+// Vier feste Stufen (sichtbare Sheet-Höhe von unten gemessen):
 //  1) nur der Griff (über der Safe Area greifbar)
 //  2) Griff + 1 voller Eintrag
-//  3) Griff + 3 volle Einträge (Karte NICHT verdeckt)
+//  3) Griff + 3 volle Einträge (Karte noch gut sichtbar)
+//  4) fast volle Höhe — zum Durchblättern langer Listen
 const SNAP_MID_PX = HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT + 20; // ≈ 184
 const SNAP_LARGE_PX =
   HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT * 3 + CARD_GAP * 2 + 20; // ≈ 412, 3 Einträge
+// Stufe 4 als Anteil der verfügbaren Höhe: Bei vielen Treffern will man lesen,
+// nicht die Karte sehen. Vorher endete das Sheet bei ~412 px — die Liste scrollte
+// zwar, aber die letzten Einträge lagen im abgeschnittenen Bereich.
+const SNAP_FULL_FRACTION = 0.92;
 
 const SPRING = { damping: 20, stiffness: 200, mass: 0.6 };
 
@@ -49,10 +54,11 @@ export default function DraggableListSheet({
     // Stufe 1: nur Griff, aber über dem Home-Indicator (sonst nicht wischbar).
     const small = HANDLE_HEIGHT + bottomInset;
     // Obergrenze: nie höher als verfügbarer Platz (kleine Screens).
-    const cap = availableHeight * 0.92;
+    const cap = availableHeight * SNAP_FULL_FRACTION;
+    const full = cap;
     const large = Math.min(SNAP_LARGE_PX + bottomInset, cap);
     const mid = Math.min(SNAP_MID_PX + bottomInset, large);
-    return { small, mid, large };
+    return { small, mid, large, full };
   }, [availableHeight, bottomInset]);
 
   // sheetHeight = aktuell sichtbare Höhe des Sheets (von unten gemessen).
@@ -86,9 +92,11 @@ export default function DraggableListSheet({
       // Aktuelle Stufe grob bestimmen und eine hochschalten (wrap-around).
       const midThreshold = (heights.small + heights.mid) / 2;
       const largeThreshold = (heights.mid + heights.large) / 2;
+      const fullThreshold = (heights.large + heights.full) / 2;
       let target: number;
       if (v < midThreshold) target = heights.mid;
       else if (v < largeThreshold) target = heights.large;
+      else if (v < fullThreshold) target = heights.full;
       else target = heights.small;
       snapTo(target);
     });
@@ -103,7 +111,7 @@ export default function DraggableListSheet({
       const next = startHeight.value - e.translationY;
       sheetHeight.value = Math.max(
         heights.small * 0.6,
-        Math.min(heights.large, next)
+        Math.min(heights.full, next)
       );
     })
     .onEnd((e) => {
@@ -112,14 +120,18 @@ export default function DraggableListSheet({
       // Ziel anhand Position + Wurfrichtung wählen.
       let target = heights.mid;
       if (velocity < -500) {
-        target = v < heights.mid ? heights.mid : heights.large;
+        // Nach oben geworfen → jeweils die nächsthöhere Stufe.
+        target = v < heights.mid ? heights.mid : v < heights.large ? heights.large : heights.full;
       } else if (velocity > 500) {
-        target = v > heights.mid ? heights.mid : heights.small;
+        // Nach unten geworfen → nächstniedrigere Stufe.
+        target = v > heights.large ? heights.large : v > heights.mid ? heights.mid : heights.small;
       } else {
-        const dS = Math.abs(v - heights.small);
-        const dM = Math.abs(v - heights.mid);
-        const dL = Math.abs(v - heights.large);
-        target = dS < dM && dS < dL ? heights.small : dL < dM ? heights.large : heights.mid;
+        // Ohne Schwung: zur nächstgelegenen Stufe einrasten.
+        const steps = [heights.small, heights.mid, heights.large, heights.full];
+        target = steps[0];
+        for (const s of steps) {
+          if (Math.abs(v - s) < Math.abs(v - target)) target = s;
+        }
       }
       snapTo(target);
     });

@@ -62,6 +62,18 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 - `apps/app/package-lock.json` entfernt — im npm-Workspace ist allein der
   Root-Lock maßgeblich.
 
+### Geändert
+
+- Redaktionelle Änderungen kommen zeitnah an: Der Server erneuert seinen Cache
+  jetzt alle 20 Minuten von selbst (vorher nur, wenn jemand die API aufrief), und
+  die App fragt alle 5 Minuten still über den neuen Endpunkt `/version.json` nach,
+  ob sich etwas geändert hat. Die Antwort ist **42 Bytes** statt 688 KB — das
+  volle GeoJSON wird nur bei einer echten Änderung nachgeladen. Zusätzlich
+  Pull-to-Refresh in der Liste und `staleTime: 0` für die Events-Query.
+- Listen-Sheet hat eine vierte Snap-Stufe (fast volle Höhe) und mehr Leerraum am
+  Listenende. Vorher endete es bei ~412 px — die Liste scrollte zwar, aber die
+  letzten Einträge lagen im abgeschnittenen Bereich unterhalb des Bildschirms.
+
 ### Behoben
 
 - Event-Modal: Kopfbereich fix, nur die Beschreibung scrollt; bei zu wenig Platz

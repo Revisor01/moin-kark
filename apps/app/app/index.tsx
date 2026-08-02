@@ -49,7 +49,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const isWide = width >= WIDE_BREAKPOINT;
 
-  const { data, isLoading, isError, refetch } = useEvents();
+  const { data, isLoading, isError, refetch, isFetching } = useEvents();
   const { data: categories } = useCategories();
   const { location, status: locStatus, request: requestLocation } = useLocation();
   const { mapsApp, setMapsApp } = useMapsApp();
@@ -372,7 +372,7 @@ export default function Home() {
         <View style={styles.wideRow}>
           <View style={styles.listPane}>
             {filterBar}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} />
           </View>
           <View style={styles.mapPane}>{map}</View>
         </View>
@@ -406,7 +406,7 @@ export default function Home() {
           <DraggableListSheet availableHeight={mapAreaHeight} topInset={0} bottomInset={insets.bottom}>
             {/* bottomInset an die Liste: als Scroll-Inhalt-Reserve, nicht als
                 Container-Padding — sonst sind die letzten Einträge nicht erreichbar. */}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} />
           </DraggableListSheet>
         ) : null}
       </View>
