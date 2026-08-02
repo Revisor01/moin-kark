@@ -1,7 +1,14 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import type { EventFeature } from "@moinkark/shared";
 import EventCard from "./EventCard";
 import { colors, fonts, spacing } from "../lib/theme";
+
+/**
+ * Leerraum unter dem letzten Eintrag. Muss mindestens so hoch sein wie der Teil
+ * des Sheets, der bei der mittleren Snap-Stufe unterhalb des Bildschirms liegt —
+ * sonst lässt sich der letzte Termin nicht in den sichtbaren Bereich scrollen.
+ */
+const TAIL_SPACE = 280;
 
 interface Props {
   features: EventFeature[];
@@ -16,6 +23,9 @@ interface Props {
    * verkleinern und die letzten Einträge unerreichbar machen.
    */
   bottomInset?: number;
+  /** Runterziehen erzwingt frische Daten — für die Redaktion, die gerade etwas geändert hat. */
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export default function EventList({
@@ -26,6 +36,8 @@ export default function EventList({
   isSaved,
   onToggleSave,
   bottomInset = 0,
+  onRefresh,
+  refreshing = false,
 }: Props) {
   return (
     <FlatList
@@ -43,7 +55,11 @@ export default function EventList({
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-      contentContainerStyle={[styles.content, { paddingBottom: spacing.xxl + bottomInset }]}
+      // Großzügige Reserve am Listenende: Das Sheet steht je nach Snap-Stufe nur
+      // teilweise im Bild — ohne diesen Leerraum bleibt der letzte Eintrag im
+      // abgeschnittenen Bereich hängen und ist nicht lesbar. Als Scroll-INHALT
+      // (nicht als Container-Padding), sonst schrumpft der sichtbare Bereich.
+      contentContainerStyle={[styles.content, { paddingBottom: TAIL_SPACE + bottomInset }]}
       ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Nichts gefunden</Text>
@@ -55,6 +71,16 @@ export default function EventList({
       initialNumToRender={12}
       windowSize={11}
       showsVerticalScrollIndicator
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        ) : undefined
+      }
     />
   );
 }

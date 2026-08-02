@@ -1,6 +1,7 @@
 // Moin Kark API — Read-Only Aggregator für die Kirchenkreis-Dithmarschen-Eventkarte.
 // Hält die 14 ChurchDesk-Read-Tokens server-seitig, liefert ein dedupliziertes GeoJSON.
 
+import { createHash } from "node:crypto";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -64,6 +65,38 @@ app.get("/events.geojson", async (c) => {
   }
 });
 
+/**
+ * Kurz-Kennung des aktuellen Datenbestands (Hash über alle Events).
+ *
+ * Die App fragt das alle paar Minuten ab — die Antwort ist ein paar Bytes groß
+ * statt ~700 KB. Ändert sich der Hash, lädt sie das GeoJSON neu. So kommen
+ * redaktionelle Änderungen (Highlight gesetzt, Titel korrigiert, Termin abgesagt)
+ * zeitnah an, ohne dass jedes Gerät im Minutentakt den vollen Feed zieht.
+ */
+function fingerprint(fc: EventFeatureCollection): string {
+  const h = createHash("sha1");
+  // Nur die Felder, deren Änderung die App sehen muss — Reihenfolge stabil halten.
+  for (const f of fc.features) {
+    const p = f.properties;
+    h.update(
+      `${p.id}|${p.startUtc}|${p.endUtc ?? ""}|${p.title}|${p.highlight ? 1 : 0}|` +
+        `${f.geometry.coordinates.join(",")}|${p.locationName ?? ""}\n`
+    );
+  }
+  return h.digest("hex").slice(0, 16);
+}
+
+app.get("/version.json", async (c) => {
+  try {
+    const { from, to, key } = parseWindow(c.req.query("from"), c.req.query("to"));
+    const fc = await cache.get(key, () => buildFeatureCollection(from, to));
+    return c.json({ version: fingerprint(fc), count: fc.features.length });
+  } catch (e: any) {
+    console.error("[/version.json]", e?.message ?? e);
+    return c.json({ error: e?.message ?? "internal error" }, 500);
+  }
+});
+
 app.get("/categories.json", async (c) => {
   try {
     const { from, to, key } = parseWindow(c.req.query("from"), c.req.query("to"));
@@ -75,7 +108,30 @@ app.get("/categories.json", async (c) => {
   }
 });
 
+/**
+ * Hält den Standard-Zeitraum von selbst warm.
+ *
+ * Ohne das erneuert sich der Cache nur, wenn jemand die API aufruft — der erste
+ * Aufruf nach einer Ruhephase wartet dann auf 14 ChurchDesk-Calls. Mit dem Timer
+ * ist immer ein frischer Stand da: Die App bekommt sofort Antwort, und ihre
+ * Änderungs-Abfrage (/version.json) sieht redaktionelle Korrekturen von selbst,
+ * ohne dass ein Nutzer den Refresh auslösen muss.
+ */
+function warmCache(): void {
+  const { from, to, key } = parseWindow();
+  void cache
+    .refresh(key, () => buildFeatureCollection(from, to))
+    .then((fc) => console.log(`[moinkark-api] Cache erneuert: ${fc.features.length} Events`))
+    .catch((e) => console.error("[moinkark-api] Cache-Refresh fehlgeschlagen:", e?.message ?? e));
+}
+
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`[moinkark-api] hört auf http://0.0.0.0:${info.port}`);
   console.log(`[moinkark-api] CORS erlaubt: ${ALLOWED_ORIGINS.join(", ")}`);
+  // Sofort einmal laden, danach im TTL-Takt.
+  warmCache();
+  const timer = setInterval(warmCache, TTL_MS);
+  // Node soll wegen des Timers nicht am Beenden gehindert werden.
+  timer.unref?.();
+  console.log(`[moinkark-api] Auto-Refresh alle ${Math.round(TTL_MS / 60000)} min`);
 });

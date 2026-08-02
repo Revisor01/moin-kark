@@ -45,6 +45,15 @@ export class SwrCache<T> {
     return entry.value;
   }
 
+  /**
+   * Lädt unabhängig vom TTL neu und ersetzt den Eintrag. Für den Auto-Refresh —
+   * `get()` würde bei frischem Eintrag sofort zurückkehren und nie aktualisieren.
+   * Läuft schon ein Ladevorgang, wird dessen Ergebnis mitgenutzt (kein Doppel-Call).
+   */
+  refresh(key: string, loader: () => Promise<T>): Promise<T> {
+    return this.load(key, loader);
+  }
+
   private load(key: string, loader: () => Promise<T>): Promise<T> {
     const existing = this.inflight.get(key);
     if (existing) return existing;

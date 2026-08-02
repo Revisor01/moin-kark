@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import type { EventFeatureCollection } from "@moinkark/shared";
-import { fetchCategories, fetchEvents } from "../api";
+import { fetchCategories, fetchEvents, fetchVersion } from "../api";
 import { loadCachedEvents, saveCachedEvents } from "../eventCache";
 
 /** Heutiges Berlin-Datum („2026-08-02") — Tageswechsel ist die Refetch-Grenze. */
@@ -31,6 +31,13 @@ export function useEvents() {
   const query = useQuery({
     queryKey: ["events"],
     queryFn: fetchEvents,
+    // Events IMMER gegen den Server prüfen, auch wenn Cache-Daten vorliegen.
+    // Redaktionelle Änderungen (Highlight gesetzt, Titel korrigiert, Termin
+    // abgesagt) müssen zeitnah ankommen — mit staleTime galten frisch gesetzte
+    // Highlights als „noch frisch genug" und tauchten erst Minuten später auf.
+    // Der persistierte Cache verhindert dabei den Spinner: er wird sofort
+    // angezeigt und still ersetzt, sobald die Netz-Antwort da ist.
+    staleTime: 0,
   });
 
   // Frische Netz-Daten persistieren, sobald sie ankommen.
@@ -54,6 +61,36 @@ export function useEvents() {
       }
     });
     return () => sub.remove();
+  }, [refetch]);
+
+  // Stille Änderungs-Abfrage alle 5 Minuten: /version.json ist ein paar Bytes
+  // groß (Hash über den Datenbestand). Nur wenn er sich ändert, wird das volle
+  // GeoJSON (~700 KB) nachgeladen. So sind redaktionelle Korrekturen zeitnah da,
+  // ohne die Geräte im Minutentakt den ganzen Feed ziehen zu lassen.
+  // Läuft nur im Vordergrund — im Hintergrund gibt es nichts anzuzeigen.
+  const versionRef = useRef<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      if (AppState.currentState !== "active") return;
+      try {
+        const v = await fetchVersion();
+        if (cancelled) return;
+        if (versionRef.current === null) {
+          versionRef.current = v; // erster Lauf: nur merken
+        } else if (versionRef.current !== v) {
+          versionRef.current = v;
+          refetch();
+        }
+      } catch {
+        // Netzfehler ignorieren — beim nächsten Durchlauf erneut versuchen.
+      }
+    };
+    const id = setInterval(check, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [refetch]);
 
   // Echte Daten haben Vorrang; bis sie da sind, zeigen wir den Cache.
