@@ -49,6 +49,9 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Traefik). Die Alt-Domain `kkkarte.godsapp.de` bleibt vorerst in der
   CORS-Allowlist, solange Builds mit der alten URL im Umlauf sind.
 - Mail-Weiterleitung `moin@moin-kark.de`.
+- API läuft als Portainer-Stack `moinkark-api` (statt frei laufendem Container).
+  Deploys gehen darüber, weil `docker-compose` 1.29 auf dem Server mit der
+  neueren Docker-Engine bricht (`KeyError: 'ContainerConfig'`).
 
 ### Sicherheit
 
@@ -70,5 +73,31 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 - Reanimated-Crash beim Start; kein Fehler-Screen beim Offline-Start mit Cache.
 - Erinnerungen brechen im Web nicht mehr ab (Platform-Guard).
 - Dunkler Strich über dem Listen-Sheet (Rahmenkante + zu kräftiger Schatten).
+- Kirche und Pastorat in Wesselburen lagen auf exakt derselben Koordinate — ein
+  Pin verdeckte den anderen, der Gottesdienst war auf der Karte nicht auffindbar.
+  Ursache: ChurchDesk geokodiert über die Adresse, und beide Orte sind unter
+  „Marktstr. 2“ gepflegt. Neue Korrekturtabelle `LOCATION_COORD_FIXES` setzt die
+  echte Position (Quelle: OpenStreetMap); `coordSource` kennt dafür den Wert `fix`.
+- Tap auf einen Ort mit mehreren Terminen öffnete ein beliebiges Event: Bei
+  deckungsgleichen Pins (St. Bartholomäus: 13 Termine) ist die vom Renderer
+  gemeldete Reihenfolge zufällig. Jetzt öffnet der Tap den zeitlich nächsten
+  Termin — nicht das Konzert nächste Woche statt des Gottesdienstes gleich.
+- Karte sprang beim freien Navigieren ständig auf den eigenen Standort zurück:
+  Der Fly-to-Effect hing an `userLocation`, und das Live-Tracking liefert alle
+  25 m eine neue Position. Standort liegt jetzt in einer Ref, der Effect reagiert
+  nur noch auf den Token (Start und „Zu meinem Standort“ wie bisher).
+- Event-Modal ließ sich auf iOS nicht mehr scrollen und nur an einem schmalen
+  Streifen zuwischen: Die Swipe-Zone lag als eigene Ebene über der ScrollView und
+  hat die Touches abgefangen. Die Geste greift jetzt über das ganze Sheet, läuft
+  simultan zur ScrollView und schließt nur, wenn die Liste schon oben steht.
+- Platzhalterbilder zeigten irreführende Ortsmotive: Ein Meldorfer Dom stand auch
+  über Terminen anderer Gemeinden. Ortsbilder erscheinen jetzt nur noch bei der
+  zugehörigen Gemeinde (Büsum, Meldorf, Wesselburen, Hennstedt), alle anderen
+  bekommen neutrale Landschaftsmotive.
+- Veraltete Termine beim App-Start: Der Cache galt pauschal 24 Stunden und
+  enthielt bei wöchentlichen Serien noch die Instanz der Vorwoche — am Sonntag
+  stand dadurch ein Termin nächste Woche oben statt des Gottesdienstes am selben
+  Vormittag. Der Cache gilt jetzt nur noch für den Tag, an dem er geschrieben
+  wurde; zusätzlich wird beim Tageswechsel aus dem Hintergrund neu geladen.
 
 [Unreleased]: https://github.com/Revisor01/moin-kark/commits/main

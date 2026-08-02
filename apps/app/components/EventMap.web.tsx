@@ -49,15 +49,21 @@ export default function EventMap({
     });
   }, [onBoundsChange]);
 
+  // Standort in einer Ref mitführen — der Effect darf NUR am Token hängen, sonst
+  // zieht jede neue Position (Live-Tracking) die Karte zurück auf den eigenen Punkt.
+  const locationRef = useRef(userLocation);
+  locationRef.current = userLocation;
+
   // Auf „Zu mir"-Token reagieren.
   useEffect(() => {
-    if (!flyToUserToken || !userLocation) return;
+    const loc = locationRef.current;
+    if (!flyToUserToken || !loc) return;
     mapRef.current?.easeTo({
-      center: [userLocation.lng, userLocation.lat],
+      center: [loc.lng, loc.lat],
       zoom: 11.5,
       duration: 700,
     });
-  }, [flyToUserToken, userLocation]);
+  }, [flyToUserToken]);
 
   // Fallback: auf die Dithmarschen-Übersicht (ferner Standort → nicht ins Leere).
   useEffect(() => {
@@ -93,9 +99,24 @@ export default function EventMap({
         });
         return;
       }
-      onSelect(Number(f.properties?.id));
+      // Mehrere Events am gleichen Ort liegen deckungsgleich übereinander —
+      // feats[0] wäre Zufall. Den zeitlich nächsten Termin wählen (s. native).
+      const [hlng, hlat] = (f.geometry as any).coordinates ?? [];
+      const sameSpot = features.filter((x) => {
+        const [lng, lat] = x.geometry.coordinates;
+        return lng === hlng && lat === hlat;
+      });
+      if (sameSpot.length === 0) {
+        onSelect(Number(f.properties?.id));
+        return;
+      }
+      let best = sameSpot[0];
+      for (const x of sameSpot) {
+        if (new Date(x.properties.startUtc) < new Date(best.properties.startUtc)) best = x;
+      }
+      onSelect(best.properties.id);
     },
-    [onSelect]
+    [onSelect, features]
   );
 
   return (

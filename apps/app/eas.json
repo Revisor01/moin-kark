@@ -19,7 +19,10 @@
       "ios": {
         "resourceClass": "m-medium"
       },
-      "credentialsSource": "local"
+      "credentialsSource": "local",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {

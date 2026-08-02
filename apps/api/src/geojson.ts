@@ -2,6 +2,7 @@
 // Übernimmt alle relevanten Felder voll aus der API.
 
 import {
+  coordFixFor,
   fallbackCoords,
   orgName,
   resolveKirchspiel,
@@ -68,9 +69,18 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
     typeof lo.longitude === "number" &&
     !(lo.latitude === 0 && lo.longitude === 0);
 
-  const coords = hasCoords
-    ? { lat: lo!.latitude as number, lng: lo!.longitude as number }
-    : fallbackCoords(parish, orgId);
+  const locationName = event.locationName || event.location || lo?.name || undefined;
+
+  // Bekannt falsch geokodierte Orte korrigieren (ChurchDesk geokodiert über die
+  // Adresse — Kirche und Pastorat unter derselben Anschrift landen sonst exakt
+  // aufeinander und ein Pin verdeckt den anderen). Die Korrektur hat Vorrang.
+  const fix = coordFixFor(locationName);
+
+  const coords =
+    fix ??
+    (hasCoords
+      ? { lat: lo!.latitude as number, lng: lo!.longitude as number }
+      : fallbackCoords(parish, orgId));
 
   return {
     type: "Feature",
@@ -98,12 +108,12 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       kirchspiel: resolveKirchspiel(parish, orgId),
       orgId,
       orgName: orgName(orgId),
-      locationName: event.locationName || event.location || lo?.name || undefined,
+      locationName,
       address: lo?.address || undefined,
       city: lo?.city || undefined,
       zipcode: lo?.zipcode || undefined,
       price: event.price || undefined,
-      coordSource: hasCoords ? "event" : "fallback",
+      coordSource: fix ? "fix" : hasCoords ? "event" : "fallback",
       highlight: hasHighlightTag(event.summary, event.description) || undefined,
     },
   };

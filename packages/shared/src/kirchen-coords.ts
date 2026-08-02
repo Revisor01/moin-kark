@@ -61,6 +61,35 @@ export const ORG_COORDS: Record<number, LatLng> = {
 /** Geografisches Zentrum Dithmarschen — letzter Notnagel. */
 export const DITHMARSCHEN_CENTER: LatLng = { lat: 54.12, lng: 9.05 };
 
+/**
+ * Korrekturen für Orte, die ChurchDesk auf eine falsche Koordinate geokodiert.
+ *
+ * Hintergrund: ChurchDesk geokodiert über die eingetragene ADRESSE. Sind Kirche und
+ * Pastorat/Gemeindehaus unter derselben Anschrift gepflegt (Wesselburen: beides
+ * „Marktstr. 2"), bekommen beide exakt dieselbe Koordinate — ein Pin liegt dann
+ * unsichtbar unter dem anderen, egal wie weit man zoomt. Der Gottesdienst in der
+ * Kirche war dadurch auf der Karte nicht auffindbar.
+ *
+ * Schlüssel = locationName (normalisiert), Wert = tatsächliche Position.
+ * Quelle der Koordinaten: OpenStreetMap (Gebäude-Geometrie).
+ *
+ * Diese Tabelle greift VOR der ChurchDesk-Koordinate — sie ist die Wahrheit für
+ * die hier genannten Orte. Neue Fälle einfach ergänzen.
+ */
+export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
+  // Kirche liegt 63 m südöstlich des Pastorats (beide „Marktstr. 2" in ChurchDesk).
+  "wesselburen | st. bartholomäus": { lat: 54.2120945, lng: 8.9225438 },
+};
+
+/**
+ * Liefert eine korrigierte Koordinate für einen Ort — oder undefined, wenn der
+ * Ort nicht in der Korrekturtabelle steht (dann gilt die ChurchDesk-Angabe).
+ */
+export function coordFixFor(locationName: string | undefined): LatLng | undefined {
+  if (!locationName) return undefined;
+  return LOCATION_COORD_FIXES[normalize(locationName)];
+}
+
 function normalize(s: string): string {
   return s.trim().replace(/\s+/g, " ").toLowerCase();
 }

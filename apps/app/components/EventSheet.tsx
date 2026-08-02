@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   Image,
   Platform,
@@ -93,28 +93,52 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   // klar begrenzten Raum und scrollt zuverlässig intern bis zum Maps-Button.
   const sheetHeight = Math.min(winH * 0.88, winH - insets.top - 24);
 
-  // Swipe-down zum Schließen. Greift nur am oberen Rand (Grabber-Zone), damit die
-  // Inhalts-ScrollView frei bleibt — sonst frisst die Pan-Geste das Scrollen.
+  // Swipe-down zum Schließen — über dem GANZEN Sheet, nicht nur am oberen Rand.
+  // Damit das Scrollen frei bleibt, läuft die Pan-Geste simultan zur ScrollView
+  // (simultaneousWithExternalGesture) und greift nur, wenn die ScrollView schon
+  // ganz oben steht (atTop). Sonst wischt man beim Runterscrollen versehentlich zu.
   const translateY = useSharedValue(0);
+  const scrollRef = useRef(null);
+  // Scroll-Offset als Shared Value: der Gesture-Callback läuft auf dem UI-Thread
+  // und kann keinen React-State lesen.
+  const atTop = useSharedValue(true);
   // translateY NICHT im close zurücksetzen → kein Aufblitzen (Sheet bliebe sonst 1 Frame oben sichtbar).
   // Beim Öffnen eines neuen Events wieder auf 0 (s. Effect unten).
   const swipeDown = Gesture.Pan()
+    .simultaneousWithExternalGesture(scrollRef)
+    // Erst ab klarer Vertikalbewegung übernehmen, damit ein Tippen auf Herz/Buttons
+    // und kurze Scroll-Impulse nicht als Swipe gelten.
+    .activeOffsetY(12)
+    .failOffsetY(-12)
     .onUpdate((e) => {
-      translateY.value = Math.max(0, e.translationY);
+      // Nur mitziehen, wenn oben angekommen UND nach unten gewischt wird.
+      if (!atTop.value || e.translationY <= 0) return;
+      translateY.value = e.translationY;
     })
     .onEnd((e) => {
-      if (e.translationY > 120 || e.velocityY > 800) {
+      if (atTop.value && (e.translationY > 120 || e.velocityY > 800)) {
         translateY.value = withTiming(sheetHeight, { duration: 180 }, () => runOnJS(onClose)());
       } else {
         translateY.value = withTiming(0, { duration: 150 });
       }
     });
+
+  // Hält atTop aktuell — bei beiden Scroll-Varianten (scrollAll / nur Beschreibung).
+  const onScroll = (e: any) => {
+    atTop.value = e.nativeEvent.contentOffset.y <= 0;
+  };
   const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
 
   // Neues Event geöffnet → Sheet von oben einsetzen (translateY zurück auf 0).
+  // atTop ebenfalls zurücksetzen: das frische Sheet startet immer ungescrollt,
+  // sonst bliebe der Wert vom vorher gescrollten Event stehen und der Swipe
+  // zum Schließen würde beim nächsten Event nicht greifen.
   useEffect(() => {
-    if (feature) translateY.value = 0;
-  }, [feature, translateY]);
+    if (feature) {
+      translateY.value = 0;
+      atTop.value = true;
+    }
+  }, [feature, translateY, atTop]);
 
   if (!feature) return null;
   const p = feature.properties;
@@ -146,7 +170,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
     <View>
       {/* Kein Event-Bild → wechselndes Dithmarschen-Motiv, stabil pro Event. */}
       <Image
-        source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id)}
+        source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id, p.parish, p.city)}
         style={styles.hero}
         resizeMode="cover"
       />
@@ -205,13 +229,6 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
       <Animated.View style={[styles.sheet, { height: sheetHeight }, sheetAnim]}>
         {/* Tap auf das Sheet schließt NICHT (stopPropagation), Swipe-down am Kopf schließt. */}
         <Pressable onPress={(e) => e.stopPropagation()} style={styles.flex}>
-          {/* Swipe-down-Zone: transparenter Streifen über dem Grabber, liegt über der
-              ScrollView. Nur ~40pt hoch und endet links von Herz/Schließen-Button,
-              damit weder Scrollen noch die Buttons blockiert werden. */}
-          <GestureDetector gesture={swipeDown}>
-            <View style={styles.swipeZone} />
-          </GestureDetector>
-
           {/* Merken (Herz) */}
           <TouchableOpacity
             style={styles.heart}
@@ -239,39 +256,47 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
               ~37pt = keine zwei Zeilen), weil Bild + Meta-Block den Kopf sehr hoch
               machen. Reicht die Höhe nicht, scrollt stattdessen das ganze Sheet —
               so bleibt der Text immer erreichbar. */}
-          {scrollAll ? (
-            <ScrollView
-              style={styles.descScroll}
-              showsVerticalScrollIndicator
-              contentContainerStyle={styles.descScrollInner}
-            >
-              {headerArea}
-              {desc ? (
-                <>
-                  <View style={styles.descDivider} />
-                  <Text style={styles.desc}>{desc}</Text>
-                </>
-              ) : null}
-            </ScrollView>
-          ) : (
-            <>
-              {headerArea}
-              <View style={styles.descArea}>
+          <GestureDetector gesture={swipeDown}>
+            {scrollAll ? (
+              <ScrollView
+                ref={scrollRef}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+                style={styles.descScroll}
+                showsVerticalScrollIndicator
+                contentContainerStyle={styles.descScrollInner}
+              >
+                {headerArea}
                 {desc ? (
                   <>
                     <View style={styles.descDivider} />
-                    <ScrollView
-                      style={styles.descScroll}
-                      showsVerticalScrollIndicator
-                      contentContainerStyle={styles.descOnlyInner}
-                    >
-                      <Text style={styles.desc}>{desc}</Text>
-                    </ScrollView>
+                    <Text style={styles.desc}>{desc}</Text>
                   </>
                 ) : null}
+              </ScrollView>
+            ) : (
+              <View style={styles.flex}>
+                {headerArea}
+                <View style={styles.descArea}>
+                  {desc ? (
+                    <>
+                      <View style={styles.descDivider} />
+                      <ScrollView
+                        ref={scrollRef}
+                        onScroll={onScroll}
+                        scrollEventThrottle={16}
+                        style={styles.descScroll}
+                        showsVerticalScrollIndicator
+                        contentContainerStyle={styles.descOnlyInner}
+                      >
+                        <Text style={styles.desc}>{desc}</Text>
+                      </ScrollView>
+                    </>
+                  ) : null}
+                </View>
               </View>
-            </>
-          )}
+            )}
+          </GestureDetector>
 
           {/* Fixer Maps-Button unten. */}
           <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
@@ -354,17 +379,6 @@ const styles = StyleSheet.create({
   // Bild und Kopfsektion bringen ihr eigenes Padding mit → hier nur unten Luft,
   // damit die letzte Textzeile nicht am Footer klebt.
   descScrollInner: { paddingBottom: spacing.xl },
-  // Transparente Swipe-Zone über dem Grabber (schließt per Wischen nach unten).
-  // right lässt Herz (right: 56) und Schließen (right: 12) frei — beide sind 36pt
-  // breit und sitzen bei top: 12, würden also sonst von dieser Zone verdeckt.
-  swipeZone: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: spacing.md + 44 + 36 + spacing.sm,
-    height: 40,
-    zIndex: 5,
-  },
   descDivider: {
     height: 1,
     backgroundColor: colors.border,

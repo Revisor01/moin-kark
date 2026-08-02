@@ -97,6 +97,27 @@ Die App zieht ihre Daten aus der API. Für lokale Entwicklung die eigene Origin 
 Optional `?from=` / `?to=` (ISO oder `YYYY-MM-DD`). Das Fenster wird serverseitig
 auf `MAX_WINDOW_DAYS` gedeckelt — das schützt die Tokens vor Abfrage-Exzessen.
 
+## Android-Signing
+
+Der Release-Keystore liegt **außerhalb des Repos**:
+
+| Was | Wo |
+|---|---|
+| Keystore-Datei | `~/.claude/secrets/keystores/anders-erzaehlt-release.jks` |
+| Alias für diese App | `moinkark` |
+| Zugangsdaten | `~/.claude/secrets/keystores/moinkark-keystore.env` |
+| EAS-Anbindung | `apps/app/credentials.json` (gitignored) |
+
+Die Datei wird mit *anders erzählt* geteilt, Moin Kark hat darin aber einen
+**eigenen Alias** — die Schlüssel sind getrennt, nur der Container ist derselbe.
+
+> **Ohne diesen Schlüssel sind keine Play-Store-Updates mehr möglich.** Google
+> akzeptiert Updates nur, wenn sie mit demselben Key signiert sind wie die
+> Erstveröffentlichung. Geht er verloren, muss die App unter neuer Package-ID
+> neu veröffentlicht werden und alle Installationen sind verloren.
+> Die Datei gehört also ins Backup — ein Backup vom 2026-08-02 liegt neben ihr
+> als `.bak-20260802`.
+
 ## iOS-Build: MapLibre-Workaround (wichtig)
 
 Xcodes SwiftPM hängt auf diesem Rechner beim Laden des MapLibre-Binärartefakts:

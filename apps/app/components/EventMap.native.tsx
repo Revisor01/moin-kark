@@ -16,6 +16,38 @@ import { DITHMARSCHEN, colors } from "../lib/theme";
 import { DITHMARSCHEN_MASK, DITHMARSCHEN_OUTLINE } from "../lib/dithmarschen-boundary";
 import type { EventMapProps } from "./EventMap";
 
+/**
+ * Wählt aus den angetippten Pins den zeitlich nächsten Termin.
+ *
+ * Nötig, weil an einem Ort viele Events auf EXAKT derselben Koordinate liegen
+ * (St. Bartholomäus Wesselburen: 13 Termine). MapLibre meldet dann entweder nur
+ * den obersten Pin oder mehrere in beliebiger Reihenfolge — in beiden Fällen ist
+ * `features[0]` Zufall. Darum: alle Events an dieser Koordinate aus den Daten
+ * heraussuchen und den nehmen, der als nächstes stattfindet.
+ */
+function nearestEventId(hits: any[], features: EventMapProps["features"]): number {
+  const ids = new Set(hits.map((h) => Number(h?.properties?.id)).filter(Number.isFinite));
+  const first = hits[0];
+  const [hlng, hlat] = first?.geometry?.coordinates ?? [];
+
+  // Alle Events auf derselben Koordinate einsammeln (nicht nur die gemeldeten).
+  const sameSpot = features.filter((f) => {
+    const [lng, lat] = f.geometry.coordinates;
+    return lng === hlng && lat === hlat;
+  });
+
+  const candidates = sameSpot.length > 0 ? sameSpot : features.filter((f) => ids.has(f.properties.id));
+  if (candidates.length === 0) return Number(first?.properties?.id);
+
+  // Frühester Start gewinnt. Vergangene sind hier bereits ausgefiltert
+  // (applyFilters/isPast laufen vor der Übergabe an die Karte).
+  let best = candidates[0];
+  for (const f of candidates) {
+    if (new Date(f.properties.startUtc) < new Date(best.properties.startUtc)) best = f;
+  }
+  return best.properties.id;
+}
+
 export default function EventMap({
   features,
   onSelect,
@@ -29,8 +61,16 @@ export default function EventMap({
 
   const data: EventFeatureCollection = { type: "FeatureCollection", features };
 
+  // Standort in einer Ref mitführen: der Fly-to-Effect darf NUR am Token hängen.
+  // Vorher stand userLocation in den Dependencies — und weil useLocation per
+  // watchPositionAsync alle 25 m eine neue Position liefert, ist die Karte beim
+  // freien Navigieren immer wieder auf den eigenen Punkt zurückgesprungen.
+  const locationRef = useRef(userLocation);
+  locationRef.current = userLocation;
+
   useEffect(() => {
-    if (!flyToUserToken || !userLocation) return;
+    const loc = locationRef.current;
+    if (!flyToUserToken || !loc) return;
     // Das Listen-Sheet verdeckt den unteren Kartenteil → Position NICHT in die Mitte der
     // Gesamtkarte, sondern in die Mitte des SICHTBAREN oberen Bereichs setzen. Dazu das
     // Kartenzentrum nach Süden verschieben (Position erscheint dadurch weiter oben).
@@ -38,11 +78,11 @@ export default function EventMap({
     // (Position landete oberhalb des Sichtfelds) → auf ~0.03 reduziert.
     const LAT_OFFSET = 0.03;
     cameraRef.current?.flyTo({
-      center: [userLocation.lng, userLocation.lat - LAT_OFFSET],
+      center: [loc.lng, loc.lat - LAT_OFFSET],
       zoom: 11.5,
       duration: 700,
     });
-  }, [flyToUserToken, userLocation]);
+  }, [flyToUserToken]);
 
   // Fallback: auf die Dithmarschen-Übersicht fliegen (ferner Standort → nicht ins Leere fliegen).
   useEffect(() => {
@@ -56,7 +96,8 @@ export default function EventMap({
 
   const onSourcePress = async (e: any) => {
     // MapLibre RN v11: Features liegen unter e.nativeEvent.features
-    const feat = e?.nativeEvent?.features?.[0] ?? e?.features?.[0];
+    const hits: any[] = e?.nativeEvent?.features ?? e?.features ?? [];
+    const feat = hits[0];
     if (!feat) return;
     if (feat.properties?.point_count) {
       // Cluster → exakt so weit reinzoomen, dass er sich in die nächste Ebene
@@ -78,7 +119,11 @@ export default function EventMap({
       cameraRef.current?.flyTo({ center: coords, zoom, duration: 450 });
       return;
     }
-    onSelect(Number(feat.properties?.id));
+    // Mehrere Events am GLEICHEN Ort (Kirche mit Gottesdienst, Orgelkonzert, …)
+    // liegen als deckungsgleiche Pins übereinander. features[0] ist dabei
+    // willkürlich — beim Tippen kam so das Orgelkonzert nächste Woche statt des
+    // Gottesdienstes in einer Stunde. Darum den zeitlich NÄCHSTEN Termin wählen.
+    onSelect(nearestEventId(hits, features));
   };
 
   const onRegionDidChange = (e: any) => {
