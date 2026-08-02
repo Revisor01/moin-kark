@@ -26,6 +26,8 @@ interface Props {
   /** Runterziehen erzwingt frische Daten — für die Redaktion, die gerade etwas geändert hat. */
   onRefresh?: () => void;
   refreshing?: boolean;
+  /** Liste steckt im ziehbaren Sheet → kein RefreshControl (blockiert dort das Scrollen). */
+  inSheet?: boolean;
 }
 
 export default function EventList({
@@ -38,6 +40,7 @@ export default function EventList({
   bottomInset = 0,
   onRefresh,
   refreshing = false,
+  inSheet = false,
 }: Props) {
   return (
     <FlatList
@@ -71,8 +74,13 @@ export default function EventList({
       initialNumToRender={12}
       windowSize={11}
       showsVerticalScrollIndicator
+      // Kein RefreshControl im ziehbaren Sheet: Auf iOS fängt er die Geste am
+      // oberen Listenrand ab und federt zurück — die Liste sprang beim Scrollen
+      // immer wieder nach oben und die unteren Einträge waren nicht erreichbar.
+      // Pull-to-Refresh gibt es deshalb nur dort, wo die Liste fest steht
+      // (Breitbild-Ansicht); im Sheet aktualisiert die App ohnehin alle 5 Minuten.
       refreshControl={
-        onRefresh ? (
+        onRefresh && !inSheet ? (
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
