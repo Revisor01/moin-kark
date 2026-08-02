@@ -15,7 +15,11 @@ export interface EventImage {
   copyright?: string;
 }
 
-export type CoordSource = "event" | "fallback";
+/**
+ * „event" = Koordinate aus ChurchDesk, „fallback" = aus der Gemeinde-/Org-Tabelle,
+ * „fix" = manuell korrigiert (ChurchDesk hatte den Ort falsch geokodiert).
+ */
+export type CoordSource = "event" | "fallback" | "fix";
 
 /** Properties eines Event-Features. Felder kommen voll aus der ChurchDesk-API. */
 export interface EventProps {

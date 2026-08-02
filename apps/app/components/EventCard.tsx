@@ -37,7 +37,7 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
         {/* Kein Foto → wechselndes Dithmarschen-Motiv (stabil pro Event, s.
             lib/placeholders.ts), hier quadratisch mittig zugeschnitten. */}
         <Image
-          source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id)}
+          source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id, p.parish, p.city)}
           style={styles.thumb}
           resizeMode="cover"
         />

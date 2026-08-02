@@ -1,8 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import type { EventFeatureCollection } from "@moinkark/shared";
 import { fetchCategories, fetchEvents } from "../api";
 import { loadCachedEvents, saveCachedEvents } from "../eventCache";
+
+/** Heutiges Berlin-Datum („2026-08-02") — Tageswechsel ist die Refetch-Grenze. */
+function berlinDay(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
 export function useEvents() {
   // Persistierter Cache aus AsyncStorage: liegt er vor, zeigen wir ihn SOFORT
@@ -26,6 +37,24 @@ export function useEvents() {
   useEffect(() => {
     if (query.isSuccess && query.data) saveCachedEvents(query.data);
   }, [query.isSuccess, query.dataUpdatedAt]);
+
+  // Zurück aus dem Hintergrund → neu laden, wenn sich der (Berlin-)Tag geändert hat.
+  // Ohne das startet die App am Sonntagmorgen mit dem Stand von gestern Abend: der
+  // Gottesdienst von heute fehlt, stattdessen steht ein Termin nächste Woche oben.
+  // refetchOnMount greift hier NICHT — beim Wechsel aus dem Hintergrund mountet nichts neu.
+  const refetch = query.refetch;
+  const dayRef = useRef(berlinDay());
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      const today = berlinDay();
+      if (today !== dayRef.current) {
+        dayRef.current = today;
+        refetch();
+      }
+    });
+    return () => sub.remove();
+  }, [refetch]);
 
   // Echte Daten haben Vorrang; bis sie da sind, zeigen wir den Cache.
   const data = query.data ?? cached ?? undefined;
