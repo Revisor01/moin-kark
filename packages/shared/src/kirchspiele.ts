@@ -127,3 +127,30 @@ export function resolveKirchspiel(parish: string | undefined, orgId: number): Ki
 export function orgName(orgId: number): string {
   return ORG_NAMES[orgId] ?? `Org ${orgId}`;
 }
+
+/**
+ * Alle Gemeinden eines Events — berücksichtigt Mehrfachzuordnung (`parishes`),
+ * fällt sonst auf die einzelne `parish` zurück. Für Filter und Anzeige:
+ * Ein Event „gehört" zu jeder dieser Gemeinden.
+ */
+export function eventParishes(p: { parish?: string; parishes?: string[] }): string[] {
+  if (p.parishes?.length) return p.parishes;
+  return p.parish ? [p.parish] : [];
+}
+
+/**
+ * Anzeigename der Gemeinde(n): bei Mehrfachzuordnung alle ausschreiben, mit dem
+ * Kirchspiel als Klammer — „Kirchspiel Eider: Hennstedt, Weddingstedt … und Hemme".
+ * („Kirchspiel" allein ist für viele kein vertrauter Begriff, die Gemeindenamen sind es.)
+ */
+export function parishesLabel(p: {
+  parish?: string;
+  parishes?: string[];
+  kirchspiel: string;
+}): string | undefined {
+  const all = eventParishes(p);
+  if (all.length === 0) return undefined;
+  if (all.length === 1) return all[0];
+  const list = `${all.slice(0, -1).join(", ")} und ${all[all.length - 1]}`;
+  return `Kirchspiel ${p.kirchspiel}: ${list}`;
+}

@@ -17,7 +17,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EventFeature } from "@moinkark/shared";
+import { eventParishes, parishesLabel, type EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
 import { placeholderFor } from "../lib/placeholders";
@@ -152,11 +152,19 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   const [lng, lat] = feature.geometry.coordinates;
   const price = formatPrice(p.price);
 
+  // Mehrfach zugeordnete Events: alle Gemeinden ausschreiben („Kirchspiel Eider:
+  // Hennstedt, Weddingstedt … und Hemme") — „Kirchspiel" allein ist für viele
+  // kein vertrauter Begriff, die Gemeindenamen sind es.
+  const parishes = eventParishes(p);
+  const multiParish = parishes.length > 1;
+  const gemeindeValue = parishesLabel(p);
+
   // Höhe des fixen Kopfbereichs abschätzen: Bild + Kopfsektion (Zeit, Titel, Badges,
   // Trenner) + eine Zeile je Meta-Angabe. Danach entscheidet sich, ob für die
-  // Beschreibung genug Platz bleibt.
+  // Beschreibung genug Platz bleibt. Die Gemeindeliste bei Mehrfachzuordnung
+  // umbricht auf ~2 Zeilen — sie ersetzt die Zeilen Gemeinde + Kirchspiel.
   const metaCount =
-    (p.parish ? 1 : 0) + 1 + (p.locationName ? 1 : 0) + (address ? 1 : 0) +
+    (multiParish ? 2 : (p.parish ? 1 : 0) + 1) + (p.locationName ? 1 : 0) + (address ? 1 : 0) +
     (p.contributor ? 1 : 0) + (price ? 1 : 0);
   const headerEstimate = HERO_HEIGHT + HEAD_BASE + metaCount * META_ROW;
   const footerHeight = FOOTER_BASE + insets.bottom;
@@ -202,8 +210,14 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
           <View style={styles.divider} />
 
           <View style={styles.metaBlock}>
-            {p.parish ? <Meta label="Kirchengemeinde" value={p.parish} /> : null}
-            <Meta label="Kirchspiel" value={p.kirchspiel} />
+            {gemeindeValue ? (
+              <Meta
+                label={multiParish ? "Kirchengemeinden" : "Kirchengemeinde"}
+                value={gemeindeValue}
+              />
+            ) : null}
+            {/* Bei Mehrfachzuordnung steckt das Kirchspiel schon in der Gemeindezeile. */}
+            {multiParish ? null : <Meta label="Kirchspiel" value={p.kirchspiel} />}
             {p.locationName ? <Meta label="Ort" value={p.locationName} /> : null}
             {address ? <Meta label="Adresse" value={address} /> : null}
             {p.contributor ? <Meta label="Mitwirkung" value={p.contributor} /> : null}

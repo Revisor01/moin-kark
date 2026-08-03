@@ -1,6 +1,6 @@
 // Reine, testbare Filterlogik. Wirkt clientseitig auf das gecachte GeoJSON — kein Refetch.
 
-import type { EventFeature } from "@moinkark/shared";
+import { eventParishes, type EventFeature } from "@moinkark/shared";
 
 export type DateFilter = "all" | "today" | "week" | "weekend";
 
@@ -158,7 +158,9 @@ export function applyFilters(
     }
     if (!matchesCategory(f, filters.category)) return false;
     if (filters.kirchspiel && f.properties.kirchspiel !== filters.kirchspiel) return false;
-    if (filters.parish && f.properties.parish !== filters.parish) return false;
+    // Mehrfach zugeordnete Events (z.B. Kirchspiel-weite Sommerkirche) zählen zu
+    // JEDER ihrer Gemeinden — nicht nur zur ersten.
+    if (filters.parish && !eventParishes(f.properties).includes(filters.parish)) return false;
     if (ctx.bounds && !inBounds(f, ctx.bounds)) return false;
     return true;
   });

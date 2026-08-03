@@ -38,8 +38,14 @@ export interface EventProps {
   image?: EventImage;
   categories: EventCategory[];
   contributor?: string;
-  /** Kirchengemeinde (parishes[0].title). */
+  /** Kirchengemeinde (parishes[0].title) — Anzeige-Kurzform und Abwärtskompatibilität. */
   parish?: string;
+  /**
+   * ALLE zugeordneten Kirchengemeinden, wenn das Event in ChurchDesk mehreren
+   * Gemeinden gehört (z.B. Kirchspiel-weite Termine wie die Sommerkirche).
+   * Nur gesetzt bei Mehrfachzuordnung; sonst gilt `parish` allein.
+   */
+  parishes?: string[];
   /** Abgeleitetes Kirchspiel (aus orgId-Mapping). */
   kirchspiel: string;
   /** ChurchDesk-Organisation, aus der das Event stammt. */

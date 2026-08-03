@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { KIRCHSPIELE } from "@moinkark/shared";
+import { KIRCHSPIELE, eventParishes } from "@moinkark/shared";
 import EventMap from "../components/EventMap";
 import EventList from "../components/EventList";
 import EventSheet from "../components/EventSheet";
@@ -239,12 +239,14 @@ export default function Home() {
   }, [allFeatures]);
 
   // Gemeinden des gewählten Kirchspiels (alphabetisch). Leer = keine Gemeinde-Reihe.
+  // Mehrfach zugeordnete Events steuern ALLE ihre Gemeinden bei — sonst fehlte
+  // z.B. Weddingstedt, wenn dort nur Kirchspiel-weite Termine stattfinden.
   const gemeindeOptions = useMemo(() => {
     if (!filters.kirchspiel) return [];
     const set = new Set<string>();
     for (const f of allFeatures) {
-      if (f.properties.kirchspiel === filters.kirchspiel && f.properties.parish) {
-        set.add(f.properties.parish);
+      if (f.properties.kirchspiel === filters.kirchspiel) {
+        for (const g of eventParishes(f.properties)) set.add(g);
       }
     }
     return [...set].sort((a, b) => a.localeCompare(b, "de"));
