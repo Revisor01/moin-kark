@@ -20,6 +20,12 @@ interface Props {
   children: React.ReactNode;
   /** Optionaler Untertitel im Griffbereich (z.B. Anzahl). */
   subtitle?: string;
+  /**
+   * Meldet nach jedem Einrasten, wie viele Pixel des Sheets UNTER der
+   * Bildschirmkante liegen. Die Liste im Sheet braucht genau diesen Wert als
+   * Endabstand, damit der letzte Eintrag in den sichtbaren Bereich scrollt.
+   */
+  onHiddenBottomChange?: (px: number) => void;
 }
 
 // Maße der Liste (müssen zu EventCard/EventList passen):
@@ -37,8 +43,7 @@ const SNAP_MID_PX = HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT + 20; // ≈ 
 const SNAP_LARGE_PX =
   HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT * 3 + CARD_GAP * 2 + 20; // ≈ 412, 3 Einträge
 // Stufe 4 als Anteil der verfügbaren Höhe: Bei vielen Treffern will man lesen,
-// nicht die Karte sehen. Vorher endete das Sheet bei ~412 px — die Liste scrollte
-// zwar, aber die letzten Einträge lagen im abgeschnittenen Bereich.
+// nicht die Karte sehen.
 const SNAP_FULL_FRACTION = 0.92;
 
 const SPRING = { damping: 20, stiffness: 200, mass: 0.6 };
@@ -49,6 +54,7 @@ export default function DraggableListSheet({
   bottomInset = 0,
   children,
   subtitle,
+  onHiddenBottomChange,
 }: Props) {
   const heights = useMemo(() => {
     // Stufe 1: nur Griff, aber über dem Home-Indicator (sonst nicht wischbar).
@@ -61,17 +67,37 @@ export default function DraggableListSheet({
     return { small, mid, large, full };
   }, [availableHeight, bottomInset]);
 
+  // WICHTIG zur Architektur: Das Sheet hat eine FESTE Höhe (Vollstufe) und wird
+  // per translateY ins Bild geschoben. Die Höhe selbst wird NICHT animiert —
+  // animierte Layout-Höhen (useAnimatedStyle + height) kamen auf iOS nicht
+  // zuverlässig im Yoga-Layout an: Das Sheet blieb inhaltsgroß, die Liste
+  // überzog den ganzen Bildschirm und ihre letzten Einträge lagen dauerhaft
+  // unterhalb der sichtbaren Kante (Web war korrekt, nur Native betroffen).
+  // Transforms laufen dagegen am Layout vorbei und sind auf allen Plattformen
+  // verlässlich — der Standardweg für Bottom-Sheets.
   // sheetHeight = aktuell sichtbare Höhe des Sheets (von unten gemessen).
   // Start in Stufe 2 (erster Eintrag lesbar).
   const sheetHeight = useSharedValue(heights.mid);
   const startHeight = useSharedValue(heights.mid);
 
+  // Der unter der Bildschirmkante liegende Sheet-Anteil je Ruhestufe → als
+  // Endabstand an die Liste melden (dort als Scroll-Inhalt, nie als Container-
+  // Padding). Während des Ziehens bleibt der Wert der letzten Ruhestufe stehen;
+  // nach dem Einrasten stimmt er wieder exakt.
+  const reportHidden = (visible: number) => {
+    onHiddenBottomChange?.(Math.max(0, heights.full - visible));
+  };
+  useEffect(() => {
+    reportHidden(heights.mid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heights]);
+
   // Reanimated 4.3.x hat beim allerersten Frame einen Race zwischen dem
   // AnimationFrameBatchinator (DisplayLink) und dem noch nicht registrierten
   // ShadowNode → EXC_BAD_ACCESS in REANodesManager::performOperations beim Start
   // (software-mansion/react-native-reanimated#9293 / #9402). Wir halten das Sheet
-  // deshalb einen Frame lang statisch (feste Höhe, kein animierter Style), bis der
-  // native View sicher gemountet ist, und lassen erst dann Animationen zu.
+  // deshalb einen Frame lang statisch (fester Transform, kein animierter Style),
+  // bis der native View sicher gemountet ist, und lassen erst dann Animationen zu.
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setReady(true));
@@ -81,9 +107,10 @@ export default function DraggableListSheet({
   const snapTo = (target: number) => {
     "worklet";
     sheetHeight.value = withSpring(target, SPRING);
+    runOnJS(reportHidden)(target);
   };
 
-  // Tipp auf den Griff → nächstgrößere Stufe (small→mid→large), von large zurück auf small.
+  // Tipp auf den Griff → nächstgrößere Stufe (small→mid→large→full), von full zurück auf small.
   const tap = Gesture.Tap()
     .enabled(ready)
     .maxDuration(250)
@@ -137,13 +164,24 @@ export default function DraggableListSheet({
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
-    height: sheetHeight.value,
+    transform: [{ translateY: -sheetHeight.value }],
   }));
 
   return (
-    // Äußere View: trägt Schatten + Position, KEIN overflow:hidden (sonst wird Schatten weggeclippt).
-    // Vor `ready` feste Höhe (kein shared-value-getriebener Style) → umgeht den Reanimated-Start-Race.
-    <Animated.View style={[styles.sheetShadow, ready ? animatedStyle : { height: heights.mid }]}>
+    // Äußere View: feste Höhe (Vollstufe), geparkt direkt UNTER der sichtbaren
+    // Fläche; translateY schiebt den benötigten Anteil ins Bild. Trägt Schatten,
+    // KEIN overflow:hidden (sonst wird der Schatten weggeclippt).
+    // Vor `ready` fester Transform (kein shared-value-getriebener Style) → umgeht
+    // den Reanimated-Start-Race.
+    <Animated.View
+      style={[
+        styles.sheetShadow,
+        { top: availableHeight, height: heights.full },
+        ready
+          ? animatedStyle
+          : { transform: [{ translateY: -heights.mid }] },
+      ]}
+    >
       {/* Innere View: clippt die runden Ecken + Liste, trägt Rahmen/Hintergrund. */}
       <View style={styles.sheetInner}>
         {/* Griffbereich: Drag ODER Tipp (Tipp = eine Stufe größer) */}
@@ -153,11 +191,6 @@ export default function DraggableListSheet({
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
         </GestureDetector>
-        {/* KEIN paddingBottom hier: Padding am Container einer FlatList verkleinert
-            den sichtbaren Bereich dauerhaft, statt am Listenende Platz zu schaffen —
-            die letzten Einträge lagen dadurch im abgeschnittenen Bereich und waren
-            nicht erreichbar. Die Safe-Area-Reserve gehört in contentContainerStyle
-            der Liste (s. EventList: bottomInset). */}
         <View style={styles.body}>{children}</View>
       </View>
     </Animated.View>
@@ -169,7 +202,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 0,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     // Weicher Schatten nach OBEN — setzt das Sheet gegen die Karte ab, ohne als

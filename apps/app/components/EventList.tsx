@@ -4,11 +4,13 @@ import EventCard from "./EventCard";
 import { colors, fonts, spacing } from "../lib/theme";
 
 /**
- * Leerraum unter dem letzten Eintrag. Muss mindestens so hoch sein wie der Teil
- * des Sheets, der bei der mittleren Snap-Stufe unterhalb des Bildschirms liegt —
- * sonst lässt sich der letzte Termin nicht in den sichtbaren Bereich scrollen.
+ * Atempause unter dem letzten Eintrag. Die Liste endet exakt an der sichtbaren
+ * Sheet-Kante (nachgemessen) — hier ist KEINE Kompensation für verdeckte Bereiche
+ * nötig. Der frühere 280-px-Puffer stammte aus der Zeit, als der eigentliche
+ * Scroll-Blocker (RefreshControl im Sheet) noch unerkannt war, und erzeugte am
+ * Listenende eine bildschirmfüllende Leerfläche.
  */
-const TAIL_SPACE = 280;
+const TAIL_SPACE = 24;
 
 interface Props {
   features: EventFeature[];

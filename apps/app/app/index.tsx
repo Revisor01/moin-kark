@@ -69,6 +69,10 @@ export default function Home() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
+  // Anteil des Listen-Sheets, der unterhalb der Bildschirmkante geparkt ist
+  // (Sheet hat feste Höhe und wird per translateY geschoben). Die Liste braucht
+  // genau diesen Wert als Endabstand, sonst bleibt ihr Schluss unerreichbar.
+  const [sheetHiddenPx, setSheetHiddenPx] = useState(0);
   const [didInitialZoom, setDidInitialZoom] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -372,7 +376,7 @@ export default function Home() {
         <View style={styles.wideRow}>
           <View style={styles.listPane}>
             {filterBar}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} inSheet />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} />
           </View>
           <View style={styles.mapPane}>{map}</View>
         </View>
@@ -403,10 +407,16 @@ export default function Home() {
           {filterBar}
         </View>
         {mapAreaHeight > 0 ? (
-          <DraggableListSheet availableHeight={mapAreaHeight} topInset={0} bottomInset={insets.bottom}>
-            {/* bottomInset an die Liste: als Scroll-Inhalt-Reserve, nicht als
-                Container-Padding — sonst sind die letzten Einträge nicht erreichbar. */}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} />
+          <DraggableListSheet
+            availableHeight={mapAreaHeight}
+            topInset={0}
+            bottomInset={insets.bottom}
+            onHiddenBottomChange={setSheetHiddenPx}
+          >
+            {/* Endabstand = Safe Area + verdeckter Sheet-Anteil: als Scroll-Inhalt,
+                nicht als Container-Padding — sonst sind die letzten Einträge
+                nicht erreichbar. */}
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom + sheetHiddenPx} onRefresh={refetch} refreshing={isFetching} inSheet />
           </DraggableListSheet>
         ) : null}
       </View>
