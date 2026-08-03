@@ -40,6 +40,14 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   (Terracotta-Pin mit Kirche) in allen Varianten für iOS, Android und Web.
 - Footer nach dem projektübergreifenden Branding-Pattern: App + Version,
   „Made with 🐦 in Hennstedt“, Friedensgruß.
+- Mehrfach zugeordnete Events kennen jetzt alle ihre Gemeinden: Ein
+  ChurchDesk-Termin kann mehreren Gemeinden gehören (die Sommerkirche hängt an
+  allen sechs Eider-Gemeinden, der Abendsegen an Urlauberseelsorge + Büsum) —
+  bisher zählte nur die erste. Die API liefert zusätzlich `parishes`, der
+  Gemeindefilter findet den Termin über jede zugeordnete Gemeinde, die
+  Detailansicht schreibt alle Namen aus („Kirchengemeinden: Kirchspiel Eider:
+  Hennstedt, Weddingstedt, Lunden, Schlichting, St. Annen und Hemme“) und die
+  Listenkarte zeigt kompakt „Kirchspiel Eider“. 16 Events im Feed betroffen.
 
 ### Infrastruktur
 
@@ -76,6 +84,16 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- Listen-Sheet: Die letzten Einträge waren auf iOS in jeder Snap-Stufe
+  unerreichbar (je nach Stufe 4–5 Termine), im Web ging alles. Wurzelursache:
+  Die animierte Sheet-**Höhe** (Reanimated `useAnimatedStyle` + `height`) kam
+  auf iOS nicht im Layout an — die Liste wurde inhaltsgroß und ihr Ende lag
+  dauerhaft unterhalb der Bildschirmkante. Das Sheet hat jetzt eine feste Höhe
+  und wird per `translateY` verschoben (Transforms laufen am Layout vorbei);
+  der unter der Kante geparkte Anteil wird pro Stufe exakt berechnet und der
+  Liste als Endabstand gemeldet. Der geratene 280-px-Puffer entfiel, ebenso
+  der fälschlich in der Breitbild-Ansicht (statt im Sheet) deaktivierte
+  Pull-to-Refresh. Mit echten Wisch-Gesten im Simulator und im Web verifiziert.
 - Event-Modal: Kopfbereich fix, nur die Beschreibung scrollt; bei zu wenig Platz
   scrollt automatisch das gesamte Sheet (sonst waren die letzten Zeilen auf
   kleinen Geräten unerreichbar).
