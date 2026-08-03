@@ -61,7 +61,14 @@ function pickImage(img: CdEvent["image"]): EventImage | undefined {
 }
 
 export function toFeature(event: CdEvent, orgId: number): EventFeature {
-  const parish = event.parishes?.[0]?.title;
+  // Ein Event kann in ChurchDesk MEHREREN Gemeinden gehören (Kirchspiel-weite
+  // Termine wie die Sommerkirche hängen an allen sechs Eider-Gemeinden). Die
+  // erste bleibt als `parish` (Kurzform/Koordinaten-Fallback), die volle Liste
+  // geht als `parishes` mit — Filter und Anzeige in der App brauchen alle.
+  const allParishes = (event.parishes ?? [])
+    .map((p) => p.title)
+    .filter((t): t is string => !!t);
+  const parish = allParishes[0];
   const lo = event.locationObj;
   // 0/0 ist der „Nullpunkt" (Golf von Guinea) — ChurchDesk liefert das bei nicht
   // geokodierten Orten. Als „keine echten Koordinaten" behandeln → Fallback nutzen.
@@ -118,6 +125,7 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       })),
       contributor: event.contributor || undefined,
       parish,
+      parishes: allParishes.length > 1 ? allParishes : undefined,
       kirchspiel: resolveKirchspiel(parish, orgId),
       orgId,
       orgName: orgName(orgId),

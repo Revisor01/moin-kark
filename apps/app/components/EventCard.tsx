@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import type { EventFeature } from "@moinkark/shared";
+import { eventParishes, type EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
 import { placeholderFor } from "../lib/placeholders";
@@ -19,6 +19,13 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
   const cat = p.categories[0]?.title;
   const accent = colorForCategory(cat);
   const time = formatEventTime(p.startUtc, p.endUtc, p.allDay, p.showEndtime);
+  // Mehrfach zugeordnete Events: auf der kompakten Karte „Kirchspiel Eider" statt
+  // einer einzelnen (irreführend herausgegriffenen) Gemeinde; alle Namen stehen
+  // in der Detailansicht.
+  const place =
+    eventParishes(p).length > 1
+      ? `Kirchspiel ${p.kirchspiel}`
+      : p.parish ?? p.locationName ?? p.kirchspiel;
 
   return (
     <View style={[styles.card, p.highlight && styles.cardHighlight, active && styles.cardActive]}>
@@ -30,7 +37,7 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`${p.title}, ${time}, ${p.parish ?? p.kirchspiel}`}
+        accessibilityLabel={`${p.title}, ${time}, ${place}`}
         style={styles.pressArea}
       >
         <View style={[styles.accent, { backgroundColor: accent }]} />
@@ -55,7 +62,7 @@ export default function EventCard({ feature, active, onPress, saved, onToggleSav
               </View>
             ) : null}
             <Text style={styles.place} numberOfLines={1}>
-              {p.parish ?? p.locationName ?? p.kirchspiel}
+              {place}
             </Text>
           </View>
         </View>
