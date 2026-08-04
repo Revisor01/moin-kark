@@ -12,7 +12,7 @@
   "dependencies": {
     "@hono/node-server": "^2.0.12",
     "@moinkark/shared": "*",
-    "hono": "^4.12.33",
+    "hono": "^4.12.34",
     "tsx": "^4.19.2"
   },
   "devDependencies": {
