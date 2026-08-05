@@ -38,6 +38,9 @@ yarn-error.*
 # Playwright MCP artifacts
 .playwright-mcp/
 
+# Laufzeit-Daten der API (lokale Entwicklung; im Container ein Volume)
+apps/api/data/
+
 # iOS signing (lokal, NIE committen)
 apps/app/dist-cert.p12
 apps/app/moinkark.mobileprovision
