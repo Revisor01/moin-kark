@@ -414,11 +414,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
   },
-  heroEmpty: {
-    opacity: 0.25,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-  },
   content: { flexShrink: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, gap: spacing.xs },
   time: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
   title: {

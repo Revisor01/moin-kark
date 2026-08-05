@@ -7,19 +7,14 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { colors, fonts, radius, spacing } from "../lib/theme";
-import { Text } from "react-native";
+import { colors, radius } from "../lib/theme";
 
 interface Props {
   /** Höhe des Bereichs, über dem das Sheet liegt (Karte sichtbar dahinter). */
   availableHeight: number;
-  /** Headerhöhe oben (Titel + Filterleiste), bestimmt obere Grenze. */
-  topInset: number;
   /** Untere Safe-Area (Home-Indicator) — Griff muss darüber greifbar bleiben. */
   bottomInset?: number;
   children: React.ReactNode;
-  /** Optionaler Untertitel im Griffbereich (z.B. Anzahl). */
-  subtitle?: string;
   /**
    * Meldet nach jedem Einrasten, wie viele Pixel des Sheets UNTER der
    * Bildschirmkante liegen. Die Liste im Sheet braucht genau diesen Wert als
@@ -50,10 +45,8 @@ const SPRING = { damping: 20, stiffness: 200, mass: 0.6 };
 
 export default function DraggableListSheet({
   availableHeight,
-  topInset,
   bottomInset = 0,
   children,
-  subtitle,
   onHiddenBottomChange,
 }: Props) {
   const heights = useMemo(() => {
@@ -188,7 +181,6 @@ export default function DraggableListSheet({
         <GestureDetector gesture={Gesture.Race(pan, tap)}>
           <View style={styles.handleArea}>
             <View style={styles.grabber} />
-            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
         </GestureDetector>
         <View style={styles.body}>{children}</View>
@@ -233,12 +225,6 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: colors.borderStrong,
-  },
-  subtitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 13,
-    color: colors.muted,
-    marginTop: spacing.xs,
   },
   body: { flex: 1 },
 });

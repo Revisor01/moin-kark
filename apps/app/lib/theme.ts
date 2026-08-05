@@ -43,13 +43,10 @@ export const categoryColors: Record<string, string> = {
   Gottesdienst: "#0E6E6E",
   Andacht: "#3A8A8A",
   Konzerte: "#8E44AD",
-  Kirchenmusik: "#8E44AD",
   "Sela-Yoga": "#2E7D5B",
   Treffpunkt: "#E4572E",
-  Treffen: "#E4572E",
   Senioren: "#C97B2C",
   "Kinder / Jugendliche": "#D4A017",
-  Konzert: "#8E44AD",
   default: "#5C6B6B",
 };
 

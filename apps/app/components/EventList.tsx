@@ -16,7 +16,6 @@ interface Props {
   features: EventFeature[];
   selectedId?: number | null;
   onSelect: (id: number) => void;
-  header?: React.ReactElement;
   isSaved?: (id: number) => boolean;
   onToggleSave?: (id: number) => void;
   /**
@@ -36,7 +35,6 @@ export default function EventList({
   features,
   selectedId,
   onSelect,
-  header,
   isSaved,
   onToggleSave,
   bottomInset = 0,
@@ -48,7 +46,6 @@ export default function EventList({
     <FlatList
       data={features}
       keyExtractor={(f) => String(f.properties.id)}
-      ListHeaderComponent={header}
       extraData={{ selectedId, isSaved }}
       renderItem={({ item }) => (
         <EventCard
@@ -96,7 +93,7 @@ export default function EventList({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: 0 },
+  content: { padding: spacing.lg },
   empty: { alignItems: "center", paddingVertical: spacing.xxl, gap: spacing.sm },
   emptyTitle: { fontFamily: fonts.display, fontSize: 18, color: colors.foreground },
   emptyText: {

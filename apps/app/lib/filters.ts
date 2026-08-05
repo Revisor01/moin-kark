@@ -29,9 +29,6 @@ export const DEFAULT_FILTERS: Filters = {
   highlightsOnly: false,
 };
 
-/** Umkreis-Radius für „In meiner Nähe" in Kilometern. */
-export const NEARBY_RADIUS_KM = 10;
-
 /** Haversine-Distanz in km zwischen zwei Punkten. */
 export function distanceKm(a: LatLng, b: LatLng): number {
   const R = 6371;
