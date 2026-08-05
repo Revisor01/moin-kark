@@ -12,6 +12,11 @@ import {
   type EventImage,
 } from "@moinkark/shared";
 import type { CdEvent } from "./churchdesk.js";
+import {
+  dynamicCoordFixFor,
+  dynamicCoordFixForTitle,
+  dynamicCoordOverrideForTitle,
+} from "./locations.js";
 
 /**
  * Erkennt das redaktionelle „KAT: …, Highlight, …"-Tag in Summary/Beschreibung.
@@ -83,16 +88,21 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
   // Bekannt falsch geokodierte Orte korrigieren (ChurchDesk geokodiert über die
   // Adresse — Kirche und Pastorat unter derselben Anschrift landen sonst exakt
   // aufeinander und ein Pin verdeckt den anderen). Die Korrektur hat Vorrang.
-  const fix = coordFixFor(locationName);
+  // Über /admin gepflegte Laufzeit-Korrekturen überstimmen jeweils die statische Tabelle.
+  const fix = dynamicCoordFixFor(locationName) ?? coordFixFor(locationName);
 
   // Kein Ort und keine Koordinate in ChurchDesk → über den Titel zuordnen, bevor
   // der Gemeindepunkt greift (sonst liegen ganze Serien auf einer Nadel).
-  const titleFix = !locationName && !hasCoords ? coordFixForTitle(event.title) : undefined;
+  const titleFix =
+    !locationName && !hasCoords
+      ? dynamicCoordFixForTitle(event.title) ?? coordFixForTitle(event.title)
+      : undefined;
 
   // Wenige Reihen ueberstimmen bewusst auch eine gepflegte ChurchDesk-Koordinate:
   // Auf dem Gelaende der Familienlagune tragen alle Termine dieselbe Adresse,
   // finden aber an verschiedenen Stellen statt (Kirchenkiste vs. Salzwiesen).
-  const titleOverride = coordOverrideForTitle(event.title);
+  const titleOverride =
+    dynamicCoordOverrideForTitle(event.title) ?? coordOverrideForTitle(event.title);
 
   const coords =
     titleOverride ??

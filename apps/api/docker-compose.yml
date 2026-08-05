@@ -13,7 +13,9 @@ services:
       PORT: "8787"
       CACHE_TTL_MS: "300000"
       DEFAULT_WINDOW_DAYS: "60"
-      MAX_WINDOW_DAYS: "90"
+      # Admin-Oberfläche (/admin) für Orts-Korrekturen; ohne Token deaktiviert.
+      ADMIN_TOKEN: "${ADMIN_TOKEN:-}"
+      DATA_DIR: "/data"
       # karte.* = Web-App, moin-kark.de = Landingpage. Die Alt-Domain bleibt
       # vorerst erlaubt, damit bereits ausgelieferte App-Builds weiterlaufen.
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://karte.moin-kark.de,https://moin-kark.de,https://kkkarte.godsapp.de}"
@@ -32,6 +34,9 @@ services:
       CD_TOKEN_2936: "${CD_TOKEN_2936:-}"
       CD_TOKEN_2940: "${CD_TOKEN_2940:-}"
       CD_TOKEN_6572: "${CD_TOKEN_6572:-}"
+    volumes:
+      # Über /admin gepflegte Orts-Korrekturen überleben hier Container-Neubauten.
+      - moinkark-data:/data
     networks:
       - traefik
     labels:
@@ -42,3 +47,6 @@ services:
 networks:
   traefik:
     external: true
+
+volumes:
+  moinkark-data:

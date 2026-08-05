@@ -1,18 +1,24 @@
 // Moin Kark API — Read-Only Aggregator für die Kirchenkreis-Dithmarschen-Eventkarte.
 // Hält die 14 ChurchDesk-Read-Tokens server-seitig, liefert ein dedupliziertes GeoJSON.
 
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { EventFeatureCollection } from "@moinkark/shared";
+import {
+  LOCATION_COORD_FIXES,
+  TITLE_COORD_FIXES,
+  type EventFeatureCollection,
+} from "@moinkark/shared";
 import { buildFeatureCollection, extractCategories } from "./aggregate.js";
 import { SwrCache } from "./cache.js";
+import { getOverrides, loadOverrides, setOverrides } from "./locations.js";
+import { adminPage, statusPage, type FallbackGroup, type StatusData } from "./pages.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const TTL_MS = Number(process.env.CACHE_TTL_MS ?? 20 * 60 * 1000); // 20 min
 const DEFAULT_DAYS = Number(process.env.DEFAULT_WINDOW_DAYS ?? 60);
-const MAX_DAYS = Number(process.env.MAX_WINDOW_DAYS ?? 90);
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN?.trim() || undefined;
 
 // CORS-Allowlist: kommagetrennt in ALLOWED_ORIGINS, sonst Dev-Defaults.
 const ALLOWED_ORIGINS = (
@@ -25,21 +31,22 @@ const ALLOWED_ORIGINS = (
 
 const cache = new SwrCache<EventFeatureCollection>({ ttlMs: TTL_MS });
 
-function parseWindow(fromRaw?: string, toRaw?: string): { from: Date; to: Date; key: string } {
-  const now = new Date();
-  const from = fromRaw ? new Date(fromRaw) : now;
-  let to = toRaw ? new Date(toRaw) : new Date(now.getTime() + DEFAULT_DAYS * 86400_000);
-
-  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
-    throw new Error("Ungültiges Datum (erwartet ISO oder YYYY-MM-DD).");
-  }
-  // Fenster serverseitig deckeln (Token-Schutz).
-  const maxTo = new Date(from.getTime() + MAX_DAYS * 86400_000);
-  if (to > maxTo) to = maxTo;
-
-  // Cache-Key auf Tagesgranularität (verhindert Key-Explosion durch ms-Unterschiede).
+/**
+ * Das Zeitfenster ist serverseitig fest: heute + DEFAULT_DAYS. Die frühere
+ * `?from=`/`?to=`-Unterstützung ist bewusst entfernt — kein Client nutzte sie,
+ * aber jeder beliebige Parameter erzeugte einen eigenen Cache-Eintrag samt
+ * kompletter 14-Org-Fetch-Kaskade (Token- und Speicher-Schutz).
+ */
+function currentWindow(): { from: Date; to: Date; key: string } {
+  const from = new Date();
+  const to = new Date(from.getTime() + DEFAULT_DAYS * 86400_000);
   const key = `${from.toISOString().slice(0, 10)}_${to.toISOString().slice(0, 10)}`;
   return { from, to, key };
+}
+
+function getCollection(): Promise<EventFeatureCollection> {
+  const { from, to, key } = currentWindow();
+  return cache.get(key, () => buildFeatureCollection(from, to));
 }
 
 const app = new Hono();
@@ -52,13 +59,72 @@ app.use(
 );
 
 app.get("/", (c) => c.json({ service: "moinkark-api", status: "ok" }));
-app.get("/healthz", (c) => c.json({ status: "ok" }));
+
+/**
+ * Betriebszustand aus dem jüngsten Datenstand — ohne selbst einen Fetch
+ * auszulösen (der Auto-Refresh hält den Cache warm):
+ * - ok:       Daten da, alle Orgs haben geantwortet.
+ * - degraded: Daten da, aber mind. eine Org fiel beim letzten Refresh aus
+ *             (z. B. abgelaufener Einzeltoken — deren Events fehlen still!).
+ * - stale:    letzter erfolgreicher Refresh liegt > 3×TTL zurück (Refresh hängt/scheitert).
+ * - starting: noch gar kein Datenstand (Kaltstart).
+ */
+function statusData(): StatusData {
+  const latest = cache.peekLatest();
+  const meta = latest?.value.meta;
+  if (!latest || !meta) return { status: "starting", fallback: [] };
+  const ageSeconds = (Date.now() - latest.updatedAt) / 1000;
+  const status: StatusData["status"] =
+    ageSeconds > (3 * TTL_MS) / 1000 ? "stale" : meta.orgsFailed > 0 ? "degraded" : "ok";
+
+  // Fallback-Sichtfenster: Welche Orte liegen mangels Koordinate auf dem
+  // Gemeinde-Pin? Gruppiert nach Ortsname (bzw. Gemeinde, wenn keiner gepflegt ist).
+  const groups = new Map<string, FallbackGroup>();
+  for (const f of latest.value.features) {
+    if (f.properties.coordSource !== "fallback") continue;
+    const name =
+      f.properties.locationName ?? `(kein Ortsname) — ${f.properties.parish ?? f.properties.orgName}`;
+    const g = groups.get(name) ?? { name, count: 0, titles: [] };
+    g.count++;
+    if (!g.titles.includes(f.properties.title)) g.titles.push(f.properties.title);
+    groups.set(name, g);
+  }
+  const fallback = [...groups.values()].sort((a, b) => b.count - a.count);
+
+  return {
+    status,
+    generatedAt: meta.generatedAt,
+    ageSeconds,
+    events: meta.total,
+    orgsOk: meta.orgsOk,
+    orgsFailed: meta.orgsFailed,
+    withEventCoords: meta.withEventCoords,
+    fallback,
+  };
+}
+
+app.get("/healthz", (c) => {
+  const d = statusData();
+  const http = d.status === "ok" || d.status === "degraded" ? 200 : 503;
+  return c.json(
+    {
+      status: d.status,
+      events: d.events,
+      orgsOk: d.orgsOk,
+      orgsFailed: d.orgsFailed,
+      generatedAt: d.generatedAt,
+      cacheAgeSeconds: d.ageSeconds == null ? undefined : Math.round(d.ageSeconds),
+    },
+    http
+  );
+});
+
+app.get("/status.json", (c) => c.json(statusData()));
+app.get("/status", (c) => c.html(statusPage(statusData())));
 
 app.get("/events.geojson", async (c) => {
   try {
-    const { from, to, key } = parseWindow(c.req.query("from"), c.req.query("to"));
-    const fc = await cache.get(key, () => buildFeatureCollection(from, to));
-    return c.json(fc);
+    return c.json(await getCollection());
   } catch (e: any) {
     console.error("[/events.geojson]", e?.message ?? e);
     return c.json({ error: e?.message ?? "internal error" }, 500);
@@ -88,8 +154,7 @@ function fingerprint(fc: EventFeatureCollection): string {
 
 app.get("/version.json", async (c) => {
   try {
-    const { from, to, key } = parseWindow(c.req.query("from"), c.req.query("to"));
-    const fc = await cache.get(key, () => buildFeatureCollection(from, to));
+    const fc = await getCollection();
     return c.json({ version: fingerprint(fc), count: fc.features.length });
   } catch (e: any) {
     console.error("[/version.json]", e?.message ?? e);
@@ -99,12 +164,46 @@ app.get("/version.json", async (c) => {
 
 app.get("/categories.json", async (c) => {
   try {
-    const { from, to, key } = parseWindow(c.req.query("from"), c.req.query("to"));
-    const fc = await cache.get(key, () => buildFeatureCollection(from, to));
-    return c.json(extractCategories(fc));
+    return c.json(extractCategories(await getCollection()));
   } catch (e: any) {
     console.error("[/categories.json]", e?.message ?? e);
     return c.json({ error: e?.message ?? "internal error" }, 500);
+  }
+});
+
+// --- Admin: Orts-Korrekturen pflegen (Token in ADMIN_TOKEN, sonst deaktiviert) ---
+
+/** Konstantzeit-Vergleich über SHA-256 (verhindert Timing- und Längen-Leaks). */
+function tokenOk(header: string | undefined): boolean {
+  if (!ADMIN_TOKEN || !header?.startsWith("Bearer ")) return false;
+  const given = createHash("sha256").update(header.slice(7).trim()).digest();
+  const want = createHash("sha256").update(ADMIN_TOKEN).digest();
+  return timingSafeEqual(given, want);
+}
+
+app.get("/admin", (c) => c.html(adminPage()));
+
+app.use("/admin/api/*", async (c, next) => {
+  if (!ADMIN_TOKEN) return c.json({ error: "Admin deaktiviert (ADMIN_TOKEN nicht gesetzt)." }, 503);
+  if (!tokenOk(c.req.header("Authorization"))) return c.json({ error: "unauthorized" }, 401);
+  await next();
+});
+
+app.get("/admin/api/locations", (c) =>
+  c.json({
+    static: { locations: LOCATION_COORD_FIXES, titles: TITLE_COORD_FIXES },
+    overrides: getOverrides(),
+  })
+);
+
+app.put("/admin/api/locations", async (c) => {
+  try {
+    const saved = setOverrides(await c.req.json());
+    // Korrekturen sollen sofort sichtbar werden, nicht erst beim nächsten TTL-Tick.
+    warmCache();
+    return c.json({ ok: true, overrides: saved });
+  } catch (e: any) {
+    return c.json({ error: e?.message ?? "invalid payload" }, 400);
   }
 });
 
@@ -118,7 +217,7 @@ app.get("/categories.json", async (c) => {
  * ohne dass ein Nutzer den Refresh auslösen muss.
  */
 function warmCache(): void {
-  const { from, to, key } = parseWindow();
+  const { from, to, key } = currentWindow();
   void cache
     .refresh(key, () => buildFeatureCollection(from, to))
     .then((fc) => console.log(`[moinkark-api] Cache erneuert: ${fc.features.length} Events`))
@@ -128,6 +227,8 @@ function warmCache(): void {
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`[moinkark-api] hört auf http://0.0.0.0:${info.port}`);
   console.log(`[moinkark-api] CORS erlaubt: ${ALLOWED_ORIGINS.join(", ")}`);
+  if (!ADMIN_TOKEN) console.warn("[moinkark-api] ADMIN_TOKEN nicht gesetzt — /admin ist deaktiviert.");
+  loadOverrides();
   // Sofort einmal laden, danach im TTL-Takt.
   warmCache();
   const timer = setInterval(warmCache, TTL_MS);
