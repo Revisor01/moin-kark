@@ -49,6 +49,24 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Hennstedt, Weddingstedt, Lunden, Schlichting, St. Annen und Hemme“) und die
   Listenkarte zeigt kompakt „Kirchspiel Eider“. 16 Events im Feed betroffen.
 
+- **Orts-Verwaltung `/admin`**: Koordinaten-Korrekturen lassen sich jetzt zur
+  Laufzeit pflegen (Ortsname → Koordinate, Titel-Präfix → Koordinate, optional
+  mit Vorrang vor ChurchDesk), statt nur hartkodiert in
+  `kirchen-coords.ts`. Login per `ADMIN_TOKEN`, Ablage als JSON im
+  Docker-Volume (übersteht Container-Neubauten), Speichern stößt sofort einen
+  Daten-Refresh an. Die statischen Tabellen bleiben die Basis und werden in der
+  Oberfläche mit angezeigt.
+- **Status-Monitor `/status`** (öffentlich, auch als `/status.json`): Zustand
+  der API auf einen Blick — erreichte Gemeinden, Datenstand-Alter, Eventzahl und
+  vor allem die Liste aller Events, die mangels Koordinate auf einem
+  Gemeinde-Fallback-Pin liegen. Neue Orte in ChurchDesk fallen damit beim
+  Wochenblick auf, statt zufällig. Ein Klick in der Admin-Oberfläche übernimmt
+  einen Fallback-Ort direkt als neue Korrektur.
+- `/healthz` meldet jetzt echten Betriebszustand statt pauschal „ok":
+  `ok`/`degraded` (mind. eine Gemeinde ausgefallen — z.B. abgelaufener
+  Einzeltoken)/`stale` (Refresh hängt, HTTP 503) samt `orgsFailed` und
+  Cache-Alter — als Andockpunkt für einen Uptime-Monitor.
+
 ### Infrastruktur
 
 - Eigene Domain `moin-kark.de` mit vollständigem DNS (A/AAAA, Wildcard, MX, SPF,
@@ -72,6 +90,21 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Geändert
 
+- Offline-Start am neuen Tag zeigt jetzt den letzten bekannten Stand (bis zu
+  7 Tage alt) statt des Fehlerscreens. Der frühere harte Tageswechsel-Verwurf
+  schützte vor falsch sortierten Vorwochen-Terminen — das erledigt inzwischen
+  der `isPast`-Filter beim Laden, der Verwurf bestrafte nur noch den Start im
+  Funkloch.
+- Das API-Zeitfenster ist serverseitig fest (heute + 60 Tage). Die
+  `?from=`/`?to=`-Parameter sind entfernt: Kein Client nutzte sie, aber jeder
+  beliebige Wert erzeugte einen eigenen ~700-KB-Cache-Eintrag samt kompletter
+  14-Org-Fetch-Kaskade — ein gefundenes Fressen für neugierige Skripte.
+- Frühjahrsputz vor dem Launch: tote Props und Exports entfernt (u.a.
+  `selectedId`/`dimmed` am Karten-Vertrag, `topInset`/`subtitle` am Sheet,
+  Reste des nie gebauten Umkreisfilters), ungenutzte Font-Dependency
+  `@expo-google-fonts/space-grotesk` raus, `isPast`-Duplikat im Event-Cache
+  durch Import ersetzt, redundante Kategorie-Farben und CSS-Reste der
+  Landingpage bereinigt. Netto −54 Zeilen, verhaltensgleich.
 - Redaktionelle Änderungen kommen zeitnah an: Der Server erneuert seinen Cache
   jetzt alle 5 Minuten von selbst (vorher nur, wenn jemand die API aufrief), und
   die App fragt alle 5 Minuten still über den neuen Endpunkt `/version.json` nach,
@@ -84,6 +117,24 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- ChurchDesk-Totalausfall (Wartungsfenster, Netzstörung) hätte alle Karten
+  geleert: Fielen alle 14 Gemeinden gleichzeitig aus, lieferte der Aggregator
+  „erfolgreich" eine leere Collection — der Cache übernahm sie, der
+  Versions-Hash änderte sich und jedes Gerät ersetzte seinen lokalen Bestand
+  durch nichts. Jetzt wirft der Aggregator bei 0 erreichten Gemeinden einen
+  Fehler und der Cache behält den letzten guten Stand (stale-while-revalidate
+  wie designed).
+- ChurchDesk-Requests haben jetzt ein 15-Sekunden-Timeout. Vorher galt der
+  undici-Default (~5 Minuten) — ein einziges hängendes ChurchDesk blockierte
+  jeden Cold-Start und Refresh-Durchlauf, und das In-flight-Dedup hielt den
+  hängenden Promise zusätzlich fest.
+- Cache-Speicherleck geschlossen: Das mit dem Datum wandernde Zeitfenster
+  erzeugte täglich einen neuen Cache-Key, alte Einträge (~700 KB) blieben für
+  immer liegen. Der Cache verwirft jetzt die ältesten Einträge über einem
+  Deckel.
+- Deploy-Anleitung im README deployte nicht: `docker restart` startet den
+  alten Container mit dem alten Image neu — das frisch gebaute Image wurde nie
+  übernommen. Dokumentierter Weg ist jetzt der Portainer-Redeploy.
 - Listen-Sheet: Die letzten Einträge waren auf iOS in jeder Snap-Stufe
   unerreichbar (je nach Stufe 4–5 Termine), im Web ging alles. Wurzelursache:
   Die animierte Sheet-**Höhe** (Reanimated `useAnimatedStyle` + `height`) kam

@@ -88,14 +88,30 @@ Die App zieht ihre Daten aus der API. Für lokale Entwicklung die eigene Origin 
 
 ## Endpoints
 
-| Route               | Inhalt                                              |
-|---------------------|-----------------------------------------------------|
-| `/events.geojson`   | Alle Termine als GeoJSON-FeatureCollection          |
-| `/categories.json`  | Kategorien mit Farbe und Anzahl                     |
-| `/healthz`          | Health-Check                                        |
+| Route               | Inhalt                                                            |
+|---------------------|-------------------------------------------------------------------|
+| `/events.geojson`   | Alle Termine als GeoJSON-FeatureCollection                        |
+| `/categories.json`  | Kategorien mit Farbe und Anzahl                                   |
+| `/version.json`     | Kurz-Hash des Datenbestands (Änderungs-Polling der App)           |
+| `/healthz`          | Health-Check mit `orgsFailed` + Cache-Alter (für Uptime-Monitore) |
+| `/status`           | Öffentliche Monitor-Seite (auch als `/status.json`)               |
+| `/admin`            | Orts-Verwaltung, nur mit `ADMIN_TOKEN` (s.u.)                     |
 
-Optional `?from=` / `?to=` (ISO oder `YYYY-MM-DD`). Das Fenster wird serverseitig
-auf `MAX_WINDOW_DAYS` gedeckelt — das schützt die Tokens vor Abfrage-Exzessen.
+Das Zeitfenster ist serverseitig fest (heute + `DEFAULT_WINDOW_DAYS`). Die frühere
+`?from=`/`?to=`-Unterstützung ist entfernt: Kein Client nutzte sie, aber jeder
+beliebige Parameter erzeugte einen eigenen Cache-Eintrag samt kompletter
+14-Org-Fetch-Kaskade (Token- und Speicher-Schutz).
+
+### Orts-Verwaltung (`/admin`)
+
+Die statischen Koordinaten-Korrekturen (`packages/shared/src/kirchen-coords.ts`)
+bleiben die im Code versionierte Basis. Zusätzlich lassen sich Korrekturen zur
+Laufzeit unter `/admin` pflegen (Ortsname → Koordinate, Titel-Präfix → Koordinate);
+sie haben Vorrang, werden als JSON im `DATA_DIR`-Volume persistiert und stoßen
+beim Speichern sofort einen Daten-Refresh an. Login per `ADMIN_TOKEN` (ENV);
+ohne gesetzten Token ist `/admin` deaktiviert. Der `/status`-Monitor listet alle
+Events, die mangels Koordinate auf einem Gemeinde-Fallback-Pin liegen — das sind
+die Kandidaten für neue Einträge.
 
 ## Android-Signing
 
@@ -235,9 +251,14 @@ rsync -az --delete --exclude node_modules --exclude .git --exclude .env \
 ssh root@server.godsapp.de \
   "cd /opt/stacks/moinkark-api/build && docker build -f apps/api/Dockerfile -t moinkark-api:latest ."
 
-# 3. Container neu starten
-ssh root@server.godsapp.de "docker restart moinkark-api"
+# 3. Container mit dem NEUEN Image neu erstellen — über Portainer:
+#    Stack `moinkark-api` → „Redeploy" (oder per Portainer-MCP `redeploy_stack`).
 ```
+
+**Achtung:** `docker restart moinkark-api` reicht NICHT — es startet den alten
+Container mit dem alten Image neu, das frisch gebaute Image wird nie übernommen.
+(`docker-compose` v1 auf dem Server ist mit `--force-recreate` inkompatibel und
+entfernt dabei den Container — deshalb der Weg über Portainer.)
 
 Die 14 Tokens liegen als Portainer-Stack-ENV (`moinkark-api`), niemals im Repo.
 
