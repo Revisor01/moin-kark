@@ -180,6 +180,30 @@ Achtung: Das Format der `mirrors.json` ist ein **Objekt** mit `object`/`version`
 kein Array — ein Array wird stillschweigend ignoriert und die Auflösung meldet
 fälschlich Erfolg mit leerem Ergebnis.
 
+## iOS-Build: Plattform fehlt nach Xcode-Update
+
+Nach einem Xcode-Update schlägt der Build mit „iOS x.y is not installed. Please
+download and install the platform" fehl — das SDK ist da, aber die
+Plattform-Runtime fehlt (`xcrun simctl runtime list` zeigt 0 Disk Images).
+Abhilfe (~8,5 GB Download):
+
+```bash
+xcodebuild -downloadPlatform iOS
+```
+
+## iOS-Upload: eas submit versandet → altool direkt
+
+`eas submit --path …` meldet „Scheduled iOS submission", aber der Build kommt
+nie in App Store Connect an (Expo-seitige Submission verschwindet ohne Fehler;
+eine Status-Abfrage per CLI gibt es nicht). Verlässlicher Weg — direkt mit
+Apples Tool und dem ASC-API-Key (erwartet den `.p8` in `~/private_keys/`):
+
+```bash
+mkdir -p ~/private_keys && cp ~/.claude/secrets/AuthKey_6JGT8ZLHRJ.p8 ~/private_keys/
+xcrun altool --upload-app -f MoinKark.ipa -t ios \
+  --apiKey 6JGT8ZLHRJ --apiIssuer 408ad2bb-fb61-43b2-a974-805dae7843a6
+```
+
 ## iOS-Build: fastlane-Timeout
 
 `xcodebuild -showBuildSettings` braucht auf diesem Rechner **~18 Sekunden**.
