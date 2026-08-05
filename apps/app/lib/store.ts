@@ -24,11 +24,6 @@ export function useSavedEvents() {
     });
   }, []);
 
-  const persist = useCallback((next: Set<number>) => {
-    setSaved(next);
-    AsyncStorage.setItem(SAVED_KEY, JSON.stringify([...next])).catch(() => {});
-  }, []);
-
   const toggle = useCallback(
     (id: number) => {
       setSaved((prev) => {
@@ -59,7 +54,7 @@ export function useSavedEvents() {
     });
   }, []);
 
-  return { saved, isSaved, toggle, persist, removeMany, loaded };
+  return { saved, isSaved, toggle, removeMany, loaded };
 }
 
 // --- Karten-App-Präferenz ---

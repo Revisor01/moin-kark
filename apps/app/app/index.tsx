@@ -359,13 +359,11 @@ export default function Home() {
   const map = (
     <EventMap
       features={mapFeatures}
-      selectedId={selectedId}
       onSelect={setSelectedId}
       userLocation={location}
       onBoundsChange={setBounds}
       flyToUserToken={flyToken}
       flyToOverviewToken={overviewToken}
-      dimmed={filtersOpen || profileOpen || selectedFeature !== null}
     />
   );
 
@@ -411,14 +409,13 @@ export default function Home() {
         {mapAreaHeight > 0 ? (
           <DraggableListSheet
             availableHeight={mapAreaHeight}
-            topInset={0}
             bottomInset={insets.bottom}
             onHiddenBottomChange={setSheetHiddenPx}
           >
             {/* Endabstand = Safe Area + verdeckter Sheet-Anteil: als Scroll-Inhalt,
                 nicht als Container-Padding — sonst sind die letzten Einträge
                 nicht erreichbar. */}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom + sheetHiddenPx} onRefresh={refetch} refreshing={isFetching} inSheet />
+            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom + sheetHiddenPx} inSheet />
           </DraggableListSheet>
         ) : null}
       </View>

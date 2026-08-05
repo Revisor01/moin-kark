@@ -127,7 +127,7 @@ export const MAP_STYLE: any = {
 // --- Event-Layer (Cluster + Pins) ---
 export const SOURCE_ID = "events";
 export const CLUSTER_LAYER = "clusters";
-export const CLUSTER_COUNT_LAYER = "cluster-count";
+const CLUSTER_COUNT_LAYER = "cluster-count";
 export const POINT_LAYER = "unclustered-point";
 
 export const sourceConfig = {

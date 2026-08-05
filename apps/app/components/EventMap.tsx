@@ -5,7 +5,6 @@ import type { Bounds, LatLng } from "../lib/filters";
 
 export interface EventMapProps {
   features: EventFeature[];
-  selectedId?: number | null;
   onSelect: (id: number | null) => void;
   /** Eigener Standort — zeigt „Du bist hier"-Marker. */
   userLocation?: LatLng | null;
@@ -15,8 +14,6 @@ export interface EventMapProps {
   flyToUserToken?: number;
   /** Zähler: bei Erhöhung fliegt die Karte auf die Dithmarschen-Übersicht (Fallback bei fernem Standort). */
   flyToOverviewToken?: number;
-  /** Wenn ein Sheet/Modal offen ist: Karten-Controls (Attribution) ausblenden. */
-  dimmed?: boolean;
 }
 
 // Fallback-Export (Bundler überschreibt per Plattform-Suffix).

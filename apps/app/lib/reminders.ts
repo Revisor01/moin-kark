@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { EventFeature } from "@moinkark/shared";
 
 export type ReminderPref = "evening" | "2h" | "both" | "off";
-export const REMINDER_KEY = "kkd:reminderPref";
+const REMINDER_KEY = "kkd:reminderPref";
 export const DEFAULT_REMINDER: ReminderPref = "evening";
 
 // Map: eventId -> [notificationIds]. Damit wir beim Entfernen gezielt canceln.
