@@ -19,12 +19,14 @@ export interface LocationOverrides {
   locations: Record<string, LatLng>;
   /** Präfix-Match auf dem normalisierten Titel. */
   titles: TitleFix[];
+  /** Zusätzlich ausgeschlossene Kategorien (normalisiert) — ergänzen EXCLUDED_CATEGORIES. */
+  categories: string[];
 }
 
 const DATA_DIR = process.env.DATA_DIR ?? "./data";
 const FILE = join(DATA_DIR, "location-overrides.json");
 
-let overrides: LocationOverrides = { locations: {}, titles: [] };
+let overrides: LocationOverrides = { locations: {}, titles: [], categories: [] };
 
 /** Gleiche Normalisierung wie in kirchen-coords.ts (dort privat). */
 export function normalizeName(s: string): string {
@@ -63,14 +65,23 @@ function sanitize(raw: unknown): LocationOverrides {
     if (!isLatLng(t?.coords)) throw new Error(`Ungültige Koordinate für Titel „${t?.prefix}".`);
     titles.push({ prefix, coords: { lat: t.coords.lat, lng: t.coords.lng }, force: !!t.force });
   }
-  return { locations, titles };
+  const categories: string[] = [];
+  for (const c of Array.isArray(input?.categories) ? input.categories : []) {
+    const cat = normalizeName(typeof c === "string" ? c : "");
+    if (!cat) throw new Error("Leerer Kategorie-Name.");
+    if (!categories.includes(cat)) categories.push(cat);
+  }
+  return { locations, titles, categories };
 }
 
 /** Beim Start einmal von Platte laden. Fehlende Datei ist der Normalfall (leerer Stand). */
 export function loadOverrides(): void {
   try {
     overrides = sanitize(JSON.parse(readFileSync(FILE, "utf8")));
-    const n = Object.keys(overrides.locations).length + overrides.titles.length;
+    const n =
+      Object.keys(overrides.locations).length +
+      overrides.titles.length +
+      overrides.categories.length;
     console.log(`[locations] ${n} Laufzeit-Korrektur(en) aus ${FILE} geladen.`);
   } catch (e: any) {
     if (e?.code !== "ENOENT") {
@@ -111,4 +122,9 @@ export function dynamicCoordOverrideForTitle(title: string | undefined): LatLng 
   if (!title) return undefined;
   const t = normalizeName(title);
   return overrides.titles.find((e) => e.force && t.startsWith(e.prefix))?.coords;
+}
+
+/** Ist die Kategorie über /admin ausgeschlossen? Erwartet den normalisierten Titel. */
+export function isDynamicallyExcludedCategory(normTitle: string): boolean {
+  return overrides.categories.includes(normTitle);
 }

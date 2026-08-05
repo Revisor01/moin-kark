@@ -4,6 +4,7 @@
 import type { EventFeature, EventFeatureCollection } from "@moinkark/shared";
 import { fetchOrgEvents } from "./churchdesk.js";
 import { toFeature } from "./geojson.js";
+import { isDynamicallyExcludedCategory } from "./locations.js";
 import { loadOrgs } from "./orgs.js";
 
 /**
@@ -21,20 +22,25 @@ function specificity(orgId: number): number {
  * → siehe knowledge / Memory: ausgeschlossene Inhalte. Alle Stand 19.06.2026 (Simons Vorgabe).
  * - "externe buchung": Fremdnutzungen der Räume (DRK-Yoga, SSV, Liedertafel-Proben etc., v.a. Nordhastedt).
  * - "interne veranstaltungen": z.B. Kirchengemeinderatssitzung — nicht öffentlich.
+ * - "kirchengemeinderatssitzung": manche Orgs (Nordhastedt) pflegen KGR als eigene Kategorie.
  * - "amtshandlungen -intern-": im Namen schon intern (NICHT die normalen „amtshandlungen" = öffentl. Tauffeste).
  * - "konfirmanden": wiederkehrender Konfi-Unterricht für angemeldete Konfis, kein offenes Event.
+ *
+ * Zusätzlich lassen sich über /admin weitere Kategorien zur Laufzeit ausschließen.
  */
-const EXCLUDED_CATEGORIES = new Set<string>([
+export const EXCLUDED_CATEGORIES = new Set<string>([
   "externe buchung",
   "interne veranstaltungen",
+  "kirchengemeinderatssitzung",
   "amtshandlungen -intern-",
   "konfirmanden",
 ]);
 
 function isExcluded(ev: { categories?: { title: string }[] }): boolean {
-  return (ev.categories ?? []).some((c) =>
-    EXCLUDED_CATEGORIES.has(c.title.trim().toLowerCase())
-  );
+  return (ev.categories ?? []).some((c) => {
+    const t = c.title.trim().toLowerCase();
+    return EXCLUDED_CATEGORIES.has(t) || isDynamicallyExcludedCategory(t);
+  });
 }
 
 export async function buildFeatureCollection(

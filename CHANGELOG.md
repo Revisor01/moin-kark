@@ -62,6 +62,11 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Gemeinde-Fallback-Pin liegen. Neue Orte in ChurchDesk fallen damit beim
   Wochenblick auf, statt zufällig. Ein Klick in der Admin-Oberfläche übernimmt
   einen Fallback-Ort direkt als neue Korrektur.
+- Kategorien-Ausschluss in der Orts-Verwaltung: `/admin` kann jetzt auch ganze
+  Kategorien von der Karte nehmen (ergänzend zur festen Ausschlussliste im
+  Code). Die aktuellen Feed-Kategorien werden als Klick-Vorschläge angeboten;
+  „Kirchengemeinderatssitzung" ist zusätzlich fest ausgeschlossen — Nordhastedt
+  pflegt KGR-Sitzungen als eigene Kategorie, und die sind nicht öffentlich.
 - `/healthz` meldet jetzt echten Betriebszustand statt pauschal „ok":
   `ok`/`degraded` (mind. eine Gemeinde ausgefallen — z.B. abgelaufener
   Einzeltoken)/`stale` (Refresh hängt, HTTP 503) samt `orgsFailed` und
