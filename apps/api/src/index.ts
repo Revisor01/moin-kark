@@ -10,7 +10,7 @@ import {
   TITLE_COORD_FIXES,
   type EventFeatureCollection,
 } from "@moinkark/shared";
-import { buildFeatureCollection, extractCategories } from "./aggregate.js";
+import { buildFeatureCollection, extractCategories, EXCLUDED_CATEGORIES } from "./aggregate.js";
 import { SwrCache } from "./cache.js";
 import { getOverrides, loadOverrides, setOverrides } from "./locations.js";
 import { adminPage, statusPage, type FallbackGroup, type StatusData } from "./pages.js";
@@ -189,12 +189,21 @@ app.use("/admin/api/*", async (c, next) => {
   await next();
 });
 
-app.get("/admin/api/locations", (c) =>
-  c.json({
-    static: { locations: LOCATION_COORD_FIXES, titles: TITLE_COORD_FIXES },
+app.get("/admin/api/locations", (c) => {
+  // Aktuelle Feed-Kategorien als Klick-Vorschläge fürs Ausschließen. Bereits
+  // ausgeschlossene tauchen im Feed nicht mehr auf — die Overrides-Liste selbst
+  // bleibt aber sichtbar, darüber lässt sich ein Ausschluss wieder aufheben.
+  const latest = cache.peekLatest();
+  return c.json({
+    static: {
+      locations: LOCATION_COORD_FIXES,
+      titles: TITLE_COORD_FIXES,
+      excludedCategories: [...EXCLUDED_CATEGORIES],
+    },
     overrides: getOverrides(),
-  })
-);
+    feedCategories: latest ? extractCategories(latest.value).map((cat) => cat.title) : [],
+  });
+});
 
 app.put("/admin/api/locations", async (c) => {
   try {

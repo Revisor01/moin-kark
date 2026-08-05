@@ -118,6 +118,14 @@ export function adminPage(): string {
 <div class="card"><table id="titleTable"><tr><th>Titel beginnt mit</th><th>Lat</th><th>Lng</th><th>Überstimmt ChurchDesk</th><th></th></tr></table>
 <div class="row" style="margin-top:10px"><button class="ghost" onclick="addTitle('','','',false)">+ Titel hinzufügen</button></div></div>
 
+<h2>Ausgeschlossene Kategorien</h2>
+<p class="hint">Termine dieser Kategorien erscheinen NICHT auf der Karte. Im Code fest ausgeschlossen: <span id="staticCats"></span>. Hier lassen sich weitere ergänzen — Klick auf einen Vorschlag übernimmt ihn.</p>
+<div class="card">
+  <table id="catTable"><tr><th>Kategorie</th><th></th></tr></table>
+  <div class="row" style="margin-top:10px"><button class="ghost" onclick="addCat('')">+ Kategorie hinzufügen</button></div>
+  <p class="hint" style="margin-bottom:0">Aktuelle Kategorien im Feed: <span id="catSuggest"></span></p>
+</div>
+
 <div class="row" style="margin:18px 0">
   <button onclick="save()">Speichern &amp; Refresh anstoßen</button><span id="msg"></span>
 </div>
@@ -160,10 +168,25 @@ function addTitle(prefix, lat, lng, force) {
     '<td style="text-align:center"><input type="checkbox"' + (force ? " checked" : "") + '></td>' + delCell();
   $("titleTable").appendChild(tr);
 }
+function addCat(name) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = nameCell(name) + delCell();
+  $("catTable").appendChild(tr);
+}
 
 function render(data) {
   for (const [name, c] of Object.entries(data.overrides.locations)) addLoc(name, c.lat, c.lng);
   for (const t of data.overrides.titles) addTitle(t.prefix, t.coords.lat, t.coords.lng, !!t.force);
+  for (const cat of data.overrides.categories || []) addCat(cat);
+  $("staticCats").textContent = (data.static.excludedCategories || []).join(", ");
+  const sug = $("catSuggest");
+  sug.textContent = "";
+  for (const cat of data.feedCategories || []) {
+    const a = document.createElement("a");
+    a.href = "#"; a.textContent = cat; a.style.color = "var(--primary)"; a.style.marginRight = "10px";
+    a.onclick = (ev) => { ev.preventDefault(); addCat(cat); };
+    sug.appendChild(a);
+  }
   const stat = [];
   for (const [name, c] of Object.entries(data.static.locations))
     stat.push(name + " → " + c.lat + ", " + c.lng);
@@ -187,7 +210,12 @@ function collect() {
     if (!prefix.value.trim()) continue;
     titles.push({ prefix: prefix.value.trim(), coords: { lat: num(lat), lng: num(lng) }, force: force.checked });
   }
-  return { locations, titles };
+  const categories = [];
+  for (const tr of [...$("catTable").rows].slice(1)) {
+    const [name] = [...tr.querySelectorAll("input")];
+    if (name.value.trim()) categories.push(name.value.trim());
+  }
+  return { locations, titles, categories };
 }
 
 async function save() {
