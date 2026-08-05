@@ -5,6 +5,9 @@ import type { OrgConfig } from "./orgs.js";
 
 const BASE = "https://api2.churchdesk.com/api/v3.0.0";
 const PAGE_SIZE = 100;
+// Ohne eigenes Timeout hängt ein Request am undici-Default (~5 min) — ein einziges
+// hängendes ChurchDesk blockiert dann jeden Cold-Start und Refresh-Durchlauf.
+const CHUNK_TIMEOUT_MS = 15_000;
 
 /** Rohes ChurchDesk-Event (nur die Felder, die wir nutzen). */
 export interface CdEvent {
@@ -56,7 +59,10 @@ async function fetchChunk(
   url.searchParams.set("endDate", fmtDate(to));
   url.searchParams.set("itemsNumber", String(PAGE_SIZE));
 
-  const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+  const res = await fetch(url, {
+    signal: signal ?? AbortSignal.timeout(CHUNK_TIMEOUT_MS),
+    headers: { Accept: "application/json" },
+  });
   if (!res.ok) throw new Error(`ChurchDesk ${org.id} HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   return Array.isArray(data)

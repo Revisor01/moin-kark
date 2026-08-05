@@ -69,6 +69,14 @@ export async function buildFeatureCollection(
     }
   }
 
+  // Totalausfall (ChurchDesk-Wartungsfenster, Netzstörung): NICHT erfolgreich eine
+  // leere Collection liefern — die würde den Cache überschreiben, den Versions-Hash
+  // ändern und alle Geräte ihren lokalen Bestand mit nichts ersetzen lassen.
+  // Ein Fehler lässt stattdessen die Stale-Logik des SwrCache greifen.
+  if (orgsOk === 0) {
+    throw new Error(`Alle ${orgs.length} Org-Fetches fehlgeschlagen — alter Datenstand bleibt stehen.`);
+  }
+
   const features = [...byId.values()].map((v) => v.feature);
   const withEventCoords = features.filter((f) => f.properties.coordSource === "event").length;
 

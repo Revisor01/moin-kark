@@ -5,11 +5,18 @@
 interface Entry<T> {
   value: T;
   freshUntil: number; // ms-Timestamp
+  updatedAt: number; // ms-Timestamp des letzten erfolgreichen Ladens
 }
 
 export interface CacheOptions {
   /** Wie lange ein Wert als „frisch" gilt (ms). */
   ttlMs: number;
+  /**
+   * Obergrenze gespeicherter Einträge. Das Zeitfenster wandert mit dem Datum —
+   * jeder Tag erzeugt einen neuen Key. Ohne Deckel bleibt der Eintrag von
+   * gestern für immer liegen (~700 KB/Tag Leck im Dauerbetrieb).
+   */
+  maxEntries?: number;
 }
 
 export class SwrCache<T> {
@@ -54,13 +61,28 @@ export class SwrCache<T> {
     return this.load(key, loader);
   }
 
+  /**
+   * Jüngster erfolgreich geladener Eintrag — egal unter welchem Key. Für
+   * /healthz und /status: Direkt nach Mitternacht existiert der heutige Key
+   * noch nicht, der Datenstand von gestern Abend ist aber der maßgebliche.
+   */
+  peekLatest(): { value: T; updatedAt: number } | undefined {
+    let latest: Entry<T> | undefined;
+    for (const e of this.entries.values()) {
+      if (!latest || e.updatedAt > latest.updatedAt) latest = e;
+    }
+    return latest ? { value: latest.value, updatedAt: latest.updatedAt } : undefined;
+  }
+
   private load(key: string, loader: () => Promise<T>): Promise<T> {
     const existing = this.inflight.get(key);
     if (existing) return existing;
 
     const p = loader()
       .then((value) => {
-        this.entries.set(key, { value, freshUntil: Date.now() + this.opts.ttlMs });
+        const now = Date.now();
+        this.entries.set(key, { value, freshUntil: now + this.opts.ttlMs, updatedAt: now });
+        this.evict();
         return value;
       })
       .finally(() => {
@@ -69,5 +91,22 @@ export class SwrCache<T> {
 
     this.inflight.set(key, p);
     return p;
+  }
+
+  /** Älteste Einträge über dem Deckel verwerfen (Schutz gegen Key-Ansammlung). */
+  private evict(): void {
+    const max = this.opts.maxEntries ?? 4;
+    while (this.entries.size > max) {
+      let oldestKey: string | undefined;
+      let oldestAt = Infinity;
+      for (const [k, e] of this.entries) {
+        if (e.updatedAt < oldestAt) {
+          oldestAt = e.updatedAt;
+          oldestKey = k;
+        }
+      }
+      if (!oldestKey) break;
+      this.entries.delete(oldestKey);
+    }
   }
 }
