@@ -3,6 +3,7 @@
 // im Hintergrund lädt React Query frische Daten und ersetzt sie still.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { EventFeatureCollection } from "@moinkark/shared";
+import { isPast } from "./filters";
 
 const CACHE_KEY = "kkd:eventsCache";
 
@@ -11,15 +12,9 @@ interface Cached {
   data: EventFeatureCollection;
 }
 
-/** Berlin-lokales Datum („2026-08-02") eines Zeitstempels. */
-function berlinDay(ms: number): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Berlin",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(ms));
-}
+// Nach einer Woche ist der Bestand so lückenhaft (neue Termine fehlen, Serien
+// ausgedünnt), dass der Fehlerscreen ehrlicher ist als eine fast leere Karte.
+const MAX_AGE_MS = 7 * 86400_000;
 
 export async function loadCachedEvents(): Promise<EventFeatureCollection | null> {
   try {
@@ -28,23 +23,16 @@ export async function loadCachedEvents(): Promise<EventFeatureCollection | null>
     const c = JSON.parse(raw) as Cached;
     if (!c?.data) return null;
 
-    // Der Cache gilt NUR für den Tag, an dem er geschrieben wurde — nicht 24h.
-    // Grund: Bei wöchentlichen Serien (Gottesdienst, Chorproben) enthält der Cache
-    // von gestern Abend noch die Instanz der VORWOCHE, aber noch nicht die von
-    // heute. Zeigte man ihn trotzdem, stünde am Sonntagmorgen der Termin vom 5.8.
-    // ganz oben statt des Gottesdienstes, der in zwei Stunden anfängt. Lieber kurz
-    // den Spinner zeigen und auf frische Daten warten, als falsch sortiert starten.
-    if (berlinDay(c.ts) !== berlinDay(Date.now())) return null;
+    // Auch ein Stand von gestern ist als Offline-Start besser als der Fehlerscreen
+    // („Wer morgens im Funkloch öffnet, sieht sonst gar nichts"). Der isPast-Filter
+    // darunter wirft bereits Gelaufenes raus — auch die Vorwochen-Instanzen
+    // wöchentlicher Serien, die früher der Grund für den harten Tageswechsel-
+    // Verwurf waren. Sobald Netz da ist, ersetzt React Query den Stand still.
+    if (Date.now() - c.ts > MAX_AGE_MS) return null;
 
-    // Innerhalb desselben Tages: bereits beendete Termine rauswerfen, damit der
-    // Cache nicht Vergangenes anzeigt (2h Kulanz ohne Endzeit — wie isPast).
-    const now = Date.now();
-    const features = c.data.features.filter((f) => {
-      const start = new Date(f.properties.startUtc).getTime();
-      const endRaw = f.properties.endUtc ? new Date(f.properties.endUtc).getTime() : NaN;
-      const end = Number.isFinite(endRaw) && endRaw > start ? endRaw : start + 2 * 3600_000;
-      return end >= now;
-    });
+    // Bereits beendete Termine rauswerfen, damit der Cache nicht Vergangenes anzeigt.
+    const now = new Date();
+    const features = c.data.features.filter((f) => !isPast(f, now));
     return { ...c.data, features };
   } catch {
     return null;
