@@ -16,6 +16,7 @@ import {
   dynamicCoordFixFor,
   dynamicCoordFixForTitle,
   dynamicCoordOverrideForTitle,
+  isDynamicHighlight,
 } from "./locations.js";
 
 /**
@@ -23,7 +24,7 @@ import {
  * Gemeinden markieren so einzelne Events zur besonderen Hervorhebung (z.B. Wesselburen).
  * Robust gegen HTML (<p>KAT: Blog</p>) und Komma-Listen (KAT: Highlight, Blog, …).
  */
-function hasHighlightTag(summary?: string, description?: string): boolean {
+export function hasHighlightTag(summary?: string, description?: string): boolean {
   const text = `${summary ?? ""}\n${description ?? ""}`
     .replace(/<[^>]+>/g, "\n") // HTML-Tags zu Zeilenumbrüchen
     .replace(/&nbsp;/g, " ");
@@ -145,7 +146,10 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       zipcode: lo?.zipcode || undefined,
       price: event.price || undefined,
       coordSource: fix || titleFix || titleOverride ? "fix" : hasCoords ? "event" : "fallback",
-      highlight: hasHighlightTag(event.summary, event.description) || undefined,
+      highlight:
+        hasHighlightTag(event.summary, event.description) ||
+        isDynamicHighlight(event.id) ||
+        undefined,
     },
   };
 }

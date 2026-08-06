@@ -67,6 +67,13 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Code). Die aktuellen Feed-Kategorien werden als Klick-Vorschläge angeboten;
   „Kirchengemeinderatssitzung" ist zusätzlich fest ausgeschlossen — Nordhastedt
   pflegt KGR-Sitzungen als eigene Kategorie, und die sind nicht öffentlich.
+- Highlight-Verwaltung in der Orts-Verwaltung: `/admin` zeigt alle Events je
+  Gemeinde mit Highlight-Status (★ = ChurchDesk-Tag „KAT: Highlight", nur dort
+  änderbar) und kann per Checkbox zusätzliche Admin-Highlights setzen — z.B. für
+  Gemeinden, die das Tag nicht pflegen. Gespeichert wird als Event-ID-Liste in
+  den Laufzeit-Overrides; Highlights zu Events außerhalb des aktuellen
+  Zeitfensters bleiben beim Speichern erhalten. Die Apps sehen ein neues
+  Highlight automatisch über den Versions-Hash.
 - `/healthz` meldet jetzt echten Betriebszustand statt pauschal „ok":
   `ok`/`degraded` (mind. eine Gemeinde ausgefallen — z.B. abgelaufener
   Einzeltoken)/`stale` (Refresh hängt, HTTP 503) samt `orgsFailed` und

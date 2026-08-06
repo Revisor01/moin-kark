@@ -126,6 +126,11 @@ export function adminPage(): string {
   <p class="hint" style="margin-bottom:0">Aktuelle Kategorien im Feed: <span id="catSuggest"></span></p>
 </div>
 
+<h2>Highlights je Gemeinde</h2>
+<p class="hint">★ = Highlight per ChurchDesk-Tag („KAT: Highlight" in der Kurzbeschreibung) — nur dort änderbar.
+Häkchen = hier gesetztes Zusatz-Highlight; es hängt an genau diesem Termin (bei Serien: an der einzelnen Wiederholung).</p>
+<div class="card" id="hlContainer"><p class="hint">Lade …</p></div>
+
 <div class="row" style="margin:18px 0">
   <button onclick="save()">Speichern &amp; Refresh anstoßen</button><span id="msg"></span>
 </div>
@@ -151,6 +156,7 @@ async function login() {
   $("login").style.display = "none"; $("app").style.display = "block";
   render(await res.json());
   loadFallback();
+  loadHighlights();
 }
 
 function coordCell(v) { return '<td><input value="' + v + '" size="10" required pattern="-?\\\\d+([.,]\\\\d+)?"></td>'; }
@@ -215,7 +221,12 @@ function collect() {
     const [name] = [...tr.querySelectorAll("input")];
     if (name.value.trim()) categories.push(name.value.trim());
   }
-  return { locations, titles, categories };
+  // Admin-Highlights: alle angehakten Events plus die gerade nicht im Feed
+  // sichtbaren IDs (sonst würden sie beim Speichern still verloren gehen).
+  const highlights = [...UNKNOWN_HL];
+  for (const cb of document.querySelectorAll(".hlBox"))
+    if (cb.checked) highlights.push(Number(cb.dataset.id));
+  return { locations, titles, categories, highlights };
 }
 
 async function save() {
@@ -227,7 +238,52 @@ async function save() {
     return;
   }
   $("msg").textContent = "Gespeichert — Daten-Refresh läuft.";
-  setTimeout(loadFallback, 8000);
+  setTimeout(() => { loadFallback(); loadHighlights(); }, 8000);
+}
+
+let UNKNOWN_HL = [];
+
+async function loadHighlights() {
+  const res = await fetch("/admin/api/highlights", { headers: headers() });
+  if (!res.ok) return;
+  const d = await res.json();
+  UNKNOWN_HL = d.unknown || [];
+  const box = $("hlContainer");
+  box.innerHTML = "";
+  if (!d.groups.length) {
+    box.innerHTML = "<p class='hint'>Noch keine Daten im Cache — in ein paar Sekunden neu laden.</p>";
+    return;
+  }
+  for (const g of d.groups) {
+    const det = document.createElement("details");
+    const n = g.events.filter((e) => e.tag || e.admin).length;
+    const sum = document.createElement("summary");
+    sum.textContent = g.name + " — " + n + " Highlight" + (n === 1 ? "" : "s") + " / " + g.events.length + " Events";
+    det.appendChild(sum);
+    const table = document.createElement("table");
+    for (const e of g.events) {
+      const tr = table.insertRow();
+      const cb = tr.insertCell();
+      cb.style.width = "30px";
+      cb.innerHTML = '<input type="checkbox" class="hlBox" data-id="' + e.id + '"' + (e.admin ? " checked" : "") + '>';
+      const dt = new Date(e.startUtc);
+      const when = tr.insertCell();
+      when.className = "muted"; when.style.whiteSpace = "nowrap";
+      when.textContent = dt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " " +
+        dt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+      const ti = tr.insertCell();
+      ti.textContent = (e.tag ? "★ " : "") + e.title;
+      if (e.tag || e.admin) ti.style.fontWeight = "600";
+    }
+    det.appendChild(table);
+    box.appendChild(det);
+  }
+  if (UNKNOWN_HL.length) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = UNKNOWN_HL.length + " Admin-Highlight(s) liegen außerhalb des aktuellen Feeds und bleiben beim Speichern erhalten.";
+    box.appendChild(p);
+  }
 }
 
 async function loadFallback() {
