@@ -109,13 +109,16 @@ export function adminPage(): string {
 
 <div id="app">
 <h2>Orts-Korrekturen (Ortsname → Koordinate)</h2>
-<p class="hint">Schlüssel ist der ChurchDesk-Ortsname (Groß/Klein egal). Koordinaten aus OpenStreetMap kopieren.</p>
-<div class="card"><table id="locTable"><tr><th>Ortsname</th><th>Lat</th><th>Lng</th><th></th></tr></table>
+<p class="hint">Schlüssel ist der ChurchDesk-Ortsname (Groß/Klein egal). Koordinaten aus OpenStreetMap kopieren,
+📍 zeigt die eingetragene Position auf der Minikarte. Zeilen mit Herkunft „Code" kommen aus der im Repo
+versionierten Tabelle — eine Änderung daran wird als Laufzeit-Override gespeichert und lässt sich durch
+Zurücksetzen auf die Originalwerte wieder aufheben (ganz löschen geht nur im Code).</p>
+<div class="card"><table id="locTable"><tr><th>Ortsname</th><th>Lat</th><th>Lng</th><th></th><th>Herkunft</th><th></th></tr></table>
 <div class="row" style="margin-top:10px"><button class="ghost" onclick="addLoc('','','')">+ Ort hinzufügen</button></div></div>
 
 <h2>Titel-Korrekturen (Titel-Präfix → Koordinate)</h2>
 <p class="hint">Für Termine ganz ohne Ortsangabe. „Überstimmt ChurchDesk" nur setzen, wenn die gepflegte Adresse bewusst falsch ist (Familienlagune-Fall).</p>
-<div class="card"><table id="titleTable"><tr><th>Titel beginnt mit</th><th>Lat</th><th>Lng</th><th>Überstimmt ChurchDesk</th><th></th></tr></table>
+<div class="card"><table id="titleTable"><tr><th>Titel beginnt mit</th><th>Lat</th><th>Lng</th><th>Überstimmt ChurchDesk</th><th></th><th>Herkunft</th><th></th></tr></table>
 <div class="row" style="margin-top:10px"><button class="ghost" onclick="addTitle('','','',false)">+ Titel hinzufügen</button></div></div>
 
 <h2>Ausgeschlossene Kategorien</h2>
@@ -139,8 +142,15 @@ Häkchen = hier gesetztes Zusatz-Highlight; es hängt an genau diesem Termin (be
 <div class="card">
   <p class="hint" style="margin-top:0">Events, die aktuell auf einem Fallback-Pin liegen (vom <a href="/status">Status-Monitor</a>): Klick übernimmt den Namen als neue Orts-Korrektur.</p>
   <table id="fbTable"><tr><th>Ort / Gemeinde</th><th>Events</th><th>Beispiele</th></tr></table>
-  <details><summary>Im Code gepflegte (statische) Korrekturen anzeigen</summary><div id="staticList"></div></details>
 </div>
+</div>
+
+<div id="map" style="display:none;position:fixed;right:18px;bottom:18px;width:360px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden;z-index:9">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 6px 6px 12px">
+    <span id="mapTitle" class="hint" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button class="danger" onclick="document.getElementById('map').style.display='none'">✕</button>
+  </div>
+  <iframe id="mapFrame" width="360" height="280" style="border:0;display:block" title="Minikarte"></iframe>
 </div>
 
 <script>
@@ -162,17 +172,38 @@ async function login() {
 function coordCell(v) { return '<td><input value="' + v + '" size="10" required pattern="-?\\\\d+([.,]\\\\d+)?"></td>'; }
 function nameCell(v) { return '<td><input value="' + v.replace(/"/g, "&quot;") + '"></td>'; }
 function delCell() { return '<td><button class="danger" onclick="this.closest(\\'tr\\').remove()">✕</button></td>'; }
+function pinCell() { return '<td><button class="ghost" style="padding:4px 9px" title="Auf Minikarte zeigen" onclick="rowMap(this)">📍</button></td>'; }
+function originCell(origin) { return '<td class="hint" style="white-space:nowrap">' + (origin || "") + '</td>'; }
 
-function addLoc(name, lat, lng) {
+function addLoc(name, lat, lng, origin) {
   const tr = document.createElement("tr");
-  tr.innerHTML = nameCell(name) + coordCell(lat) + coordCell(lng) + delCell();
+  tr.innerHTML = nameCell(name) + coordCell(lat) + coordCell(lng) + pinCell() + originCell(origin) + delCell();
   $("locTable").appendChild(tr);
 }
-function addTitle(prefix, lat, lng, force) {
+function addTitle(prefix, lat, lng, force, origin) {
   const tr = document.createElement("tr");
   tr.innerHTML = nameCell(prefix) + coordCell(lat) + coordCell(lng) +
-    '<td style="text-align:center"><input type="checkbox"' + (force ? " checked" : "") + '></td>' + delCell();
+    '<td style="text-align:center"><input type="checkbox"' + (force ? " checked" : "") + '></td>' +
+    pinCell() + originCell(origin) + delCell();
   $("titleTable").appendChild(tr);
+}
+
+// --- Minikarte (OSM-Embed) — zeigt die Koordinate der angeklickten Zeile ---
+function rowMap(btn) {
+  const inputs = [...btn.closest("tr").querySelectorAll("input")];
+  const lat = num(inputs[1]), lng = num(inputs[2]);
+  if (!inputs[1].value.trim() || !inputs[2].value.trim() || !isFinite(lat) || !isFinite(lng)) {
+    alert("Erst Lat/Lng eintragen."); return;
+  }
+  showMap(inputs[0].value.trim() || "(ohne Name)", lat, lng);
+}
+function showMap(label, lat, lng) {
+  const d = 0.004; // ~Viertel-Kilometer Rand um den Marker
+  const bbox = (lng - 2 * d) + "," + (lat - d) + "," + (lng + 2 * d) + "," + (lat + d);
+  $("mapFrame").src = "https://www.openstreetmap.org/export/embed.html?bbox=" +
+    encodeURIComponent(bbox) + "&layer=mapnik&marker=" + lat + "%2C" + lng;
+  $("mapTitle").textContent = label + " — " + lat.toFixed(5) + ", " + lng.toFixed(5);
+  $("map").style.display = "block";
 }
 function addCat(name) {
   const tr = document.createElement("tr");
@@ -180,9 +211,47 @@ function addCat(name) {
   $("catTable").appendChild(tr);
 }
 
+// Code-Stand für den Speichern-Vergleich: Zeilen, die exakt dem Code entsprechen,
+// werden NICHT als Override gespeichert (sonst würden veraltete Kopien spätere
+// Code-Updates maskieren).
+let STATIC_LOC = {}, STATIC_TITLES = {};
+const norm = (s) => s.trim().replace(/\\s+/g, " ").toLowerCase();
+
 function render(data) {
-  for (const [name, c] of Object.entries(data.overrides.locations)) addLoc(name, c.lat, c.lng);
-  for (const t of data.overrides.titles) addTitle(t.prefix, t.coords.lat, t.coords.lng, !!t.force);
+  // Idempotent: bei erneutem Login (z.B. gespeicherter Token + manueller Klick)
+  // nicht doppelt anhängen.
+  for (const id of ["locTable", "titleTable", "catTable"])
+    while ($(id).rows.length > 1) $(id).deleteRow(1);
+  STATIC_LOC = {}; STATIC_TITLES = {};
+
+  // Zusammengeführte Sicht: Code-Einträge zuerst, Laufzeit-Overrides überschreiben
+  // bzw. ergänzen sie — genau die Vorrang-Logik des Servers.
+  const loc = new Map();
+  for (const [name, c] of Object.entries(data.static.locations)) {
+    STATIC_LOC[norm(name)] = { lat: c.lat, lng: c.lng };
+    loc.set(norm(name), { name, lat: c.lat, lng: c.lng, code: true, edited: false });
+  }
+  for (const [name, c] of Object.entries(data.overrides.locations)) {
+    const e = loc.get(norm(name));
+    if (e) { e.lat = c.lat; e.lng = c.lng; e.edited = true; }
+    else loc.set(norm(name), { name, lat: c.lat, lng: c.lng, code: false, edited: false });
+  }
+  for (const e of loc.values())
+    addLoc(e.name, e.lat, e.lng, e.code ? (e.edited ? "Code · angepasst" : "Code") : "");
+
+  const tit = new Map();
+  for (const t of data.static.titles) {
+    STATIC_TITLES[norm(t.prefix)] = { lat: t.coords.lat, lng: t.coords.lng, force: !!t.force };
+    tit.set(norm(t.prefix), { prefix: t.prefix, lat: t.coords.lat, lng: t.coords.lng, force: !!t.force, code: true, edited: false });
+  }
+  for (const t of data.overrides.titles) {
+    const e = tit.get(norm(t.prefix));
+    if (e) { e.lat = t.coords.lat; e.lng = t.coords.lng; e.force = !!t.force; e.edited = true; }
+    else tit.set(norm(t.prefix), { prefix: t.prefix, lat: t.coords.lat, lng: t.coords.lng, force: !!t.force, code: false, edited: false });
+  }
+  for (const t of tit.values())
+    addTitle(t.prefix, t.lat, t.lng, t.force, t.code ? (t.edited ? "Code · angepasst" : "Code") : "");
+
   for (const cat of data.overrides.categories || []) addCat(cat);
   $("staticCats").textContent = (data.static.excludedCategories || []).join(", ");
   const sug = $("catSuggest");
@@ -193,12 +262,6 @@ function render(data) {
     a.onclick = (ev) => { ev.preventDefault(); addCat(cat); };
     sug.appendChild(a);
   }
-  const stat = [];
-  for (const [name, c] of Object.entries(data.static.locations))
-    stat.push(name + " → " + c.lat + ", " + c.lng);
-  for (const t of data.static.titles)
-    stat.push("Titel „" + t.prefix + "\\u201C → " + t.coords.lat + ", " + t.coords.lng);
-  $("staticList").innerHTML = "<p class='hint'>" + stat.map(s => s.replace(/</g, "&lt;")).join("<br>") + "</p>";
 }
 
 function num(input) { return Number(String(input.value).replace(",", ".")); }
@@ -208,12 +271,16 @@ function collect() {
   for (const tr of [...$("locTable").rows].slice(1)) {
     const [name, lat, lng] = [...tr.querySelectorAll("input")];
     if (!name.value.trim()) continue;
+    const s = STATIC_LOC[norm(name.value)];
+    if (s && s.lat === num(lat) && s.lng === num(lng)) continue; // identisch mit Code → kein Override
     locations[name.value.trim()] = { lat: num(lat), lng: num(lng) };
   }
   const titles = [];
   for (const tr of [...$("titleTable").rows].slice(1)) {
     const [prefix, lat, lng, force] = [...tr.querySelectorAll("input")];
     if (!prefix.value.trim()) continue;
+    const s = STATIC_TITLES[norm(prefix.value)];
+    if (s && s.lat === num(lat) && s.lng === num(lng) && s.force === force.checked) continue;
     titles.push({ prefix: prefix.value.trim(), coords: { lat: num(lat), lng: num(lng) }, force: force.checked });
   }
   const categories = [];

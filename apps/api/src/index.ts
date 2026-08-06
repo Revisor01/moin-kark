@@ -8,6 +8,7 @@ import { cors } from "hono/cors";
 import {
   LOCATION_COORD_FIXES,
   TITLE_COORD_FIXES,
+  TITLE_OVERRIDES,
   type EventFeatureCollection,
 } from "@moinkark/shared";
 import { buildFeatureCollection, extractCategories, EXCLUDED_CATEGORIES } from "./aggregate.js";
@@ -198,7 +199,11 @@ app.get("/admin/api/locations", (c) => {
   return c.json({
     static: {
       locations: LOCATION_COORD_FIXES,
-      titles: TITLE_COORD_FIXES,
+      // force = Präfix steht in TITLE_OVERRIDES (überstimmt ChurchDesk-Koordinate).
+      titles: TITLE_COORD_FIXES.map((t) => ({
+        ...t,
+        force: TITLE_OVERRIDES.includes(t.prefix),
+      })),
       excludedCategories: [...EXCLUDED_CATEGORIES],
     },
     overrides: getOverrides(),
