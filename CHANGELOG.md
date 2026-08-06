@@ -67,6 +67,13 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Code). Die aktuellen Feed-Kategorien werden als Klick-Vorschläge angeboten;
   „Kirchengemeinderatssitzung" ist zusätzlich fest ausgeschlossen — Nordhastedt
   pflegt KGR-Sitzungen als eigene Kategorie, und die sind nicht öffentlich.
+- Orts-Verwaltung mit Minikarte und editierbaren Code-Einträgen: Die im Repo
+  versionierten Korrektur-Tabellen (`kirchen-coords.ts`) erscheinen in `/admin`
+  nicht mehr nur als Textliste, sondern als normale Tabellenzeilen (Herkunft
+  „Code") und lassen sich direkt anpassen — gespeichert wird nur die Abweichung
+  als Laufzeit-Override, Zurücksetzen auf die Originalwerte hebt sie wieder auf.
+  Jede Koordinaten-Zeile hat einen 📍-Button, der die Position auf einer
+  OSM-Minikarte zeigt.
 - Highlight-Verwaltung in der Orts-Verwaltung: `/admin` zeigt alle Events je
   Gemeinde mit Highlight-Status (★ = ChurchDesk-Tag „KAT: Highlight", nur dort
   änderbar) und kann per Checkbox zusätzliche Admin-Highlights setzen — z.B. für
