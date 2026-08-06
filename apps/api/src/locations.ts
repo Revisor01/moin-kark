@@ -21,12 +21,14 @@ export interface LocationOverrides {
   titles: TitleFix[];
   /** Zusätzlich ausgeschlossene Kategorien (normalisiert) — ergänzen EXCLUDED_CATEGORIES. */
   categories: string[];
+  /** Event-IDs, die zusätzlich zum ChurchDesk-Tag als Highlight markiert sind. */
+  highlights: number[];
 }
 
 const DATA_DIR = process.env.DATA_DIR ?? "./data";
 const FILE = join(DATA_DIR, "location-overrides.json");
 
-let overrides: LocationOverrides = { locations: {}, titles: [], categories: [] };
+let overrides: LocationOverrides = { locations: {}, titles: [], categories: [], highlights: [] };
 
 /** Gleiche Normalisierung wie in kirchen-coords.ts (dort privat). */
 export function normalizeName(s: string): string {
@@ -71,7 +73,13 @@ function sanitize(raw: unknown): LocationOverrides {
     if (!cat) throw new Error("Leerer Kategorie-Name.");
     if (!categories.includes(cat)) categories.push(cat);
   }
-  return { locations, titles, categories };
+  const highlights: number[] = [];
+  for (const h of Array.isArray(input?.highlights) ? input.highlights : []) {
+    const id = Number(h);
+    if (!Number.isInteger(id) || id <= 0) throw new Error(`Ungültige Highlight-Event-ID: ${h}`);
+    if (!highlights.includes(id)) highlights.push(id);
+  }
+  return { locations, titles, categories, highlights };
 }
 
 /** Beim Start einmal von Platte laden. Fehlende Datei ist der Normalfall (leerer Stand). */
@@ -81,7 +89,8 @@ export function loadOverrides(): void {
     const n =
       Object.keys(overrides.locations).length +
       overrides.titles.length +
-      overrides.categories.length;
+      overrides.categories.length +
+      overrides.highlights.length;
     console.log(`[locations] ${n} Laufzeit-Korrektur(en) aus ${FILE} geladen.`);
   } catch (e: any) {
     if (e?.code !== "ENOENT") {
@@ -127,4 +136,9 @@ export function dynamicCoordOverrideForTitle(title: string | undefined): LatLng 
 /** Ist die Kategorie über /admin ausgeschlossen? Erwartet den normalisierten Titel. */
 export function isDynamicallyExcludedCategory(normTitle: string): boolean {
   return overrides.categories.includes(normTitle);
+}
+
+/** Ist das Event über /admin als Highlight markiert? */
+export function isDynamicHighlight(eventId: number): boolean {
+  return overrides.highlights.includes(eventId);
 }

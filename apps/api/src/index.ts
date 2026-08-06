@@ -12,6 +12,7 @@ import {
 } from "@moinkark/shared";
 import { buildFeatureCollection, extractCategories, EXCLUDED_CATEGORIES } from "./aggregate.js";
 import { SwrCache } from "./cache.js";
+import { hasHighlightTag } from "./geojson.js";
 import { getOverrides, loadOverrides, setOverrides } from "./locations.js";
 import { adminPage, statusPage, type FallbackGroup, type StatusData } from "./pages.js";
 
@@ -202,6 +203,41 @@ app.get("/admin/api/locations", (c) => {
     },
     overrides: getOverrides(),
     feedCategories: latest ? extractCategories(latest.value).map((cat) => cat.title) : [],
+  });
+});
+
+/**
+ * Alle Events des aktuellen Feeds, gruppiert nach Gemeinde — Grundlage für die
+ * Highlight-Pflege im Admin. Pro Event steht dabei, ob das Highlight aus dem
+ * ChurchDesk-Tag („KAT: Highlight") kommt oder hier im Admin gesetzt wurde.
+ * `unknown` sind Admin-Highlights, deren Event gerade nicht im Feed liegt
+ * (vorbei, außerhalb des Zeitfensters oder Org ausgefallen) — die UI trägt sie
+ * beim Speichern weiter, statt sie still zu verlieren.
+ */
+app.get("/admin/api/highlights", (c) => {
+  const latest = cache.peekLatest();
+  const overrides = getOverrides();
+  const groups = new Map<string, { name: string; events: any[] }>();
+  const seen = new Set<number>();
+  for (const f of latest?.value.features ?? []) {
+    const p = f.properties;
+    seen.add(p.id);
+    const name = p.parish ?? p.orgName;
+    const g = groups.get(name) ?? { name, events: [] };
+    g.events.push({
+      id: p.id,
+      title: p.title,
+      startUtc: p.startUtc,
+      tag: hasHighlightTag(p.summary, p.descriptionHtml),
+      admin: overrides.highlights.includes(p.id),
+    });
+    groups.set(name, g);
+  }
+  for (const g of groups.values())
+    g.events.sort((a, b) => String(a.startUtc).localeCompare(String(b.startUtc)));
+  return c.json({
+    groups: [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, "de")),
+    unknown: overrides.highlights.filter((id) => !seen.has(id)),
   });
 });
 
