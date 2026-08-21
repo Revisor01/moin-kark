@@ -4,6 +4,8 @@
 //   2. Fallback über die ChurchDesk-orgId.
 // Simon korrigiert Detail-Zuordnungen live, sobald sichtbar.
 
+import { normalizeKey as normalize } from "./types";
+
 export const KIRCHSPIELE = [
   "Eider",
   "West",
@@ -105,9 +107,7 @@ export const ORG_NAMES: Record<number, string> = {
   6572: "Kirchspiel Heide",
 };
 
-function normalize(s: string): string {
-  return s.trim().replace(/\s+/g, " ").toLowerCase();
-}
+
 
 /**
  * Ermittelt das Kirchspiel: erst über den Gemeinde-Namen (parish), dann über die orgId.

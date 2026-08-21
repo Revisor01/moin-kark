@@ -2,6 +2,8 @@
 // Generiert aus echten ChurchDesk-locationObj-Daten (häufigste Koordinate je Gemeinde/Org),
 // daher real und stabil — Kirchenstandorte ändern sich nicht.
 
+import { normalizeKey as normalize } from "./types";
+
 export interface LatLng {
   lat: number;
   lng: number;
@@ -23,6 +25,15 @@ export const PARISH_COORDS: Record<string, LatLng> = {
   Heide: { lat: 54.195713, lng: 9.09261 },
   "Kirche Wesseln": { lat: 54.210174, lng: 9.0756 },
   Wesseln: { lat: 54.210174, lng: 9.0756 },
+  // Ohne diese Einträge fielen Events, die nur eine Gemeinde (parish) und keinen
+  // Ortsnamen tragen, auf den gröberen Org-Punkt zurück. Werte wie in
+  // LOCATION_COORD_FIXES (dort bereits geprüft).
+  "Lohe-Rickelshof": { lat: 54.1873944, lng: 9.0706326 },
+  Pahlen: { lat: 54.2628322, lng: 9.2956512 },
+  Delve: { lat: 54.3033433, lng: 9.2539684 },
+  // Helgoland gehört laut Kirchspiel-Zuordnung zu „West", hatte hier aber keinen
+  // Punkt — Termine landeten dadurch ~65 km entfernt auf dem Büsumer Org-Pin.
+  Helgoland: { lat: 54.178889, lng: 7.886389 },
   // Kirchenkreis-Termine (Freizeiten, Fortbildungen, überörtliche Angebote) haben
   // oft gar keinen Ort in Dithmarschen — Schweden, Bispingen, wechselnde Häuser.
   // Sie werden bewusst am Kirchenkreis-Sitz Meldorf angesiedelt: So bleiben sie in
@@ -55,8 +66,12 @@ export const ORG_COORDS: Record<number, LatLng> = {
   2715: { lat: 54.045977, lng: 9.115475 },
   2718: { lat: 54.165051, lng: 8.997713 },
   2720: { lat: 53.898038, lng: 9.141931 },
-  2722: { lat: 54.20102, lng: 9.075 }, // Lohe-Rickelshof (nahe Heide; kein eigenes Event-Sample)
-  2723: { lat: 54.158, lng: 9.187 }, // Pahlen / Delve (Geest; grobe Region)
+  // Christuskirche Lohe-Rickelshof (deckungsgleich mit LOCATION_COORD_FIXES);
+  // der frühere Schätzpunkt lag ~1,6 km nördlich davon.
+  2722: { lat: 54.1873944, lng: 9.0706326 },
+  // Kirche Pahlen (s. LOCATION_COORD_FIXES). Der frühere „grobe Region"-Punkt
+  // lag rund 10 km von allen zugehörigen Orten entfernt.
+  2723: { lat: 54.2628322, lng: 9.2956512 },
   2724: { lat: 54.218911, lng: 9.274758 },
   2725: { lat: 54.284324, lng: 9.168123 },
   2729: { lat: 54.129605, lng: 8.861245 },
@@ -231,9 +246,7 @@ export function coordFixFor(locationName: string | undefined): LatLng | undefine
   return LOCATION_COORD_FIXES[normalize(locationName)];
 }
 
-function normalize(s: string): string {
-  return s.trim().replace(/\s+/g, " ").toLowerCase();
-}
+
 
 const PARISH_NORM: Record<string, LatLng> = Object.fromEntries(
   Object.entries(PARISH_COORDS).map(([k, v]) => [normalize(k), v])
