@@ -62,6 +62,21 @@ export class SwrCache<T> {
   }
 
   /**
+   * Wie `refresh`, hängt sich aber NICHT an einen bereits laufenden Ladevorgang:
+   * der startete womöglich vor der auslösenden Änderung und trüge sie nicht mit.
+   * Für den Admin-Speichern-Fall — dort muss der Durchlauf die neuen Overrides
+   * garantiert gesehen haben, sonst erscheint die Korrektur erst beim nächsten
+   * TTL-Tick, obwohl die Oberfläche „Refresh läuft" meldet.
+   */
+  async refreshAfterChange(key: string, loader: () => Promise<T>): Promise<T> {
+    // Laufenden Durchlauf abwarten (Ergebnis verwerfen), damit er den frischen
+    // Stand nicht nachträglich überschreibt; Fehler dort sind hier egal.
+    const existing = this.inflight.get(key);
+    if (existing) await existing.catch(() => undefined);
+    return this.load(key, loader);
+  }
+
+  /**
    * Jüngster erfolgreich geladener Eintrag — egal unter welchem Key. Für
    * /healthz und /status: Direkt nach Mitternacht existiert der heutige Key
    * noch nicht, der Datenstand von gestern Abend ist aber der maßgebliche.

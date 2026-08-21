@@ -4,6 +4,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import {
   LOCATION_COORD_FIXES,
@@ -12,14 +13,33 @@ import {
   type EventFeatureCollection,
 } from "@moinkark/shared";
 import { buildFeatureCollection, extractCategories, EXCLUDED_CATEGORIES } from "./aggregate.js";
+import { fmtDate } from "./churchdesk.js";
 import { SwrCache } from "./cache.js";
 import { hasHighlightTag } from "./geojson.js";
 import { getOverrides, loadOverrides, setOverrides } from "./locations.js";
 import { adminPage, statusPage, type FallbackGroup, type StatusData } from "./pages.js";
 
-const PORT = Number(process.env.PORT ?? 8787);
-const TTL_MS = Number(process.env.CACHE_TTL_MS ?? 20 * 60 * 1000); // 20 min
-const DEFAULT_DAYS = Number(process.env.DEFAULT_WINDOW_DAYS ?? 60);
+/**
+ * Zahl aus der Umgebung, mit Rückfall auf den Standard.
+ *
+ * Ohne die Prüfung würde ein Tippfehler (CACHE_TTL_MS=abc) zu NaN führen: der
+ * Cache gälte nie als frisch und setInterval(…, NaN) feuerte im Millisekundentakt
+ * gegen ChurchDesk; ein NaN-Fenster ließe zudem jede Anfrage mit 500 scheitern.
+ */
+function envInt(name: string, fallback: number, min = 1): number {
+  const raw = process.env[name];
+  if (raw == null || raw.trim() === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < min) {
+    console.warn(`[moinkark-api] ${name}="${raw}" ist ungültig — nutze ${fallback}.`);
+    return fallback;
+  }
+  return Math.floor(n);
+}
+
+const PORT = envInt("PORT", 8787);
+const TTL_MS = envInt("CACHE_TTL_MS", 20 * 60 * 1000); // 20 min
+const DEFAULT_DAYS = envInt("DEFAULT_WINDOW_DAYS", 60);
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN?.trim() || undefined;
 
 // CORS-Allowlist: kommagetrennt in ALLOWED_ORIGINS, sonst Dev-Defaults.
@@ -42,7 +62,9 @@ const cache = new SwrCache<EventFeatureCollection>({ ttlMs: TTL_MS });
 function currentWindow(): { from: Date; to: Date; key: string } {
   const from = new Date();
   const to = new Date(from.getTime() + DEFAULT_DAYS * 86400_000);
-  const key = `${from.toISOString().slice(0, 10)}_${to.toISOString().slice(0, 10)}`;
+  // Schlüssel über den Berliner Kalendertag (wie das Abfragefenster selbst) —
+  // mit UTC würde er kurz nach Mitternacht noch auf den Vortag zeigen.
+  const key = `${fmtDate(from)}_${fmtDate(to)}`;
   return { from, to, key };
 }
 
@@ -53,10 +75,17 @@ function getCollection(): Promise<EventFeatureCollection> {
 
 const app = new Hono();
 
+// Das GeoJSON ist ~700 KB und geht überwiegend an Mobilfunk-Clients; gzip drückt
+// das auf einen Bruchteil. Muss VOR den Routen stehen, um deren Antworten zu sehen.
+app.use("*", compress());
+
 app.use(
   "*",
   cors({
-    origin: (origin) => (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]),
+    // Fremde Origins bekommen keinen Allow-Origin-Header (null) statt fälschlich
+    // den ersten erlaubten — der Browser blockt so oder so, aber das ist die
+    // ehrliche Antwort und im Debugging eindeutig.
+    origin: (origin) => (ALLOWED_ORIGINS.includes(origin) ? origin : null),
   })
 );
 
@@ -143,14 +172,25 @@ app.get("/events.geojson", async (c) => {
  */
 function fingerprint(fc: EventFeatureCollection): string {
   const h = createHash("sha1");
-  // Nur die Felder, deren Änderung die App sehen muss — Reihenfolge stabil halten.
-  for (const f of fc.features) {
+  // Alle Felder, die in der App sichtbar sind — auch Beschreibung, Bild und
+  // Kategorien: eine korrigierte Beschreibung muss ankommen, und Kategorien
+  // steuern zusätzlich die Filter-Chips.
+  //
+  // Zeilen werden vor dem Hashen sortiert, weil die Feature-Reihenfolge sonst aus
+  // den ChurchDesk-Antworten stammt. Liefert die API dieselben Events anders
+  // sortiert, änderte sich der Hash ohne inhaltliche Änderung — und jedes Gerät
+  // lüde ~700 KB umsonst.
+  const lines = fc.features.map((f) => {
     const p = f.properties;
-    h.update(
+    return (
       `${p.id}|${p.startUtc}|${p.endUtc ?? ""}|${p.title}|${p.highlight ? 1 : 0}|` +
-        `${f.geometry.coordinates.join(",")}|${p.locationName ?? ""}\n`
+      `${f.geometry.coordinates.join(",")}|${p.locationName ?? ""}|` +
+      `${p.summary ?? ""}|${p.descriptionHtml ?? ""}|${p.image?.url ?? ""}|` +
+      `${p.categories.map((c) => c.id).join(",")}|${p.parish ?? ""}|${p.address ?? ""}|${p.price ?? ""}`
     );
-  }
+  });
+  lines.sort();
+  for (const line of lines) h.update(`${line}\n`);
   return h.digest("hex").slice(0, 16);
 }
 
@@ -222,7 +262,14 @@ app.get("/admin/api/locations", (c) => {
 app.get("/admin/api/highlights", (c) => {
   const latest = cache.peekLatest();
   const overrides = getOverrides();
-  const groups = new Map<string, { name: string; events: any[] }>();
+  interface HighlightEntry {
+    id: number;
+    title: string;
+    startUtc: string;
+    tag: boolean;
+    admin: boolean;
+  }
+  const groups = new Map<string, { name: string; events: HighlightEntry[] }>();
   const seen = new Set<number>();
   for (const f of latest?.value.features ?? []) {
     const p = f.properties;
@@ -250,7 +297,9 @@ app.put("/admin/api/locations", async (c) => {
   try {
     const saved = setOverrides(await c.req.json());
     // Korrekturen sollen sofort sichtbar werden, nicht erst beim nächsten TTL-Tick.
-    warmCache();
+    // `afterChange`: einen ggf. laufenden Refresh abwarten, der die neuen
+    // Overrides noch nicht kennt — sonst bliebe die Korrektur eine TTL lang aus.
+    void warmCache(true);
     return c.json({ ok: true, overrides: saved });
   } catch (e: any) {
     return c.json({ error: e?.message ?? "invalid payload" }, 400);
@@ -266,11 +315,14 @@ app.put("/admin/api/locations", async (c) => {
  * Änderungs-Abfrage (/version.json) sieht redaktionelle Korrekturen von selbst,
  * ohne dass ein Nutzer den Refresh auslösen muss.
  */
-function warmCache(): void {
+function warmCache(afterChange = false): Promise<void> {
   const { from, to, key } = currentWindow();
-  void cache
-    .refresh(key, () => buildFeatureCollection(from, to))
-    .then((fc) => console.log(`[moinkark-api] Cache erneuert: ${fc.features.length} Events`))
+  const load = () => buildFeatureCollection(from, to);
+  const p = afterChange ? cache.refreshAfterChange(key, load) : cache.refresh(key, load);
+  return p
+    .then((fc) => {
+      console.log(`[moinkark-api] Cache erneuert: ${fc.features.length} Events`);
+    })
     .catch((e) => console.error("[moinkark-api] Cache-Refresh fehlgeschlagen:", e?.message ?? e));
 }
 
@@ -280,8 +332,8 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
   if (!ADMIN_TOKEN) console.warn("[moinkark-api] ADMIN_TOKEN nicht gesetzt — /admin ist deaktiviert.");
   loadOverrides();
   // Sofort einmal laden, danach im TTL-Takt.
-  warmCache();
-  const timer = setInterval(warmCache, TTL_MS);
+  void warmCache();
+  const timer = setInterval(() => void warmCache(), TTL_MS);
   // Node soll wegen des Timers nicht am Beenden gehindert werden.
   timer.unref?.();
   console.log(`[moinkark-api] Auto-Refresh alle ${Math.round(TTL_MS / 60000)} min`);

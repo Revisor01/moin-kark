@@ -2,7 +2,7 @@
 // (CD_TOKEN_<orgId>) — niemals im Code/Repo. Orgs ohne gesetzten Token werden übersprungen.
 
 /** Alle bekannten Org-IDs des Kirchenkreises Dithmarschen. */
-export const ALL_ORG_IDS = [
+const ALL_ORG_IDS = [
   2596, 2619, 2715, 2718, 2720, 2722, 2723, 2724, 2725, 2729, 2753, 2936, 2940, 6572,
 ] as const;
 

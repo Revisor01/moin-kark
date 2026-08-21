@@ -5,10 +5,10 @@
 
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { LatLng } from "@moinkark/shared";
+import { normalizeKey, type LatLng } from "@moinkark/shared";
 
 /** Titel-basierte Korrektur; `force` überstimmt auch eine gepflegte ChurchDesk-Koordinate. */
-export interface TitleFix {
+interface TitleFix {
   prefix: string;
   coords: LatLng;
   force?: boolean;
@@ -30,10 +30,12 @@ const FILE = join(DATA_DIR, "location-overrides.json");
 
 let overrides: LocationOverrides = { locations: {}, titles: [], categories: [], highlights: [] };
 
-/** Gleiche Normalisierung wie in kirchen-coords.ts (dort privat). */
-export function normalizeName(s: string): string {
-  return s.trim().replace(/\s+/g, " ").toLowerCase();
-}
+/**
+ * Dieselbe Normalisierung wie die statischen Tabellen in @moinkark/shared —
+ * bewusst importiert statt nachgebaut: An ihr hängt, ob eine über /admin
+ * gepflegte Korrektur den Ort überhaupt trifft.
+ */
+const normalizeName = normalizeKey;
 
 function isLatLng(v: unknown): v is LatLng {
   const c = v as LatLng;
@@ -46,7 +48,10 @@ function isLatLng(v: unknown): v is LatLng {
     c.lat >= -90 &&
     c.lat <= 90 &&
     c.lng >= -180 &&
-    c.lng <= 180
+    c.lng <= 180 &&
+    // 0/0 (Golf von Guinea) ist keine echte Korrektur, sondern ein leer gelassenes
+    // Formularfeld — genauso wie bei ChurchDesk-Daten (s. geojson.ts) aussortieren.
+    !(c.lat === 0 && c.lng === 0)
   );
 }
 
