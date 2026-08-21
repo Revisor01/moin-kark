@@ -37,15 +37,24 @@ export interface CdEvent {
   image?: { [key: string]: unknown; title?: string; copyright?: string } | null;
 }
 
-function fmtDate(d: Date): string {
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD
+const BERLIN = "Europe/Berlin";
+
+/**
+ * Kalendertag in Europe/Berlin als YYYY-MM-DD.
+ *
+ * Bewusst NICHT toISOString(): das liefert immer UTC. Zwischen Mitternacht und
+ * 01:00 (Winter) bzw. 02:00 (Sommer) Berliner Zeit ist das UTC-Datum noch der
+ * Vortag — das Fenster hätte nachts beim Vortag begonnen und bereits gelaufene
+ * Events eingeschlossen. Das TZ=Europe/Berlin des Containers ändert daran nichts.
+ */
+export function fmtDate(d: Date): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: BERLIN }).format(d); // sv-SE ⇒ YYYY-MM-DD
 }
 
 /**
- * Holt alle öffentlichen Events einer Org im Zeitfenster, mit Pagination.
+ * Holt einen einzelnen Zeit-Chunk (max. PAGE_SIZE Events).
  * Die public partnerToken-API liefert ausschließlich öffentliche Events.
  */
-/** Holt einen einzelnen Zeit-Chunk (max. PAGE_SIZE Events). */
 async function fetchChunk(
   org: OrgConfig,
   from: Date,
@@ -60,7 +69,11 @@ async function fetchChunk(
   url.searchParams.set("itemsNumber", String(PAGE_SIZE));
 
   const res = await fetch(url, {
-    signal: signal ?? AbortSignal.timeout(CHUNK_TIMEOUT_MS),
+    // Das Chunk-Timeout gilt IMMER. Ein übergebenes Signal kommt zusätzlich dazu —
+    // sonst entfiele mit einem externen Signal still die 15-s-Grenze.
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(CHUNK_TIMEOUT_MS)])
+      : AbortSignal.timeout(CHUNK_TIMEOUT_MS),
     headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`ChurchDesk ${org.id} HTTP ${res.status}`);
@@ -94,10 +107,22 @@ export async function fetchOrgEvents(
     // Wenn das Fenster „voll" war, könnten Events fehlen → aufteilen.
     // Stoppe bei sehr kleinen Fenstern (≤2 Tage) oder zu tiefer Rekursion.
     const spanDays = (b.getTime() - a.getTime()) / DAY;
-    if (items.length >= PAGE_SIZE && spanDays > 2 && depth < 8) {
-      const mid = new Date(a.getTime() + (b.getTime() - a.getTime()) / 2);
-      await collect(a, mid, depth + 1);
-      await collect(new Date(mid.getTime() + DAY), b, depth + 1);
+    if (items.length >= PAGE_SIZE) {
+      if (spanDays > 2 && depth < 8) {
+        const mid = new Date(a.getTime() + (b.getTime() - a.getTime()) / 2);
+        await collect(a, mid, depth + 1);
+        // Überlappend ab `mid` (nicht mid+1 Tag): Sollte ChurchDesk `endDate`
+        // exklusiv auslegen, gingen die Events des Mid-Tages sonst verloren.
+        // Doppelte fängt `byId` ohnehin ab.
+        await collect(mid, b, depth + 1);
+      } else {
+        // Fenster voll, aber nicht weiter teilbar → hier können Events fehlen.
+        // Nicht still verschlucken, sonst fällt eine Lücke nie auf.
+        console.warn(
+          `[churchdesk] Org ${org.id}: ${fmtDate(a)}–${fmtDate(b)} am ${PAGE_SIZE}er-Limit, ` +
+            `nicht weiter teilbar (${spanDays.toFixed(1)} Tage, Tiefe ${depth}) — möglicherweise unvollständig.`
+        );
+      }
     }
   }
 

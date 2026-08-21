@@ -266,6 +266,23 @@ function render(data) {
 
 function num(input) { return Number(String(input.value).replace(",", ".")); }
 
+/**
+ * Prüft ein Koordinatenpaar, bevor es zum Server geht. Wichtig: ein leeres Feld
+ * ergäbe über Number("") eine 0 — ein vergessenes Feld würde den Ort sonst
+ * klaglos auf 0/0 (Golf von Guinea) schieben. Der Server lehnt das inzwischen
+ * ebenfalls ab; hier steht es, damit die Meldung am Feld erklärbar bleibt.
+ */
+function coordsOrThrow(label, latInput, lngInput) {
+  const latRaw = String(latInput.value).trim();
+  const lngRaw = String(lngInput.value).trim();
+  if (!latRaw || !lngRaw) throw new Error("Koordinate fehlt bei „" + label + "“.");
+  const lat = num(latInput), lng = num(lngInput);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Koordinate ist keine Zahl bei „" + label + "“.");
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new Error("Koordinate außerhalb des gültigen Bereichs bei „" + label + "“.");
+  if (lat === 0 && lng === 0) throw new Error("0/0 ist keine gültige Koordinate bei „" + label + "“.");
+  return { lat, lng };
+}
+
 function collect() {
   const locations = {};
   for (const tr of [...$("locTable").rows].slice(1)) {
@@ -273,7 +290,7 @@ function collect() {
     if (!name.value.trim()) continue;
     const s = STATIC_LOC[norm(name.value)];
     if (s && s.lat === num(lat) && s.lng === num(lng)) continue; // identisch mit Code → kein Override
-    locations[name.value.trim()] = { lat: num(lat), lng: num(lng) };
+    locations[name.value.trim()] = coordsOrThrow(name.value.trim(), lat, lng);
   }
   const titles = [];
   for (const tr of [...$("titleTable").rows].slice(1)) {
@@ -281,7 +298,7 @@ function collect() {
     if (!prefix.value.trim()) continue;
     const s = STATIC_TITLES[norm(prefix.value)];
     if (s && s.lat === num(lat) && s.lng === num(lng) && s.force === force.checked) continue;
-    titles.push({ prefix: prefix.value.trim(), coords: { lat: num(lat), lng: num(lng) }, force: force.checked });
+    titles.push({ prefix: prefix.value.trim(), coords: coordsOrThrow(prefix.value.trim(), lat, lng), force: force.checked });
   }
   const categories = [];
   for (const tr of [...$("catTable").rows].slice(1)) {
@@ -297,8 +314,15 @@ function collect() {
 }
 
 async function save() {
+  let payload;
+  try {
+    payload = collect();
+  } catch (e) {
+    $("msg").textContent = "Nicht gespeichert — " + e.message;
+    return;
+  }
   $("msg").textContent = "Speichere …";
-  const res = await fetch("/admin/api/locations", { method: "PUT", headers: headers(), body: JSON.stringify(collect()) });
+  const res = await fetch("/admin/api/locations", { method: "PUT", headers: headers(), body: JSON.stringify(payload) });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     $("msg").textContent = "Fehler: " + (e.error || res.status);
