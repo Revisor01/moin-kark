@@ -13,9 +13,13 @@ export function useLocation() {
   // Live-Tracking starten: Position folgt der Bewegung (Marker aktualisiert sich),
   // statt nur einmalig beim Start gemessen zu werden. Mehrfachaufruf ist ungefährlich —
   // ein bestehendes Abo wird zuvor entfernt.
+  // Wird beim Cleanup gesetzt: ein Abo, das erst NACH dem Unmount fertig wird,
+  // darf nicht bestehen bleiben — sonst liefe die Ortung im Hintergrund weiter.
+  const unmountedRef = useRef(false);
+
   const startWatch = useCallback(async () => {
     watchRef.current?.remove();
-    watchRef.current = await Location.watchPositionAsync(
+    const sub = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Balanced,
         // Nur bei nennenswerter Bewegung / nicht zu häufig aktualisieren (Akku schonen).
@@ -26,6 +30,11 @@ export function useLocation() {
         setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       }
     );
+    if (unmountedRef.current) {
+      sub.remove();
+      return;
+    }
+    watchRef.current = sub;
   }, []);
 
   const request = useCallback(async (): Promise<LatLng | null> => {
@@ -52,8 +61,15 @@ export function useLocation() {
     }
   }, [startWatch]);
 
-  // Abo bei Unmount aufräumen.
-  useEffect(() => () => watchRef.current?.remove(), []);
+  // Abo bei Unmount aufräumen — inkl. der Markierung für ein noch ausstehendes
+  // watchPositionAsync (s. startWatch).
+  useEffect(
+    () => () => {
+      unmountedRef.current = true;
+      watchRef.current?.remove();
+    },
+    []
+  );
 
   return { location, status, request };
 }

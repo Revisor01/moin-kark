@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { eventParishes, type EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
@@ -14,7 +15,7 @@ interface Props {
   onToggleSave?: (id: number) => void;
 }
 
-export default function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
+function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
   const p = feature.properties;
   const cat = p.categories[0]?.title;
   const accent = colorForCategory(cat);
@@ -151,3 +152,9 @@ const styles = StyleSheet.create({
   heartIcon: { fontSize: 18, color: colors.faint, lineHeight: 20 },
   heartActive: { color: colors.accent },
 });
+
+/**
+ * memo: In langen Listen rendert sonst jede Karte neu, sobald sich irgendetwas
+ * am Bildschirm ändert — obwohl sich für die meisten Karten nichts geändert hat.
+ */
+export default memo(EventCard);

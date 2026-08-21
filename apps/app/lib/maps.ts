@@ -33,7 +33,9 @@ export function openInMaps(
   if (Platform.OS === "ios") {
     Linking.openURL(`maps://?ll=${lat},${lng}&q=${q}`);
   } else {
-    // Auf Android/Web kein Apple Maps → Google-Web als Fallback
-    Linking.openURL(`https://maps.apple.com/?ll=${lat},${lng}&q=${q}`);
+    // Auf Android gibt es keine Apple-Karten-App. Die maps.apple.com-URL öffnete
+    // hier nur eine Weboberfläche ohne Navigation — daher Google-Web, wie es der
+    // Kommentar immer schon versprochen hat.
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
   }
 }

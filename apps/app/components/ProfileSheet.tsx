@@ -30,6 +30,13 @@ interface Props {
   onToggleSave: (id: number) => void;
 }
 
+/**
+ * Nur auf iOS gibt es überhaupt eine Wahl: Android hat keine Apple-Karten-App,
+ * und im Web öffnet openInMaps ohnehin immer Google Maps im Browser. Wo nur eine
+ * Möglichkeit bleibt, entfällt der Abschnitt ganz (statt eines wirkungslosen Schalters).
+ */
+const MAPS_CHOICES: MapsApp[] = Platform.OS === "ios" ? ["apple", "google"] : [];
+
 export default function ProfileSheet({
   visible,
   onClose,
@@ -59,10 +66,12 @@ export default function ProfileSheet({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
         >
-          {/* Karten-App */}
+          {/* Karten-App — nur wo die Wahl etwas bewirkt (s. MAPS_CHOICES). */}
+          {MAPS_CHOICES.length > 1 && (
+          <>
           <Text style={styles.sectionLabel}>Karten-App</Text>
           <View style={styles.segment}>
-            {(["apple", "google"] as MapsApp[]).map((a) => (
+            {MAPS_CHOICES.map((a) => (
               <TouchableOpacity
                 key={a}
                 style={[styles.segmentBtn, mapsApp === a && styles.segmentBtnActive]}
@@ -78,6 +87,8 @@ export default function ProfileSheet({
           <Text style={styles.hint}>
             Wird verwendet, wenn du in einer Veranstaltung „Auf Karte öffnen" tippst.
           </Text>
+          </>
+          )}
 
           {/* Erinnerungen — im Web gibt es keine: expo-notifications kann dort nicht
               planen (s. lib/reminders.ts, alle Funktionen sind auf Web No-ops). Den
