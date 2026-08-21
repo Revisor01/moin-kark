@@ -1,0 +1,41 @@
+# Build-Kontext ist der Repo-Root (s. apps/api/docker-compose.yml). Alles hier
+# Gelistete darf NIE in ein Image-Layer wandern.
+
+# Secrets — apps/api/.env enthält die 14 ChurchDesk-Read-Tokens!
+.env
+.env.*
+!.env.example
+*.secret
+secrets.*
+
+# Signing-Material (iOS/Android)
+*.p12
+*.p8
+*.jks
+*.key
+*.pem
+*.mobileprovision
+apps/app/credentials.json
+
+# Lokale Abhängigkeiten (macOS-Binaries würden die Linux-Installation überschreiben)
+node_modules/
+**/node_modules/
+
+# Build-Artefakte / Nicht-API-Teile
+apps/app/
+apps/web/
+design/
+dist/
+build/
+*.tsbuildinfo
+
+# Laufzeitdaten der API (im Container ein Volume)
+apps/api/data/
+
+# Repo-/Werkzeug-Kram
+.git/
+.github/
+.claude/
+.playwright-mcp/
+*.log
+.DS_Store
