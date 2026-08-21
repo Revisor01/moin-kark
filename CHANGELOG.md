@@ -100,6 +100,14 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Sicherheit
 
+- Schutz gegen überlange Verarbeitungszeiten bei manipulierten Anfragen an die
+  Termin-Schnittstelle (Sicherheitsupdate der Server-Bibliothek).
+- Die Schriften der Startseite werden jetzt vom eigenen Server ausgeliefert
+  statt von Google. Beim Aufruf der Seite wird damit keine Besucher-Adresse mehr
+  an Dritte übertragen.
+- Die Server-Umgebung ist so abgesichert, dass Zugangsdaten nicht versehentlich
+  in eine ausgelieferte Fassung gelangen können, und läuft nicht mehr mit
+  Vollzugriff.
 - `@hono/node-server` auf 2.x, `hono` auf 4.12.x, `expo` auf 56.0.18,
   `brace-expansion` auf 5.0.9, `shell-quote` auf 1.10.0.
 - Dependabot-Alerts und Security-Updates aktiviert (17 → 1 offener Alert; der
@@ -109,6 +117,14 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Geändert
 
+- Auf der Karte hebt ein Tipp auf die freie Fläche die Auswahl jetzt auch in der
+  iOS- und Android-Fassung wieder auf — wie in der Web-Fassung.
+- Termindaten werden komprimiert übertragen: rund 90 % weniger Datenverbrauch
+  beim Laden der Veranstaltungen im Mobilfunknetz.
+- Änderungen an Beschreibung, Bild oder Kategorien eines Termins erreichen die
+  App jetzt zuverlässig; zugleich lädt sie nicht mehr grundlos den gesamten
+  Bestand neu, wenn sich inhaltlich nichts geändert hat.
+- Lange Terminlisten scrollen flüssiger.
 - Offline-Start am neuen Tag zeigt jetzt den letzten bekannten Stand (bis zu
   7 Tage alt) statt des Fehlerscreens. Der frühere harte Tageswechsel-Verwurf
   schützte vor falsch sortierten Vorwochen-Terminen — das erledigt inzwischen
@@ -136,6 +152,42 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- Erinnerungen konnten trotz Einstellung „Aus" verschickt werden, wenn die App
+  gestartet wurde, bevor die gespeicherte Einstellung gelesen war.
+- Wurde ein Termin schnell hintereinander gemerkt und wieder entfernt, blieb
+  die Erinnerung mitunter bestehen und meldete sich für einen Termin, den man
+  gar nicht mehr gemerkt hatte. Mehrfaches Planen konnte zudem doppelte
+  Benachrichtigungen erzeugen.
+- Erinnerungen sagten „Morgen", obwohl der Termin am Tag der Zustellung
+  bereits „Heute" war.
+- Zwischen Mitternacht und den frühen Morgenstunden konnten Termine des
+  Vortags in der Liste auftauchen.
+- Der Filter „Wochenende" zeigte am Wochenende selbst zusätzlich das
+  übernächste Wochenende an.
+- Blieb die App lange offen, verschwanden abgelaufene Termine nicht von selbst
+  aus Liste und Karte.
+- Auf Android war „Apple Karten" voreingestellt: „Auf Karte öffnen" landete im
+  Browser statt in der installierten Karten-App. Die Auswahl erscheint jetzt
+  nur noch dort, wo es wirklich etwas zu wählen gibt.
+- Karte und Liste wurden bei eingeschaltetem Standort im Sekundentakt neu
+  aufgebaut — spürbar als Ruckeln und erhöhter Akkuverbrauch beim Gehen.
+- Sonderzeichen in Beschreibungen (Anführungszeichen, Gedankenstriche,
+  Euro-Zeichen) erschienen als kryptische Zeichenfolgen. Zugleich wurden
+  Hinweiszeilen wie „ACHTUNG: Einlass ab 19 Uhr" nicht mehr fälschlich
+  ausgeblendet.
+- Öffnete man über eine Mitteilung direkt einen anderen Termin, startete die
+  Beschreibung mitten im Text.
+- Die Standortabfrage erscheint jetzt erst nach der Einführung beim ersten
+  Start — vorher schob sie sich darüber, bevor der Zweck erklärt war.
+- Veranstaltungen auf Helgoland wurden rund 65 Kilometer entfernt in Büsum
+  angezeigt. Auch Lohe-Rickelshof, Pahlen und Delve sitzen jetzt auf ihren
+  tatsächlichen Kirchenstandorten.
+- In der Ortsverwaltung führte ein leer gelassenes Koordinatenfeld dazu, dass
+  alle Termine des Ortes stillschweigend in den Atlantik verschoben wurden;
+  solche Eingaben werden jetzt mit einem Hinweis abgelehnt. Gespeicherte
+  Korrekturen greifen außerdem zuverlässig sofort statt teils erst später.
+- Endzeiten wurden bei Terminen über einen Monatswechsel hinweg falsch
+  dargestellt.
 - ChurchDesk-Totalausfall (Wartungsfenster, Netzstörung) hätte alle Karten
   geleert: Fielen alle 14 Gemeinden gleichzeitig aus, lieferte der Aggregator
   „erfolgreich" eine leere Collection — der Cache übernahm sie, der
