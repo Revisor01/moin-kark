@@ -36,10 +36,15 @@ interface Props {
  * Entfernt interne Redaktions-Marker (z.B. „KAT: …", „URL: …", „INFO: …"),
  * die am Zeilenanfang stehen — die verwirren in der öffentlichen Ansicht.
  */
+// Nur die tatsächlich in ChurchDesk gebräuchlichen Redaktions-Marker. Vorher
+// entfernte ein Muster „≥2 Großbuchstaben + Doppelpunkt" JEDE passende Zeile —
+// damit verschwand auch echter Inhalt wie „ACHTUNG: Einlass ab 19 Uhr".
+const MARKER_LINE = /^\s*(KAT|URL|INFO|TAG|TAGS|LINK|BILD|FOTO|INTERN)\s*:/i;
+
 function stripMarkers(text: string): string {
   return text
     .split("\n")
-    .filter((line) => !/^\s*[A-ZÄÖÜ]{2,}\s*:/.test(line))
+    .filter((line) => !MARKER_LINE.test(line))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -53,6 +58,21 @@ function htmlToText(html?: string): string {
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
+    // Numerische Entities auflösen (ChurchDesk liefert reichlich &#8211; und
+    // &#8220;) — die blieben sonst wörtlich in der Beschreibung stehen.
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(/&(quot|apos|lsquo|rsquo|ldquo|rdquo|ndash|mdash|hellip|euro|szlig);/gi, (_, name) => {
+      const map: Record<string, string> = {
+        quot: '"', apos: "'", lsquo: "\u2018", rsquo: "\u2019",
+        ldquo: "\u201C", rdquo: "\u201D", ndash: "\u2013", mdash: "\u2014",
+        hellip: "…", euro: "€", szlig: "ß",
+      };
+      return map[name.toLowerCase()] ?? " ";
+    })
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    // &amp; zuletzt, sonst würde „&amp;#8211;" vorzeitig zu „&#8211;".
     .replace(/&amp;/g, "&")
     .replace(/&[a-z]+;/gi, " ")
     .replace(/\n{3,}/g, "\n\n")
@@ -98,7 +118,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   // (simultaneousWithExternalGesture) und greift nur, wenn die ScrollView schon
   // ganz oben steht (atTop). Sonst wischt man beim Runterscrollen versehentlich zu.
   const translateY = useSharedValue(0);
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<ScrollView>(null);
   // Scroll-Offset als Shared Value: der Gesture-Callback läuft auf dem UI-Thread
   // und kann keinen React-State lesen.
   const atTop = useSharedValue(true);
@@ -137,6 +157,11 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
     if (feature) {
       translateY.value = 0;
       atTop.value = true;
+      // Auch die ScrollView zurücksetzen. Wird bei OFFENEM Sheet direkt ein
+      // anderes Event gewählt (Tap auf eine Mitteilung), bliebe sonst der alte
+      // Scroll-Offset stehen: die Beschreibung begänne mittendrin, während
+      // atTop bereits true meldet.
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
   }, [feature, translateY, atTop]);
 

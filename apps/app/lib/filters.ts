@@ -92,6 +92,33 @@ function sameDay(a: { y: number; m: number; d: number }, b: { y: number; m: numb
   return a.y === b.y && a.m === b.m && a.d === b.d;
 }
 
+/**
+ * Beginn (00:00 Berliner Zeit) des Kalendertags, in den `d` fällt — als UTC-ms.
+ *
+ * Der Offset wird aus dem Zeitpunkt selbst ermittelt, damit Sommer- und
+ * Winterzeit stimmen; ein fester Wert läge ein halbes Jahr lang daneben.
+ */
+function startOfBerlinDay(d: Date): number {
+  const p = berlinParts(d.toISOString());
+  // Kandidat: der Kalendertag um 00:00, zunächst als UTC gelesen.
+  const asUtc = Date.UTC(p.y, p.m - 1, p.d);
+  // Berliner Offset zu diesem Zeitpunkt bestimmen (+1 h Winter, +2 h Sommer):
+  // longOffset liefert ihn als "GMT+02:00" — robuster als ein Reparsen von
+  // toLocaleString, das sonst in der Zeitzone des Geräts gelesen würde.
+  const tzName = new Intl.DateTimeFormat("en-US", {
+    timeZone: BERLIN_TZ,
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(new Date(asUtc))
+    .find((part) => part.type === "timeZoneName")?.value;
+  const m = /GMT([+-])(\d{2}):(\d{2})/.exec(tzName ?? "");
+  const offsetMs = m
+    ? (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 3600_000 + Number(m[3]) * 60_000)
+    : 0;
+  // Wanduhr-Mitternacht liegt um den Offset VOR der gleich benannten UTC-Zeit.
+  return asUtc - offsetMs;
+}
+
 function matchesDate(startUtc: string, filter: DateFilter, now: Date): boolean {
   if (filter === "all") return true;
   const ev = berlinParts(startUtc);
@@ -100,9 +127,18 @@ function matchesDate(startUtc: string, filter: DateFilter, now: Date): boolean {
   if (filter === "today") return sameDay(ev, today);
 
   if (filter === "weekend") {
-    // Kommendes Sa/So (inkl. heute, falls Wochenende).
+    // Genau EIN Wochenende: das laufende (wenn heute Sa/So ist) bzw. das nächste.
+    //
+    // Vorher galt nur „Sa/So innerhalb von 7 Tagen" — an einem Samstagabend fiel
+    // damit auch der übernächste Samstag ins Fenster, und die Liste mischte zwei
+    // Wochenenden.
     if (ev.dow !== 6 && ev.dow !== 0) return false;
-    return isWithinDays(startUtc, now, 7);
+    // Tage bis zum Samstag dieses Wochenendes (heute, falls Sa/So).
+    const daysToSat = today.dow === 0 ? -1 : (6 - today.dow) % 7;
+    const satMs = startOfBerlinDay(now) + daysToSat * 86400_000;
+    const sunEndMs = satMs + 2 * 86400_000; // Ende Sonntag = Beginn Montag
+    const start = new Date(startUtc).getTime();
+    return start >= satMs && start < sunEndMs;
   }
 
   if (filter === "week") return isWithinDays(startUtc, now, 7);
@@ -124,8 +160,6 @@ function matchesCategory(f: EventFeature, category: string | null): boolean {
 
 export interface FilterContext {
   now?: Date;
-  /** Eigener Standort — nötig für den Umkreis-Filter. */
-  location?: LatLng | null;
   /** Sichtbarer Karten-Ausschnitt — Liste folgt der Karte, wenn gesetzt. */
   bounds?: Bounds | null;
 }
@@ -189,8 +223,10 @@ export function formatEventTime(startUtc: string, endUtc?: string, allDay?: bool
   const startTime = timeFmt.format(start);
   if (showEnd && endUtc) {
     const end = new Date(endUtc);
-    // Endzeit nur zeigen, wenn am selben Tag.
-    const sameDayEnd = berlinParts(startUtc).d === berlinParts(endUtc).d;
+    // Endzeit nur zeigen, wenn am selben Tag. Vergleich über Jahr/Monat/Tag —
+    // der frühere Vergleich nur des Monatstags hielt z.B. 21.08. → 21.09.
+    // fälschlich für eintägig.
+    const sameDayEnd = sameDay(berlinParts(startUtc), berlinParts(endUtc));
     if (sameDayEnd) return `${datePart} · ${startTime}–${timeFmt.format(end)} Uhr`;
   }
   return `${datePart} · ${startTime} Uhr`;

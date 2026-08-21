@@ -115,8 +115,11 @@ export const shadow = {
 export const DITHMARSCHEN = {
   center: [9.0, 54.13] as [number, number], // [lng, lat]
   zoom: 9.4,
-  bounds: [
-    [8.3, 53.8], // SW
-    [9.6, 54.5], // NE
-  ] as [[number, number], [number, number]],
+  /**
+   * Kartengrenzen als [west, south, east, north] — das flache Format, das
+   * MapLibre auf beiden Plattformen erwartet. (Die frühere verschachtelte
+   * SW/NE-Schreibweise akzeptierten die Typen ab @vis.gl/react-maplibre 8.1.2
+   * nicht mehr, und nativ wurde sie ohnehin von Hand flachgeklopft.)
+   */
+  bounds: [8.3, 53.8, 9.6, 54.5] as [number, number, number, number],
 };

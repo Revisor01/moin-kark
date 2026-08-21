@@ -1,6 +1,6 @@
 // Native Karte (iOS/Android) mit MapLibre RN v11. Gleicher Style, Fog of War,
 // Outline, Cluster + Pins, Standort-Marker, Bounds-Callback, Fly-to wie im Web.
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Map,
@@ -25,7 +25,7 @@ import type { EventMapProps } from "./EventMap";
  * `features[0]` Zufall. Darum: alle Events an dieser Koordinate aus den Daten
  * heraussuchen und den nehmen, der als nächstes stattfindet.
  */
-function nearestEventId(hits: any[], features: EventMapProps["features"]): number {
+function nearestEventId(hits: any[], features: EventMapProps["features"]): number | null {
   const ids = new Set(hits.map((h) => Number(h?.properties?.id)).filter(Number.isFinite));
   const first = hits[0];
   const [hlng, hlat] = first?.geometry?.coordinates ?? [];
@@ -37,7 +37,12 @@ function nearestEventId(hits: any[], features: EventMapProps["features"]): numbe
   });
 
   const candidates = sameSpot.length > 0 ? sameSpot : features.filter((f) => ids.has(f.properties.id));
-  if (candidates.length === 0) return Number(first?.properties?.id);
+  if (candidates.length === 0) {
+    // Ohne Kandidaten lieber gar nichts auswählen: Number(undefined) wäre NaN
+    // gewesen und der Tap liefe ins Leere (Sheet öffnet ohne Inhalt).
+    const raw = Number(first?.properties?.id);
+    return Number.isFinite(raw) ? raw : null;
+  }
 
   // Frühester Start gewinnt. Vergangene sind hier bereits ausgefiltert
   // (applyFilters/isPast laufen vor der Übergabe an die Karte).
@@ -59,7 +64,12 @@ export default function EventMap({
   const cameraRef = useRef<CameraRef>(null);
   const sourceRef = useRef<GeoJSONSourceRef>(null);
 
-  const data: EventFeatureCollection = { type: "FeatureCollection", features };
+  // Memoisiert wie in der Web-Variante: ohne das entstünde bei JEDEM Render ein
+  // neues Objekt, und MapLibre setzte die GeoJSON-Source jedes Mal neu.
+  const data: EventFeatureCollection = useMemo(
+    () => ({ type: "FeatureCollection", features }),
+    [features]
+  );
 
   // Standort in einer Ref mitführen: der Fly-to-Effect darf NUR am Token hängen.
   // Vorher stand userLocation in den Dependencies — und weil useLocation per
@@ -94,7 +104,14 @@ export default function EventMap({
     });
   }, [flyToOverviewToken]);
 
+  // Zeitstempel des letzten Pin-Taps. MapLibre reicht Pin-Taps mit `features` an
+  // die Karte weiter, sodass onMapPress sie erkennt — sollte eine Plattform das
+  // einmal ohne `features` tun, verhindert dieses Fenster trotzdem, dass die
+  // gerade getroffene Auswahl sofort wieder verworfen wird.
+  const lastPinPressRef = useRef(0);
+
   const onSourcePress = async (e: any) => {
+    lastPinPressRef.current = Date.now();
     // MapLibre RN v11: Features liegen unter e.nativeEvent.features
     const hits: any[] = e?.nativeEvent?.features ?? e?.features ?? [];
     const feat = hits[0];
@@ -123,7 +140,23 @@ export default function EventMap({
     // liegen als deckungsgleiche Pins übereinander. features[0] ist dabei
     // willkürlich — beim Tippen kam so das Orgelkonzert nächste Woche statt des
     // Gottesdienstes in einer Stunde. Darum den zeitlich NÄCHSTEN Termin wählen.
-    onSelect(nearestEventId(hits, features));
+    const id = nearestEventId(hits, features);
+    if (id != null) onSelect(id);
+  };
+
+  /**
+   * Tap auf die freie Karte (kein Pin) → Auswahl aufheben, wie im Web.
+   *
+   * MapLibre reicht Pin-Taps zusätzlich an die Karte weiter, dann aber MIT
+   * `features` (s. Doku zu Map.onPress). Nur wenn diese Liste leer ist, wurde
+   * wirklich daneben getippt — sonst hätte jeder Pin-Tap die gerade getroffene
+   * Auswahl sofort wieder verworfen.
+   */
+  const onMapPress = (e: any) => {
+    const hits: any[] = e?.nativeEvent?.features ?? e?.features ?? [];
+    if (hits.length > 0) return;
+    if (Date.now() - lastPinPressRef.current < 300) return;
+    onSelect(null);
   };
 
   const onRegionDidChange = (e: any) => {
@@ -158,6 +191,7 @@ export default function EventMap({
         logo={false}
         compass={false}
         attribution={false}
+        onPress={onMapPress}
         onRegionDidChange={onRegionDidChange}
       >
         <Camera
@@ -166,12 +200,7 @@ export default function EventMap({
             center: DITHMARSCHEN.center,
             zoom: DITHMARSCHEN.zoom,
           }}
-          maxBounds={[
-            DITHMARSCHEN.bounds[0][0],
-            DITHMARSCHEN.bounds[0][1],
-            DITHMARSCHEN.bounds[1][0],
-            DITHMARSCHEN.bounds[1][1],
-          ]}
+          maxBounds={DITHMARSCHEN.bounds}
         />
 
         {/* Fog of War + Umriss */}

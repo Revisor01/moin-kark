@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -80,8 +80,17 @@ export default function DraggableListSheet({
   const reportHidden = (visible: number) => {
     onHiddenBottomChange?.(Math.max(0, heights.full - visible));
   };
+
+  // Welche Ruhestufe zuletzt eingerastet ist. Ändert sich die verfügbare Höhe
+  // (iPad-Split-View; die App ist sonst hochkant fixiert), muss die Meldung zu
+  // DIESER Stufe passen — vorher ging pauschal `mid` raus, auch wenn das Sheet
+  // gerade ganz offen stand, und die Liste bekam einen falschen Endabstand.
+  const restStage = useRef<"small" | "mid" | "large" | "full">("mid");
   useEffect(() => {
-    reportHidden(heights.mid);
+    const visible = heights[restStage.current];
+    sheetHeight.value = visible;
+    startHeight.value = visible;
+    reportHidden(visible);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heights]);
 
@@ -97,10 +106,23 @@ export default function DraggableListSheet({
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  /** Merkt sich die eingerastete Stufe (läuft auf dem JS-Thread). */
+  const rememberStage = (target: number) => {
+    restStage.current =
+      target === heights.full
+        ? "full"
+        : target === heights.large
+          ? "large"
+          : target === heights.small
+            ? "small"
+            : "mid";
+    reportHidden(target);
+  };
+
   const snapTo = (target: number) => {
     "worklet";
     sheetHeight.value = withSpring(target, SPRING);
-    runOnJS(reportHidden)(target);
+    runOnJS(rememberStage)(target);
   };
 
   // Tipp auf den Griff → nächstgrößere Stufe (small→mid→large→full), von full zurück auf small.

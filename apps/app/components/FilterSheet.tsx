@@ -14,7 +14,9 @@ interface Props {
   onClose: () => void;
   date: DateFilter;
   onDate: (d: DateFilter) => void;
-  kirchspiele: string[];
+  // readonly, weil KIRCHSPIELE in @moinkark/shared ein `as const`-Tupel ist —
+  // sonst braucht die Aufrufseite einen Cast, nur um Literale zu übergeben.
+  kirchspiele: readonly string[];
   activeKirchspiel: string | null;
   onKirchspiel: (k: string | null) => void;
   gemeinden: string[];
@@ -134,9 +136,11 @@ export default function FilterSheet({
               <Chip
                 key={c}
                 label={c}
-                active={activeCategory === c.toLowerCase()}
+                // trim() wie im Filter (s. matchesCategory): ein Titel mit
+                // Randleerzeichen matchte sonst nie und der Chip blieb inaktiv.
+                active={activeCategory === c.trim().toLowerCase()}
                 color={colorForCategory(c)}
-                onPress={() => onCategory(c.toLowerCase())}
+                onPress={() => onCategory(c.trim().toLowerCase())}
               />
             ))}
           </Group>
