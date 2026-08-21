@@ -88,3 +88,14 @@ export interface EventFeatureCollection {
     orgsFailed: number;
   };
 }
+
+/**
+ * Einheitliche Schlüssel-Normalisierung für Orts-, Gemeinde- und Titel-Vergleiche.
+ *
+ * Bewusst an EINER Stelle: An dieser Funktion hängen die statischen Tabellen
+ * (kirchspiele.ts, kirchen-coords.ts) UND die über /admin gepflegten Korrekturen
+ * in der API. Driftet eine Kopie, greifen gepflegte Korrekturen still nicht mehr.
+ */
+export function normalizeKey(s: string): string {
+  return s.trim().replace(/\s+/g, " ").toLowerCase();
+}
