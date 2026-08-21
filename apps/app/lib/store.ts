@@ -1,5 +1,6 @@
 // Lokaler Speicher (AsyncStorage) für Profil-Einstellungen + gemerkte Events.
 // Kein Backend, kein Login — alles bleibt auf dem Gerät.
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 
@@ -57,7 +58,6 @@ export function useSavedEvents() {
   return { saved, isSaved, toggle, removeMany, loaded };
 }
 
-// --- Karten-App-Präferenz ---
 // --- Erinnerungs-Präferenz ---
 import {
   DEFAULT_REMINDER,
@@ -68,18 +68,33 @@ import {
 
 export function useReminderPref() {
   const [pref, setPrefState] = useState<ReminderPref>(DEFAULT_REMINDER);
+  // `loaded` unterscheidet „noch nicht gelesen" von „gelesen, ist der Default".
+  // Ohne das plant der Abgleich beim Start womöglich Erinnerungen anhand des
+  // Defaults, obwohl die Person sie auf „Aus" gestellt hat.
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    getReminderPref().then(setPrefState);
+    getReminderPref()
+      .then(setPrefState)
+      .finally(() => setLoaded(true));
   }, []);
   const setPref = useCallback((p: ReminderPref) => {
     setPrefState(p);
     persistReminderPref(p);
   }, []);
-  return { pref, setPref };
+  return { pref, setPref, loaded };
 }
 
+// --- Karten-App-Präferenz ---
+
+/**
+ * Vorbelegung nach Plattform: Apple Karten gibt es nur auf iOS. Stand hier
+ * pauschal "apple", landeten Android-Nutzer über einen Button namens
+ * „In Apple Karten öffnen" im Browser statt in ihrer Google-Maps-App.
+ */
+const DEFAULT_MAPS_APP: MapsApp = Platform.OS === "ios" ? "apple" : "google";
+
 export function useMapsApp() {
-  const [mapsApp, setMapsAppState] = useState<MapsApp>("apple");
+  const [mapsApp, setMapsAppState] = useState<MapsApp>(DEFAULT_MAPS_APP);
 
   useEffect(() => {
     AsyncStorage.getItem(MAPS_KEY).then((raw) => {

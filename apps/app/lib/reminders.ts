@@ -45,6 +45,28 @@ async function saveMap(m: Record<number, string[]>) {
   await AsyncStorage.setItem(MAP_KEY, JSON.stringify(m)).catch(() => {});
 }
 
+/**
+ * Serialisiert alle Lese-Ändern-Schreiben-Zyklen auf der Reminder-Map.
+ *
+ * Ohne das überschreiben sich parallele Aufrufe gegenseitig: Wer ein Event
+ * schnell hintereinander merkt und wieder entmerkt, löste sonst ein `cancel`
+ * aus, das die Map noch ohne die gerade geplanten IDs las — die Erinnerung
+ * feuerte später für ein längst entmerktes Event. Der Abgleich beim Start
+ * stößt zudem mehrere Aufrufe gleichzeitig an.
+ */
+let mapQueue: Promise<unknown> = Promise.resolve();
+function withMap<T>(fn: (map: Record<number, string[]>) => Promise<T>): Promise<T> {
+  const run = mapQueue.then(async () => {
+    const map = await loadMap();
+    const result = await fn(map);
+    await saveMap(map);
+    return result;
+  });
+  // Kette am Leben halten, auch wenn ein Glied scheitert.
+  mapQueue = run.catch(() => undefined);
+  return run;
+}
+
 export async function getReminderPref(): Promise<ReminderPref> {
   const raw = await AsyncStorage.getItem(REMINDER_KEY);
   if (raw === "evening" || raw === "2h" || raw === "both" || raw === "off") return raw;
@@ -103,43 +125,56 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
   // Titel: „Erinnerung: <Event>" — Body: relativer Tag + volles Datum/Uhrzeit + Ort.
   const place = f.properties.locationName ?? f.properties.parish ?? f.properties.kirchspiel;
   const when = formatWhen(start);
-  const rel = relativeDay(start, new Date(now));
 
-  const map = await loadMap();
-  const ids: string[] = map[f.properties.id] ?? [];
-  for (const t of triggers) {
-    if (t.date.getTime() <= now) continue; // Vergangenheit überspringen
-    const id = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: f.properties.title,
-        // z.B. „In 2 Stunden · Heute, Fr 19. Juni · 12:00 Uhr — Büsum, St. Clemens"
-        body: `${t.lead}${rel}, ${when}${place ? ` — ${place}` : ""}`,
-        data: { eventId: f.properties.id },
-      },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: t.date },
-    });
-    ids.push(id);
-  }
-  map[f.properties.id] = ids;
-  await saveMap(map);
+  await withMap(async (map) => {
+    // Vorhandene Planungen für dieses Event zuerst abräumen — sonst sammeln sich
+    // bei erneutem Planen (Termin verschoben, Präferenz gewechselt) Doppel-
+    // Benachrichtigungen an.
+    for (const old of map[f.properties.id] ?? []) {
+      await Notifications.cancelScheduledNotificationAsync(old).catch(() => {});
+    }
+    const ids: string[] = [];
+    for (const t of triggers) {
+      if (t.date.getTime() <= now) continue; // Vergangenheit überspringen
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: f.properties.title,
+          // z.B. „In 2 Stunden · Heute, Fr 19. Juni · 12:00 Uhr — Büsum, St. Clemens"
+          // „Heute"/„Morgen" bezogen auf den ZUSTELLzeitpunkt, nicht auf jetzt:
+        // eine heute geplante Erinnerung für morgen früh wird morgen zugestellt
+        // und hätte sonst „Morgen" gemeldet, obwohl das Event dann heute ist.
+        body: `${t.lead}${relativeDay(start, t.date)}, ${when}${place ? ` — ${place}` : ""}`,
+          data: { eventId: f.properties.id },
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: t.date },
+      });
+      ids.push(id);
+    }
+    if (ids.length) map[f.properties.id] = ids;
+    else delete map[f.properties.id];
+  });
 }
 
 /** Bricht alle geplanten Erinnerungen für ein Event ab. */
 export async function cancelForEvent(eventId: number): Promise<void> {
   if (IS_WEB) return;
-  const map = await loadMap();
-  for (const id of map[eventId] ?? []) {
-    await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
-  }
-  delete map[eventId];
-  await saveMap(map);
+  await withMap(async (map) => {
+    for (const id of map[eventId] ?? []) {
+      await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
+    }
+    delete map[eventId];
+  });
 }
 
 /** Plant alle gemerkten Events neu (z.B. nach Präferenz-Wechsel). */
 export async function rescheduleAll(saved: EventFeature[], pref: ReminderPref): Promise<void> {
   if (IS_WEB) return;
-  await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
-  await saveMap({});
+  // Leeren ebenfalls über die Queue, damit es sich nicht mit laufenden
+  // Einzelplanungen überholt.
+  await withMap(async (map) => {
+    await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
+    for (const key of Object.keys(map)) delete map[key as unknown as number];
+  });
   if (pref === "off") return;
   for (const f of saved) await scheduleForEvent(f, pref);
 }
