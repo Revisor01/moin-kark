@@ -54,12 +54,13 @@ export default function Home() {
   const { location, status: locStatus, request: requestLocation } = useLocation();
   const { mapsApp, setMapsApp } = useMapsApp();
   const { isSaved, toggle: rawToggleSave, saved, removeMany, loaded: savedLoaded } = useSavedEvents();
-  const { pref: reminderPref, setPref: setReminderPref } = useReminderPref();
+  const { pref: reminderPref, setPref: setReminderPref, loaded: reminderLoaded } = useReminderPref();
 
-  // Standort beim Start einmalig anfragen (opt-in System-Dialog) → Marker direkt sichtbar.
-  useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
+  // Standort-Anfrage: NICHT sofort beim Start. Beim allerersten Öffnen liegt das
+  // Onboarding auf dem Bildschirm — der System-Dialog schöbe sich darüber, bevor
+  // die App erklärt hat, wozu der Standort dient (schlechte Zustimmungsquote und
+  // ein bekannter Stolperstein im App-Review). Darum erst, wenn das Onboarding
+  // weg ist bzw. gar nicht gezeigt wird (s. ONBOARDING_KEY-Effekt / dismissOnboarding).
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -79,13 +80,19 @@ export default function Home() {
   // Onboarding nur beim allerersten Start zeigen.
   const ONBOARDING_KEY = "kkd:onboardingSeen";
   useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((v) => {
-      if (!v) setShowOnboarding(true);
-    });
-  }, []);
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then((v) => {
+        if (!v) setShowOnboarding(true);
+        else requestLocation(); // Kein Onboarding → direkt fragen wie bisher.
+      })
+      .catch(() => {});
+  }, [requestLocation]);
+
   const dismissOnboarding = () => {
     setShowOnboarding(false);
     AsyncStorage.setItem(ONBOARDING_KEY, "1").catch(() => {});
+    // Jetzt ist der Bildschirm frei und die Erklärung gelesen.
+    requestLocation();
   };
 
   const allFeatures = data?.features ?? [];
@@ -135,7 +142,10 @@ export default function Home() {
   // Einmaliger Abgleich gemerkter Events gegen frische Daten (entfällt / verschoben → lokale Mitteilung).
   const didSync = useRef(false);
   useEffect(() => {
-    if (didSync.current || !savedLoaded || allFeatures.length === 0) return;
+    // `reminderLoaded` abwarten: sonst liefe der Abgleich mit der Default-
+    // Präferenz und plante Erinnerungen, die abgeschaltet sein sollten. Ein
+    // zweiter Lauf mit dem echten Wert findet wegen `didSync` nicht statt.
+    if (didSync.current || !savedLoaded || !reminderLoaded || allFeatures.length === 0) return;
     didSync.current = true;
     (async () => {
       const ids = [...saved];
@@ -180,7 +190,7 @@ export default function Home() {
         }
       }
     })();
-  }, [savedLoaded, allFeatures, saved, reminderPref]);
+  }, [savedLoaded, reminderLoaded, allFeatures, saved, reminderPref]);
 
   // Tap auf eine Mitteilung → zugehöriges Event öffnen (falls es noch existiert).
   useEffect(() => {
@@ -201,9 +211,22 @@ export default function Home() {
     return { ...bounds, south: bounds.south + span * frac };
   }, [bounds, isWide, mapAreaHeight]);
 
+  // Zeitscheibe für die Filter. Ohne die bliebe `now` auf dem Wert des letzten
+  // Memo-Durchlaufs stehen: eine über Stunden offene App (Tablet auf dem Tisch)
+  // zeigte abgelaufene Termine weiter an, weil reines Verstreichen von Zeit
+  // sonst keinen Recompute auslöst. Eine Minute ist fein genug und billig.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const iv = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Bewusst OHNE `location` in den Dependencies: der Standort geht in keinen
+  // Filter ein. Stünde er hier, liefe bei laufendem GPS-Watch (alle 25 m / 5 s)
+  // ständig ein voller Filter- und Sortierdurchlauf samt Neu-Rendern der Liste.
   const filtered = useMemo(
-    () => sortByStart(applyFilters(allFeatures, filters, { location, bounds: visibleBounds })),
-    [allFeatures, filters, location, visibleBounds]
+    () => sortByStart(applyFilters(allFeatures, filters, { now: new Date(nowTick), bounds: visibleBounds })),
+    [allFeatures, filters, visibleBounds, nowTick]
   );
 
   // Gemerkte Events als Feature-Liste (fürs Profil) — vergangene fliegen sofort raus.
@@ -223,8 +246,8 @@ export default function Home() {
   // Karten-Pins folgen denselben Filtern, aber NICHT dem Viewport (sonst verschwinden Pins
   // beim Zoomen). Nur die Liste folgt dem Ausschnitt.
   const mapFeatures = useMemo(
-    () => applyFilters(allFeatures, filters, { location }),
-    [allFeatures, filters, location]
+    () => applyFilters(allFeatures, filters, { now: new Date(nowTick) }),
+    [allFeatures, filters, nowTick]
   );
 
   const categoryTitles = useMemo(
@@ -342,7 +365,7 @@ export default function Home() {
       onClose={() => setFiltersOpen(false)}
       date={filters.date}
       onDate={(d) => setFilters((f) => ({ ...f, date: d }))}
-      kirchspiele={kirchspielOptions as unknown as string[]}
+      kirchspiele={kirchspielOptions}
       activeKirchspiel={filters.kirchspiel}
       onKirchspiel={(k) => setFilters((f) => ({ ...f, kirchspiel: k, parish: null }))}
       gemeinden={gemeindeOptions}
