@@ -300,9 +300,14 @@ rsync -az --delete apps/web/ root@server.godsapp.de:/home/users/revisor/www/moin
 `karte.moin-kark.de` wird aus dem Expo-Web-Export bedient:
 
 ```bash
-cd apps/app && npx expo export --platform web --output-dir dist
+cd apps/app && npm run build:web
 rsync -az --delete dist/ root@server.godsapp.de:/home/users/revisor/www/karte.moin-kark.de/
 ```
+
+**Achtung:** `npx expo export` direkt aufzurufen reicht NICHT — `npm run build:web`
+kopiert vorher den MapLibre-Web-Worker nach `public/`. Fehlt der, bleibt die Karte
+leer, ohne eine einzige Fehlermeldung (siehe `apps/app/scripts/sync-map-worker.mjs`).
+Nach dem Deploy prüfen, ob `/maplibre-gl-worker.mjs` HTTP 200 liefert.
 
 ## Versionierung
 
