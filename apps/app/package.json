@@ -21,7 +21,7 @@
     "expo-router": "~56.2.17",
     "expo-splash-screen": "~56.0.14",
     "expo-status-bar": "~56.0.4",
-    "maplibre-gl": "^6.4.1",
+    "maplibre-gl": "^5.24.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",
@@ -46,7 +46,6 @@
   "private": true,
   "overrides": {
     "nanoid": "^3.3.18",
-    "uuid": "^11.1.1",
-    "maplibre-gl": "^6.4.1"
+    "uuid": "^11.1.1"
   }
 }
