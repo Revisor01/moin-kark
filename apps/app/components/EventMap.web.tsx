@@ -6,6 +6,7 @@ import Map, {
   type MapRef,
   type MapLayerMouseEvent,
 } from "@vis.gl/react-maplibre";
+import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { EventFeatureCollection } from "@moinkark/shared";
 import {
@@ -21,6 +22,14 @@ import {
 import { DITHMARSCHEN, colors } from "../lib/theme";
 import { DITHMARSCHEN_MASK, DITHMARSCHEN_OUTLINE } from "../lib/dithmarschen-boundary";
 import type { EventMapProps } from "./EventMap";
+
+// MapLibre ab 6.0 bestimmt die URL seines Web-Workers aus `import.meta.url`.
+// Metro löst das zu einem Pfad auf, unter dem die Datei im Export nicht liegt —
+// der Worker startet dann nie, und ohne ihn dekodiert MapLibre keine
+// Vektorkacheln: Die Karte bliebe leer, ohne eine Fehlermeldung zu erzeugen.
+// `npm run sync:map-worker` legt die Datei nach public/, von wo sie unter der
+// Host-Wurzel ausgeliefert wird.
+setWorkerUrl("/maplibre-gl-worker.mjs");
 
 export default function EventMap({
   features,
