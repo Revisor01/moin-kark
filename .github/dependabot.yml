@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Ein npm-Workspace: Der Root-Lock ist maßgeblich, deshalb genügt ein Eintrag.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Sonst kommen zwanzig einzelne PRs pro Woche.
+      patch-und-minor:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Expo und React Native werden gemeinsam und nur bewusst gehoben —
+      # ein einzelner Major bricht sonst den Build der ausgelieferten App.
+      - dependency-name: expo
+        update-types: ["version-update:semver-major"]
+      - dependency-name: expo-*
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-native
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

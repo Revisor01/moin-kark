@@ -258,4 +258,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Vormittag. Der Cache gilt jetzt nur noch für den Tag, an dem er geschrieben
   wurde; zusätzlich wird beim Tageswechsel aus dem Hintergrund neu geladen.
 
+### Sonstiges
+
+- Tests und Typecheck laufen bei jeder Änderung automatisch, dazu wöchentlich
+  eine Prüfung auf neu gemeldete Sicherheitslücken in den verwendeten
+  Fremdbibliotheken.
+
 [Unreleased]: https://github.com/Revisor01/moin-kark/commits/main
