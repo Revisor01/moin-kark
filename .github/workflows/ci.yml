@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Montags 6:00 UTC — findet neue Advisories auch ohne Commit.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests und Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+  audit:
+    name: Abhängigkeiten prüfen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Was ausgeliefert wird, muss sauber sein. Dev-Abhängigkeiten laufen nie
+      # auf einem Server und brechen den Lauf deshalb nicht.
+      #
+      # Schwelle „high": Der einzige offene Befund (decode-uri-component, medium)
+      # steckt unter expo-router und lässt sich nur durch dessen Downgrade lösen
+      # — die gepatchte Fassung ist ESM-only, query-string lädt sie per require().
+      # Auf „moderate" wäre der Lauf dauerhaft rot und niemand sähe den nächsten
+      # echten Befund.
+      - name: Produktiv-Abhängigkeiten
+        run: npm audit --omit=dev --audit-level=high
+
+      # Nur zur Ansicht — schlägt bewusst nicht fehl, sonst blockiert ein
+      # Befund in einem Build-Werkzeug jeden Merge.
+      - name: Alle Abhängigkeiten (nur Bericht)
+        if: always()
+        run: npm audit || true
