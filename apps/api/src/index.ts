@@ -2,6 +2,7 @@
 // Hält die 14 ChurchDesk-Read-Tokens server-seitig, liefert ein dedupliziertes GeoJSON.
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { compress } from "hono/compress";
@@ -326,15 +327,26 @@ function warmCache(afterChange = false): Promise<void> {
     .catch((e) => console.error("[moinkark-api] Cache-Refresh fehlgeschlagen:", e?.message ?? e));
 }
 
-serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.log(`[moinkark-api] hört auf http://0.0.0.0:${info.port}`);
-  console.log(`[moinkark-api] CORS erlaubt: ${ALLOWED_ORIGINS.join(", ")}`);
-  if (!ADMIN_TOKEN) console.warn("[moinkark-api] ADMIN_TOKEN nicht gesetzt — /admin ist deaktiviert.");
-  loadOverrides();
-  // Sofort einmal laden, danach im TTL-Takt.
-  void warmCache();
-  const timer = setInterval(() => void warmCache(), TTL_MS);
-  // Node soll wegen des Timers nicht am Beenden gehindert werden.
-  timer.unref?.();
-  console.log(`[moinkark-api] Auto-Refresh alle ${Math.round(TTL_MS / 60000)} min`);
-});
+export { app };
+
+/**
+ * Nur starten, wenn dieses Modul als Programm läuft — nicht beim Import.
+ * Tests sprechen `app` direkt über `app.request()` an; ohne die Prüfung würde
+ * jeder Testlauf einen echten Server samt ChurchDesk-Refresh hochziehen.
+ */
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMain)
+  serve({ fetch: app.fetch, port: PORT }, (info) => {
+    console.log(`[moinkark-api] hört auf http://0.0.0.0:${info.port}`);
+    console.log(`[moinkark-api] CORS erlaubt: ${ALLOWED_ORIGINS.join(", ")}`);
+    if (!ADMIN_TOKEN)
+      console.warn("[moinkark-api] ADMIN_TOKEN nicht gesetzt — /admin ist deaktiviert.");
+    loadOverrides();
+    // Sofort einmal laden, danach im TTL-Takt.
+    void warmCache();
+    const timer = setInterval(() => void warmCache(), TTL_MS);
+    // Node soll wegen des Timers nicht am Beenden gehindert werden.
+    timer.unref?.();
+    console.log(`[moinkark-api] Auto-Refresh alle ${Math.round(TTL_MS / 60000)} min`);
+  });
