@@ -108,13 +108,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 - Die Server-Umgebung ist so abgesichert, dass Zugangsdaten nicht versehentlich
   in eine ausgelieferte Fassung gelangen können, und läuft nicht mehr mit
   Vollzugriff.
-- Die Kartendarstellung der Web-Fassung wurde auf eine Fassung ohne bekannte
-  Sicherheitslücke gehoben. Über die alte ließ sich eingeschleuster Code
-  ausführen, sobald eine Karte fremde Herkunftsangaben anzeigt — in Moin Kark
-  sind diese Angaben abgeschaltet und der Kartenstil stammt aus dem eigenen
-  Code, der Weg stand hier also nicht offen.
-- Sicherheitsupdates für die verwendeten Fremdbibliotheken eingespielt.
-- Dependabot-Alerts und Security-Updates aktiviert.
+- `@hono/node-server` auf 2.x, `hono` auf 4.12.x, `expo` auf 56.0.18,
+  `brace-expansion` auf 5.0.9, `shell-quote` auf 1.10.0.
+- Dependabot-Alerts und Security-Updates aktiviert (17 → 1 offener Alert; der
+  verbleibende betrifft `uuid` im Expo-Build-Tooling, kein Patch verfügbar).
 - `apps/app/package-lock.json` entfernt — im npm-Workspace ist allein der
   Root-Lock maßgeblich.
 
