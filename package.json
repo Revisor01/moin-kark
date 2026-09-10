@@ -13,6 +13,7 @@
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspace apps/api && npm run typecheck --workspace apps/app",
+    "test": "npm test --workspace packages/shared && npm test --workspace apps/api",
     "typecheck:api": "npm run typecheck --workspace apps/api",
     "typecheck:app": "npm run typecheck --workspace apps/app",
     "dev:api": "npm run dev --workspace apps/api",
