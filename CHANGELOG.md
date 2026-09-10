@@ -108,6 +108,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 - Die Server-Umgebung ist so abgesichert, dass Zugangsdaten nicht versehentlich
   in eine ausgelieferte Fassung gelangen können, und läuft nicht mehr mit
   Vollzugriff.
+- Die Kartendarstellung der Web-Fassung wurde auf eine Fassung ohne bekannte
+  Sicherheitslücke gehoben. Über die alte ließ sich eingeschleuster Code
+  ausführen, sobald eine Karte fremde Herkunftsangaben anzeigt — in Moin Kark
+  sind diese Angaben abgeschaltet, der Weg stand hier also nicht offen.
 - Sicherheitsupdates für die verwendeten Fremdbibliotheken eingespielt.
 - Dependabot-Alerts und Security-Updates aktiviert.
 - `apps/app/package-lock.json` entfernt — im npm-Workspace ist allein der
