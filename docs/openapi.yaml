@@ -1,0 +1,530 @@
+openapi: 3.1.0
+info:
+  title: Moin Kark API
+  version: "1.0.0"
+  summary: Read-Only-Aggregator der ChurchDesk-Termine im Kirchenkreis Dithmarschen.
+  description: |
+    Aggregiert die Termine aller Kirchengemeinde-Organisationen des Kirchenkreises
+    Dithmarschen zu einem gemeinsamen Feed und liefert sie als GeoJSON aus.
+
+    Die Schnittstelle ist ausschließlich lesend. Die ChurchDesk-Zugänge bleiben
+    server-seitig; Clients kennen nur diese Adresse.
+
+    **Die Antwortformen sind ein Vertrag.** Auf den Geräten laufen App-Versionen
+    aus dem Store, die sich nicht mitdeployen lassen — sie lesen genau die hier
+    beschriebenen Felder. Aus einem Array wird deshalb kein Objekt, Felder
+    verschwinden nicht, Typen ändern sich nicht. Neue Felder dürfen hinzukommen.
+    Wer eine Form ändern muss, legt eine neue, versionierte Route an und lässt
+    die alte stehen, bis keine App sie mehr ruft.
+
+    Das Zeitfenster ist server-seitig festgelegt (ab heute, Standard 60 Tage) und
+    lässt sich nicht per Anfrage steuern. Es beginnt am **Berliner** Kalendertag,
+    nicht am UTC-Tag.
+# Die dokumentierten Routen sind ohne Anmeldung lesbar — das ist Absicht, nicht
+# eine vergessene Absicherung. Geschützt ist allein die Ortsverwaltung (s. unten).
+security: []
+
+servers:
+  - url: https://api.moin-kark.de
+    description: Produktion
+  - url: http://localhost:8787
+    description: Lokale Entwicklung
+
+tags:
+  - name: Feed
+    description: Die Termindaten, die die App liest.
+  - name: Betrieb
+    description: Zustand der Schnittstelle.
+
+paths:
+  /events.geojson:
+    get:
+      tags: [Feed]
+      summary: Alle Termine als GeoJSON
+      description: |
+        Liefert alle öffentlichen Termine im aktuellen Zeitfenster als
+        GeoJSON-FeatureCollection — ein Feature je Termin, dedupliziert über die
+        ChurchDesk-Event-ID.
+
+        Nicht öffentliche Kategorien (interne Veranstaltungen, externe
+        Raumbuchungen, Kirchengemeinderatssitzungen, Konfirmandenunterricht und
+        die über die Ortsverwaltung ausgeschlossenen) fehlen im Feed.
+
+        Antworten werden server-seitig zwischengespeichert. Fällt ChurchDesk
+        vorübergehend aus, bleibt der letzte erfolgreiche Stand stehen, statt
+        eine leere Sammlung zu liefern.
+      operationId: getEvents
+      responses:
+        "200":
+          description: Der aktuelle Terminbestand.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventFeatureCollection"
+        "500":
+          description: |
+            Es liegt kein Datenstand vor und es konnte auch keiner geladen werden
+            (etwa weil alle Organisationen ausgefallen sind).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /categories.json:
+    get:
+      tags: [Feed]
+      summary: Kategorien des aktuellen Feeds
+      description: |
+        Die Kategorien aller Termine im Feed, für die Filterauswahl in der App.
+        Gleichnamige Kategorien verschiedener Organisationen sind zusammengefasst
+        (der Vergleich ignoriert Groß- und Kleinschreibung sowie Randleerzeichen).
+        Sortiert nach Häufigkeit, bei Gleichstand alphabetisch.
+
+        Die Antwort ist ein **Array**.
+      operationId: getCategories
+      responses:
+        "200":
+          description: Die Kategorien mit ihrer Häufigkeit.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+        "500":
+          description: Es konnte kein Datenstand geladen werden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /version.json:
+    get:
+      tags: [Feed]
+      summary: Kennung des aktuellen Datenbestands
+      description: |
+        Eine kurze Kennung über den gesamten Terminbestand. Die App fragt sie
+        regelmäßig ab, weil die Antwort wenige Bytes groß ist statt einiger
+        hundert Kilobyte. Ändert sich die Kennung, lädt die App den Feed neu.
+
+        Die Kennung ändert sich, sobald sich an einem Termin etwas ändert, das in
+        der App sichtbar ist — Titel, Zeiten, Ort, Beschreibung, Bild, Kategorien,
+        Preis oder die Hervorhebung. Eine andere Reihenfolge derselben Termine
+        ändert sie nicht.
+      operationId: getVersion
+      responses:
+        "200":
+          description: Kennung und Anzahl der Termine.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, count]
+                properties:
+                  version:
+                    type: string
+                    description: 16 Hexadezimalzeichen.
+                    pattern: "^[0-9a-f]{16}$"
+                    examples: ["3f1c9a2b7d4e5061"]
+                  count:
+                    type: integer
+                    description: Anzahl der Termine im Feed.
+                    examples: [742]
+        "500":
+          description: Es konnte kein Datenstand geladen werden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /healthz:
+    get:
+      tags: [Betrieb]
+      summary: Zustand für die Überwachung
+      description: |
+        Meldet den Zustand aus dem zuletzt geladenen Datenstand, ohne selbst Daten
+        zu holen. Gedacht für Container-Healthchecks und Monitoring.
+
+        `ok` und `degraded` gelten als gesund (Status 200): Bei `degraded` ist
+        mindestens eine Organisation ausgefallen, deren Termine fehlen also im
+        Feed — der Dienst liefert aber weiter aus. `stale` und `starting` gelten
+        als ungesund (Status 503).
+      operationId: getHealth
+      responses:
+        "200":
+          description: Der Dienst liefert Daten aus (`ok` oder `degraded`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: |
+            Kein brauchbarer Datenstand — entweder noch keiner vorhanden
+            (`starting`) oder der letzte ist zu alt (`stale`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /status.json:
+    get:
+      tags: [Betrieb]
+      summary: Ausführlicher Betriebszustand
+      description: |
+        Wie `/healthz`, zusätzlich mit der Liste der Orte, die mangels
+        Koordinate auf einem Gemeindepunkt liegen. Damit fallen neu angelegte
+        Orte auf, für die noch keine Koordinate gepflegt ist.
+
+        Antwortet immer mit Status 200, auch beim Zustand `starting`. Dieselben
+        Daten gibt es unter `/status` als Seite zum Anschauen.
+      operationId: getStatus
+      responses:
+        "200":
+          description: Der Betriebszustand.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+
+components:
+  schemas:
+    EventFeatureCollection:
+      type: object
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          const: FeatureCollection
+        features:
+          type: array
+          description: Ein Eintrag je Termin. Bei leerem Bestand ein leeres Array.
+          items:
+            $ref: "#/components/schemas/EventFeature"
+        meta:
+          $ref: "#/components/schemas/FeedMeta"
+
+    EventFeature:
+      type: object
+      required: [type, geometry, properties]
+      properties:
+        type:
+          type: string
+          const: Feature
+        geometry:
+          $ref: "#/components/schemas/Point"
+        properties:
+          $ref: "#/components/schemas/EventProps"
+
+    Point:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          const: Point
+        coordinates:
+          type: array
+          description: |
+            GeoJSON-Reihenfolge: **[Länge, Breite]**, nicht umgekehrt.
+            Der Nullpunkt 0/0 kommt nicht vor — ChurchDesk liefert ihn für nicht
+            verortete Adressen, dort greift stattdessen ein Gemeindepunkt.
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+          examples: [[8.861245, 54.129605]]
+
+    EventProps:
+      type: object
+      description: |
+        Die Eigenschaften eines Termins. Optionale Felder fehlen, wenn ChurchDesk
+        nichts liefert — sie sind dann nicht vorhanden, nicht leer.
+      required:
+        - id
+        - title
+        - startUtc
+        - endUtc
+        - allDay
+        - showEndtime
+        - categories
+        - kirchspiel
+        - orgId
+        - orgName
+        - coordSource
+      properties:
+        id:
+          type: integer
+          description: ChurchDesk-Event-ID, eindeutig über alle Organisationen.
+        title:
+          type: string
+        startUtc:
+          type: string
+          format: date-time
+          description: Beginn in UTC. Die Anzeige rechnet clientseitig nach Europe/Berlin um.
+          examples: ["2026-06-15T08:00:00Z"]
+        endUtc:
+          type: string
+          format: date-time
+          description: Ende in UTC.
+        allDay:
+          type: boolean
+          description: Ganztägiger Termin.
+        showEndtime:
+          type: boolean
+          description: Ob die Endzeit angezeigt werden soll (Vorgabe der Gemeinde).
+        summary:
+          type: string
+          description: Kurzfassung.
+        descriptionHtml:
+          type: string
+          description: |
+            Beschreibung als HTML. Beim Anzeigen bereinigen (Web) beziehungsweise
+            die Auszeichnung entfernen (App).
+        image:
+          $ref: "#/components/schemas/Image"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventCategory"
+        contributor:
+          type: string
+          description: Wer den Termin gestaltet (Chor, Kantorei, Name).
+        parish:
+          type: string
+          description: |
+            Kirchengemeinde. Bei Mehrfachzuordnung die erste — die vollständige
+            Liste steht in `parishes`.
+          examples: ["Büsum"]
+        parishes:
+          type: array
+          description: |
+            Alle zugeordneten Kirchengemeinden. Nur gesetzt, wenn der Termin
+            mehreren gehört (etwa kirchspielweite Reihen); sonst gilt `parish`
+            allein. Der Gemeindefilter muss den Termin über jede davon finden.
+          items:
+            type: string
+          examples: [["Hennstedt", "Weddingstedt", "Hemme"]]
+        kirchspiel:
+          type: string
+          description: |
+            Abgeleitetes Kirchspiel. Ohne Zuordnung „Kirchenkreis Dithmarschen".
+          enum:
+            - Eider
+            - West
+            - Heide und Umgebung
+            - Mitte-Süd
+            - Geest
+            - Süd
+            - Kirchenkreis Dithmarschen
+        orgId:
+          type: integer
+          description: ChurchDesk-Organisation, aus der der Termin stammt.
+        orgName:
+          type: string
+          description: Anzeigename dieser Organisation.
+          examples: ["Kirchspiel West"]
+        locationName:
+          type: string
+          description: Anzeige-Ort.
+          examples: ["St. Clemens"]
+        address:
+          type: string
+        city:
+          type: string
+        zipcode:
+          type: string
+        price:
+          type: string
+          description: Preisangabe als Text, so wie gepflegt.
+          examples: ["5 €"]
+        coordSource:
+          type: string
+          description: |
+            Woher die Koordinate stammt:
+            `event` aus ChurchDesk, `fallback` vom Gemeinde- oder
+            Organisationspunkt (der Ort selbst ist nicht verortet), `fix` aus
+            einer gepflegten Korrektur.
+          enum: [event, fallback, fix]
+        highlight:
+          type: boolean
+          const: true
+          description: |
+            Redaktionell hervorgehobener Termin. Nur gesetzt, wenn hervorgehoben —
+            sonst fehlt das Feld.
+
+    EventCategory:
+      type: object
+      required: [id, title, color]
+      properties:
+        id:
+          type: integer
+          description: ChurchDesk-Kategorie-ID, nur innerhalb einer Organisation eindeutig.
+        title:
+          type: string
+        color:
+          type: integer
+          description: ChurchDesk-Farbindex; die Anzeige bildet ihn auf eine Palette ab.
+
+    Image:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        copyright:
+          type: string
+
+    Category:
+      type: object
+      description: Ein Eintrag der Kategorienliste für die Filterauswahl.
+      required: [title, color, count]
+      properties:
+        title:
+          type: string
+          examples: ["Gottesdienst"]
+        color:
+          type: integer
+        count:
+          type: integer
+          description: Anzahl der Termine mit dieser Kategorie im aktuellen Feed.
+
+    FeedMeta:
+      type: object
+      description: |
+        Angaben zum Datenstand, für Betrieb und Fehlersuche. Nicht Teil des
+        GeoJSON-Standards.
+      required:
+        - generatedAt
+        - from
+        - to
+        - total
+        - withEventCoords
+        - withFallbackCoords
+        - orgsOk
+        - orgsFailed
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+          description: Wann dieser Stand erzeugt wurde.
+        from:
+          type: string
+          format: date-time
+          description: Beginn des Zeitfensters.
+        to:
+          type: string
+          format: date-time
+          description: Ende des Zeitfensters.
+        total:
+          type: integer
+          description: Anzahl der Termine.
+        withEventCoords:
+          type: integer
+          description: Davon mit eigener Koordinate aus ChurchDesk.
+        withFallbackCoords:
+          type: integer
+          description: Davon auf einem Gemeinde- oder Organisationspunkt.
+        orgsOk:
+          type: integer
+          description: Organisationen, die geantwortet haben.
+        orgsFailed:
+          type: integer
+          description: |
+            Organisationen, die ausgefallen sind. Deren Termine fehlen im Feed,
+            ohne dass die Antwort sonst darauf hinweist.
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/ServiceStatus"
+        events:
+          type: integer
+          description: Termine im letzten Datenstand. Fehlt beim Zustand `starting`.
+        orgsOk:
+          type: integer
+        orgsFailed:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        cacheAgeSeconds:
+          type: integer
+          description: Alter des Datenstands in Sekunden.
+
+    Status:
+      type: object
+      required: [status, fallback]
+      properties:
+        status:
+          $ref: "#/components/schemas/ServiceStatus"
+        generatedAt:
+          type: string
+          format: date-time
+        ageSeconds:
+          type: number
+          description: Alter des Datenstands in Sekunden.
+        events:
+          type: integer
+        orgsOk:
+          type: integer
+        orgsFailed:
+          type: integer
+        withEventCoords:
+          type: integer
+        fallback:
+          type: array
+          description: |
+            Orte, deren Termine mangels Koordinate auf einem Gemeindepunkt liegen,
+            nach Häufigkeit sortiert. Beim Zustand `starting` leer.
+          items:
+            $ref: "#/components/schemas/FallbackGroup"
+
+    FallbackGroup:
+      type: object
+      required: [name, count, titles]
+      properties:
+        name:
+          type: string
+          description: |
+            Der Ortsname. Ist keiner gepflegt, steht hier ein Hinweis mit der
+            Gemeinde beziehungsweise Organisation.
+          examples: ["Gemeindehaus", "(kein Ortsname) — Lunden"]
+        count:
+          type: integer
+          description: Anzahl der betroffenen Termine.
+        titles:
+          type: array
+          description: Titel dieser Termine, ohne Wiederholungen.
+          items:
+            type: string
+
+    ServiceStatus:
+      type: string
+      description: |
+        `ok` — Daten liegen vor, alle Organisationen haben geantwortet.
+        `degraded` — Daten liegen vor, mindestens eine Organisation ist
+        ausgefallen; deren Termine fehlen im Feed.
+        `stale` — der letzte erfolgreiche Abruf liegt zu lange zurück.
+        `starting` — es liegt noch kein Datenstand vor (Kaltstart).
+      enum: [ok, degraded, stale, starting]
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Beschreibung des Fehlers.
+
+# Nicht dokumentiert: die Ortsverwaltung unter /admin.
+#
+# Dort werden Koordinaten-Korrekturen, Kategorie-Ausschlüsse und
+# Hervorhebungen zur Laufzeit gepflegt. Die Oberfläche liegt unter /admin, die
+# zugehörigen Routen unter /admin/api/. Sie sind durch ein Token geschützt und
+# ohne gesetztes Token abgeschaltet. Sie gehören nicht zur öffentlichen
+# Schnittstelle und keine App ruft sie.
