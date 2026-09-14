@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -7,7 +7,15 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { colors, radius } from "../lib/theme";
+import {
+  HANDLE_HEIGHT,
+  SHEET_STAGES,
+  adjacentStage,
+  sheetSnapPx,
+  sheetStageLabel,
+  type SheetStage,
+} from "../lib/listLayout";
+import { colors, radius, shadow, sizes } from "../lib/theme";
 
 interface Props {
   /** Höhe des Bereichs, über dem das Sheet liegt (Karte sichtbar dahinter). */
@@ -23,20 +31,13 @@ interface Props {
   onHiddenBottomChange?: (px: number) => void;
 }
 
-// Maße der Liste (müssen zu EventCard/EventList passen):
-const HANDLE_HEIGHT = 44;
-const CARD_HEIGHT = 104; // EventCard.pressArea.height
-const CARD_GAP = 12; // EventList ItemSeparator (spacing.md)
-const LIST_PADDING_TOP = 16; // EventList content padding (spacing.lg)
-
 // Vier feste Stufen (sichtbare Sheet-Höhe von unten gemessen):
 //  1) nur der Griff (über der Safe Area greifbar)
 //  2) Griff + 1 voller Eintrag
 //  3) Griff + 3 volle Einträge (Karte noch gut sichtbar)
 //  4) fast volle Höhe — zum Durchblättern langer Listen
-const SNAP_MID_PX = HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT + 20; // ≈ 184
-const SNAP_LARGE_PX =
-  HANDLE_HEIGHT + LIST_PADDING_TOP + CARD_HEIGHT * 3 + CARD_GAP * 2 + 20; // ≈ 412, 3 Einträge
+// Die Kartenmaße für 2) und 3) kommen aus lib/listLayout (eine Quelle für
+// EventCard, EventList und dieses Sheet) und folgen der Systemschrift.
 // Stufe 4 als Anteil der verfügbaren Höhe: Bei vielen Treffern will man lesen,
 // nicht die Karte sehen.
 const SNAP_FULL_FRACTION = 0.92;
@@ -49,16 +50,18 @@ export default function DraggableListSheet({
   children,
   onHiddenBottomChange,
 }: Props) {
+  const { fontScale } = useWindowDimensions();
   const heights = useMemo(() => {
+    const snap = sheetSnapPx(fontScale);
     // Stufe 1: nur Griff, aber über dem Home-Indicator (sonst nicht wischbar).
     const small = HANDLE_HEIGHT + bottomInset;
     // Obergrenze: nie höher als verfügbarer Platz (kleine Screens).
     const cap = availableHeight * SNAP_FULL_FRACTION;
     const full = cap;
-    const large = Math.min(SNAP_LARGE_PX + bottomInset, cap);
-    const mid = Math.min(SNAP_MID_PX + bottomInset, large);
+    const large = Math.min(snap.large + bottomInset, cap);
+    const mid = Math.min(snap.mid + bottomInset, large);
     return { small, mid, large, full };
-  }, [availableHeight, bottomInset]);
+  }, [availableHeight, bottomInset, fontScale]);
 
   // WICHTIG zur Architektur: Das Sheet hat eine FESTE Höhe (Vollstufe) und wird
   // per translateY ins Bild geschoben. Die Höhe selbst wird NICHT animiert —
@@ -85,13 +88,18 @@ export default function DraggableListSheet({
   // (iPad-Split-View; die App ist sonst hochkant fixiert), muss die Meldung zu
   // DIESER Stufe passen — vorher ging pauschal `mid` raus, auch wenn das Sheet
   // gerade ganz offen stand, und die Liste bekam einen falschen Endabstand.
-  const restStage = useRef<"small" | "mid" | "large" | "full">("mid");
+  const restStage = useRef<SheetStage>("mid");
+  // Dieselbe Stufe noch einmal als State — nur für den Screenreader-Griff
+  // (Label „Stufe 2 von 4“ muss neu rendern, die Ref tut das nicht).
+  const [stage, setStage] = useState<SheetStage>("mid");
   useEffect(() => {
     const visible = heights[restStage.current];
     sheetHeight.value = visible;
     startHeight.value = visible;
     reportHidden(visible);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Absichtlich nur an `heights` gebunden: restStage ist eine Ref, die Höhen
+    // sind Shared Values, reportHidden ändert sich nicht — nichts davon soll den
+    // Effekt erneut auslösen.
   }, [heights]);
 
   // Reanimated 4.3.x hat beim allerersten Frame einen Race zwischen dem
@@ -108,7 +116,7 @@ export default function DraggableListSheet({
 
   /** Merkt sich die eingerastete Stufe (läuft auf dem JS-Thread). */
   const rememberStage = (target: number) => {
-    restStage.current =
+    const next: SheetStage =
       target === heights.full
         ? "full"
         : target === heights.large
@@ -116,6 +124,8 @@ export default function DraggableListSheet({
           : target === heights.small
             ? "small"
             : "mid";
+    restStage.current = next;
+    setStage(next);
     reportHidden(target);
   };
 
@@ -123,6 +133,17 @@ export default function DraggableListSheet({
     "worklet";
     sheetHeight.value = withSpring(target, SPRING);
     runOnJS(rememberStage)(target);
+  };
+
+  // Screenreader (VoiceOver/TalkBack): Der Griff ist als „anpassbar“ gemeldet;
+  // Wischen nach oben/unten schaltet eine Stufe weiter. Läuft auf dem
+  // JS-Thread, deshalb ohne runOnJS direkt zur Stufe springen.
+  const onAccessibilityAction = (e: { nativeEvent: { actionName: string } }) => {
+    const action = e.nativeEvent.actionName;
+    if (action !== "increment" && action !== "decrement") return;
+    const target = heights[adjacentStage(restStage.current, action)];
+    sheetHeight.value = withSpring(target, SPRING);
+    rememberStage(target);
   };
 
   // Tipp auf den Griff → nächstgrößere Stufe (small→mid→large→full), von full zurück auf small.
@@ -201,7 +222,20 @@ export default function DraggableListSheet({
       <View style={styles.sheetInner}>
         {/* Griffbereich: Drag ODER Tipp (Tipp = eine Stufe größer) */}
         <GestureDetector gesture={Gesture.Race(pan, tap)}>
-          <View style={styles.handleArea}>
+          <View
+            style={styles.handleArea}
+            accessible
+            accessibilityRole="adjustable"
+            accessibilityLabel={sheetStageLabel(stage)}
+            accessibilityHint="Nach oben oder unten wischen, um die Liste zu vergrößern oder zu verkleinern"
+            accessibilityValue={{
+              min: 1,
+              max: SHEET_STAGES.length,
+              now: SHEET_STAGES.indexOf(stage) + 1,
+            }}
+            accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+            onAccessibilityAction={onAccessibilityAction}
+          >
             <View style={styles.grabber} />
           </View>
         </GestureDetector>
@@ -220,11 +254,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
     // Weicher Schatten nach OBEN — setzt das Sheet gegen die Karte ab, ohne als
     // harte Linie zu lesen (die Rahmenkante ist bewusst entfallen).
-    shadowColor: "#0A1F1F",
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 16,
+    ...shadow.sheet,
   },
   sheetInner: {
     flex: 1,
@@ -239,13 +269,12 @@ const styles = StyleSheet.create({
   handleArea: {
     alignItems: "center",
     justifyContent: "center",
-    height: 44, // große, leicht greifbare Drag-Zone
+    height: HANDLE_HEIGHT, // große, leicht greifbare Drag-Zone
     backgroundColor: colors.background,
   },
   grabber: {
-    width: 52,
-    height: 6,
-    borderRadius: 3,
+    ...sizes.grabber,
+    borderRadius: radius.pill,
     backgroundColor: colors.borderStrong,
   },
   body: { flex: 1 },

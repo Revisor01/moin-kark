@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
+  BackHandler,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,6 +22,7 @@ import DraggableListSheet from "../components/DraggableListSheet";
 import OnboardingOverlay from "../components/OnboardingOverlay";
 import { useCategories, useEvents } from "../lib/hooks/useEvents";
 import { useLocation } from "../lib/hooks/useLocation";
+import { useSavedSync } from "../lib/hooks/useSavedSync";
 import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
 import {
   cancelForEvent,
@@ -29,7 +31,7 @@ import {
   scheduleForEvent,
   type ReminderPref,
 } from "../lib/reminders";
-import { syncSavedEvents, loadSnapshotStartTimes } from "../lib/savedSync";
+import { resolveBackPress } from "../lib/backNavigation";
 import {
   DEFAULT_FILTERS,
   applyFilters,
@@ -40,7 +42,7 @@ import {
   type Bounds,
   type Filters,
 } from "../lib/filters";
-import { colors, fonts, spacing } from "../lib/theme";
+import { colors, glyph, mapColors, radius, sizes, spacing, text } from "../lib/theme";
 
 const WIDE_BREAKPOINT = 900;
 
@@ -49,7 +51,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const isWide = width >= WIDE_BREAKPOINT;
 
-  const { data, isLoading, isError, refetch, isFetching } = useEvents();
+  const { data, dataUpdatedAt, isLoading, isError, refetch, isFetching } = useEvents();
   const { data: categories } = useCategories();
   const { location, status: locStatus, request: requestLocation } = useLocation();
   const { mapsApp, setMapsApp } = useMapsApp();
@@ -98,22 +100,28 @@ export default function Home() {
   const allFeatures = data?.features ?? [];
 
   // Merken + lokale Erinnerung planen/abbrechen.
-  const toggleSave = async (id: number) => {
-    const wasSaved = isSaved(id);
-    rawToggleSave(id);
-    if (wasSaved) {
-      cancelForEvent(id);
-    } else if (reminderPref !== "off") {
-      const f = allFeatures.find((x) => x.properties.id === id);
-      if (f && (await ensurePermission())) scheduleForEvent(f, reminderPref);
-    }
-  };
+  // useCallback: geht als Prop an jede Listenkarte — eine bei jedem Render neue
+  // Funktion hebelte dort das memo aus, und alle sichtbaren Karten renderten
+  // bei jeder Positionsmeldung und jedem Minutentakt neu.
+  const toggleSave = useCallback(
+    async (id: number) => {
+      const wasSaved = isSaved(id);
+      rawToggleSave(id);
+      if (wasSaved) {
+        cancelForEvent(id).catch(() => {});
+      } else if (reminderPref !== "off") {
+        const f = allFeatures.find((x) => x.properties.id === id);
+        if (f && (await ensurePermission())) scheduleForEvent(f, reminderPref).catch(() => {});
+      }
+    },
+    [isSaved, rawToggleSave, reminderPref, allFeatures]
+  );
 
   // Erinnerungs-Präferenz ändern → alle gemerkten Events neu planen.
   const onReminderPref = async (p: ReminderPref) => {
     setReminderPref(p);
     if (p !== "off") await ensurePermission();
-    rescheduleAll(savedFeatures, p);
+    rescheduleAll(savedFeatures, p).catch(() => {});
   };
 
   // „Zu meinem Standort"-Button: Position holen + hinfliegen. Liegt der Standort außerhalb
@@ -139,67 +147,53 @@ export default function Home() {
     setDidInitialZoom(true);
   }, [location, allFeatures, didInitialZoom]);
 
-  // Einmaliger Abgleich gemerkter Events gegen frische Daten (entfällt / verschoben → lokale Mitteilung).
-  const didSync = useRef(false);
-  useEffect(() => {
-    // `reminderLoaded` abwarten: sonst liefe der Abgleich mit der Default-
-    // Präferenz und plante Erinnerungen, die abgeschaltet sein sollten. Ein
-    // zweiter Lauf mit dem echten Wert findet wegen `didSync` nicht statt.
-    if (didSync.current || !savedLoaded || !reminderLoaded || allFeatures.length === 0) return;
-    didSync.current = true;
-    (async () => {
-      const ids = [...saved];
-
-      // Vergangene Likes dauerhaft aufräumen — sowohl Events, die noch im Feed
-      // stehen (über isPast) als auch verwaiste (nicht mehr im Feed), deren
-      // Startzeit aus dem Snapshot in der Vergangenheit liegt.
-      const byId = new Map(allFeatures.map((f) => [f.properties.id, f]));
-      const snapTimes = await loadSnapshotStartTimes();
-      const nowMs = Date.now();
-      const pastIds = ids.filter((id) => {
-        const f = byId.get(id);
-        if (f) return isPast(f);
-        const startUtc = snapTimes[id];
-        // Verwaist + Startzeit vorbei → war ein vergangenes Event → entfernen.
-        // Verwaist ohne bekannte Startzeit → in Ruhe lassen (kein Snapshot).
-        return startUtc ? new Date(startUtc).getTime() < nowMs : false;
-      });
-      if (pastIds.length) {
-        removeMany(pastIds);
-        for (const id of pastIds) cancelForEvent(id);
-      }
-
-      const res = await syncSavedEvents(ids, allFeatures);
-      // Reminder für entfallene/verschobene Events neu planen.
-      if ((res.removed.length || res.changed.length) && reminderPref !== "off") {
-        for (const id of res.removed) cancelForEvent(id);
-        for (const id of res.changed) {
-          cancelForEvent(id);
-          const f = allFeatures.find((x) => x.properties.id === id);
-          if (f) scheduleForEvent(f, reminderPref);
-        }
-      }
-      // Einmalig nach dem Update: ALLE Reminder neu planen, damit alte (falsch
-      // formatierte „Morgen"-) Benachrichtigungen durch die korrekte Variante ersetzt werden.
-      if (reminderPref !== "off") {
-        const KEY = "kkd:reminderFormatV2";
-        if (!(await AsyncStorage.getItem(KEY))) {
-          const savedNow = allFeatures.filter((f) => saved.has(f.properties.id));
-          await rescheduleAll(savedNow, reminderPref);
-          await AsyncStorage.setItem(KEY, "1");
-        }
-      }
-    })();
-  }, [savedLoaded, reminderLoaded, allFeatures, saved, reminderPref]);
+  // Abgleich gemerkter Events gegen frische Netzdaten (entfällt / verschoben →
+  // lokale Mitteilung, Erinnerungen nachziehen). Läuft bei jeder neuen Netzantwort.
+  useSavedSync({
+    features: allFeatures,
+    meta: data?.meta,
+    dataUpdatedAt,
+    saved,
+    savedLoaded,
+    removeMany,
+    reminderPref,
+    reminderLoaded,
+  });
 
   // Tap auf eine Mitteilung → zugehöriges Event öffnen (falls es noch existiert).
+  // useLastNotificationResponse statt eines reinen Listeners: Bei Kaltstart über
+  // eine Mitteilung trifft die Antwort ein, BEVOR Home gemountet ist — der
+  // Listener verpasste sie, die App startete nur auf der Karte. Der Hook liest
+  // beim Mount die zuletzt gespeicherte Antwort und hört danach weiter zu
+  // (s. expo-notifications 56, useLastNotificationResponse).
+  const lastNotificationResponse = Notifications.useLastNotificationResponse();
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener((resp) => {
-      const id = resp.notification.request.content.data?.eventId;
-      if (typeof id === "number") setSelectedId(id);
+    if (!lastNotificationResponse) return;
+    const id = lastNotificationResponse.notification.request.content.data?.eventId;
+    if (typeof id === "number") setSelectedId(id);
+    // Verbraucht: sonst öffnete dieselbe Antwort das Event bei einem späteren
+    // Neu-Mount erneut, und ein zweiter Tipp auf dieselbe Mitteilung gälte als
+    // unverändert.
+    Notifications.clearLastNotificationResponse();
+  }, [lastNotificationResponse]);
+
+  // Android-Zurücktaste: offene Sheets schließen statt die App in den
+  // Hintergrund zu schicken. Reihenfolge s. lib/backNavigation. Auf iOS und
+  // im Web ist der Handler wirkungslos.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      const target = resolveBackPress({
+        eventOpen: selectedId !== null,
+        filtersOpen,
+        profileOpen,
+      });
+      if (target === "event") setSelectedId(null);
+      else if (target === "filters") setFiltersOpen(false);
+      else if (target === "profile") setProfileOpen(false);
+      return target !== null;
     });
     return () => sub.remove();
-  }, []);
+  }, [selectedId, filtersOpen, profileOpen]);
 
   // Das Listen-Sheet verdeckt den unteren Teil der Karte. Die Liste soll sich aber NUR auf den
   // SICHTBAREN Ausschnitt (über dem Sheet) beziehen → unteren Bounds-Anteil abschneiden.
@@ -459,7 +453,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   wideRow: { flex: 1, flexDirection: "row" },
-  mapPane: { flex: 1.4, backgroundColor: colors.mapWater },
+  mapPane: { flex: 1.4, backgroundColor: mapColors.water },
   listPane: {
     flex: 1,
     maxWidth: 460,
@@ -468,7 +462,7 @@ const styles = StyleSheet.create({
     borderRightColor: colors.border,
     backgroundColor: colors.background,
   },
-  mapArea: { flex: 1, backgroundColor: colors.mapWater },
+  mapArea: { flex: 1, backgroundColor: mapColors.water },
   floatingBar: {
     position: "absolute",
     top: 0,
@@ -490,45 +484,33 @@ const styles = StyleSheet.create({
   profileBtn: {
     width: 42,
     height: 42,
-    borderRadius: 21,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
-  profileIcon: { fontSize: 19, color: colors.accent },
+  profileIcon: { ...glyph.md, color: colors.accent },
   profileBadge: {
     position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    top: -spacing.xs,
+    right: -spacing.xs,
+    minWidth: sizes.badge,
+    height: sizes.badge,
+    borderRadius: radius.pill,
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
     borderWidth: 2,
     borderColor: colors.background,
   },
-  profileBadgeText: { fontFamily: fonts.bodySemibold, fontSize: 10, color: colors.onAccent },
-  kicker: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: colors.primary,
-  },
-  h1: {
-    fontFamily: fonts.displayBold,
-    fontSize: 28,
-    color: colors.foreground,
-    lineHeight: 32,
-    marginTop: 2,
-  },
-  sub: { fontFamily: fonts.body, fontSize: 14, color: colors.muted, marginTop: 2 },
+  profileBadgeText: { ...text.captionStrong, color: colors.onColor },
+  kicker: { ...text.eyebrow, color: colors.primary },
+  h1: { ...text.display, color: colors.ink, marginTop: spacing.xxs },
+  sub: { ...text.label, color: colors.muted, marginTop: spacing.xxs },
   center: {
     flex: 1,
     alignItems: "center",
@@ -537,10 +519,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.xl,
   },
-  loadingText: { fontFamily: fonts.body, fontSize: 15, color: colors.muted },
+  loadingText: { ...text.body, color: colors.muted },
   errorText: {
-    fontFamily: fonts.body,
-    fontSize: 15,
+    ...text.body,
     color: colors.muted,
     textAlign: "center",
     maxWidth: 300,
@@ -550,7 +531,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
-    borderRadius: 12,
+    borderRadius: radius.md,
   },
-  retryText: { fontFamily: fonts.bodySemibold, fontSize: 15, color: colors.onPrimary },
+  retryText: { ...text.bodyStrong, color: colors.onColor },
 });

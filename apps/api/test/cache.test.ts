@@ -120,6 +120,51 @@ describe("SwrCache", () => {
     expect(cache.peekLatest()?.value).toBe("B");
   });
 
+  it("fällt bei neuem Schlüssel auf den jüngsten alten Stand zurück, statt zu scheitern", async () => {
+    // Mitternacht: Der Tages-Schlüssel wechselt, der Stand von gestern liegt aber
+    // noch im Speicher. Fällt ChurchDesk gerade aus, darf das kein 500 werden.
+    const cache = new SwrCache<string>({ ttlMs: 60_000 });
+    await cache.get("gestern", () => Promise.resolve("A"));
+
+    const loader = vi.fn().mockRejectedValue(new Error("ChurchDesk weg"));
+    expect(await cache.get("heute", loader)).toBe("A");
+    // Der neue Schlüssel wird trotzdem im Hintergrund geladen (und scheitert hier).
+    await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(1));
+    // Nach dem Fehlschlag steht der alte Stand weiterhin.
+    expect(await cache.get("heute", loader)).toBe("A");
+  });
+
+  it("lädt einen neuen Schlüssel im Hintergrund und wechselt danach auf den neuen Stand", async () => {
+    // Die erste Anfrage nach Mitternacht darf nicht auf den vollen 14-Org-Fetch
+    // warten — sie bekommt den Vortagesstand, der neue Tag lädt nebenher.
+    let resolve!: (v: string) => void;
+    const cache = new SwrCache<string>({ ttlMs: 60_000 });
+    await cache.get("gestern", () => Promise.resolve("A"));
+
+    const loader = vi.fn(() => new Promise<string>((r) => (resolve = r)));
+    // Zwei parallele Anfragen: beide sofort bedient, nur ein Ladevorgang.
+    expect(await Promise.all([cache.get("heute", loader), cache.get("heute", loader)])).toEqual([
+      "A",
+      "A",
+    ]);
+    expect(loader).toHaveBeenCalledTimes(1);
+
+    resolve("B");
+    await vi.waitFor(async () => expect(await cache.get("heute", loader)).toBe("B"));
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+
+  it("wartet beim echten Kaltstart weiterhin synchron und reicht den Fehler durch", async () => {
+    // Der Rückfall greift nur, wenn überhaupt ein Stand da ist — ohne Eintrag
+    // bleibt es beim bisherigen Verhalten (Test oben), auch nach einem
+    // gescheiterten Erstversuch unter einem anderen Schlüssel.
+    const cache = new SwrCache<string>({ ttlMs: 60_000 });
+    await expect(cache.get("gestern", () => Promise.reject(new Error("weg")))).rejects.toThrow("weg");
+    await expect(cache.get("heute", () => Promise.reject(new Error("immer noch weg")))).rejects.toThrow(
+      "immer noch weg"
+    );
+  });
+
   it("wirft alte Schlüssel über dem Deckel weg", async () => {
     // Das Zeitfenster wandert täglich — ohne Deckel bliebe der Eintrag von
     // gestern für immer liegen.
@@ -129,8 +174,11 @@ describe("SwrCache", () => {
       await new Promise((r) => setTimeout(r, 2));
     }
     const loader = vi.fn().mockResolvedValue("neu geladen");
-    // tag1 ist verdrängt und muss neu geladen werden …
-    expect(await cache.get("tag1", loader)).toBe("neu geladen");
+    // tag1 ist verdrängt und wird neu geladen — bis dahin gibt es den jüngsten
+    // Stand (tag3) als Rückfall …
+    expect(await cache.get("tag1", loader)).toBe("tag3");
+    expect(loader).toHaveBeenCalledTimes(1);
+    await vi.waitFor(async () => expect(await cache.get("tag1", loader)).toBe("neu geladen"));
     // … tag3 liegt noch im Cache.
     expect(await cache.get("tag3", loader)).toBe("tag3");
     expect(loader).toHaveBeenCalledTimes(1);

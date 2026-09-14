@@ -1,0 +1,35 @@
+/* Generiert aus packages/shared/src/theme.ts — dort ändern, nicht hier. */
+:root{
+  --ink:#1C2B2B;--ink-rgb:28,43,43;
+  --muted:#5C6B6B;--muted-rgb:92,107,107;
+  --faint:#687373;--faint-rgb:104,115,115;
+  --background:#FBF6EE;--background-rgb:251,246,238;
+  --surface:#FFFFFF;--surface-rgb:255,255,255;
+  --on-color:#FFFFFF;--on-color-rgb:255,255,255;
+  --surface-muted:#F3ECE0;--surface-muted-rgb:243,236,224;
+  --border:#E6DCCB;--border-rgb:230,220,203;
+  --border-strong:#D6C8B0;--border-strong-rgb:214,200,176;
+  --primary:#0E6E6E;--primary-rgb:14,110,110;
+  --primary-soft:#A9D6D6;--primary-soft-rgb:169,214,214;
+  --accent:#E4572E;--accent-rgb:228,87,46;
+  --accent-dark:#B8431F;--accent-dark-rgb:184,67,31;
+  --success:#2E7D5B;--success-rgb:46,125,91;
+  --warning:#C97B2C;--warning-rgb:201,123,44;
+  --location:#2563EB;--location-rgb:37,99,235;
+  --map-green:#E4EBDA;--map-green-rgb:228,235,218;
+  --cat-andacht:#3A8A8A;--cat-andacht-rgb:58,138,138;
+  --cat-concert:#8E44AD;--cat-concert-rgb:142,68,173;
+  --cat-kids:#D4A017;--cat-kids-rgb:212,160,23;
+  --alpha-backdrop:0.6;--alpha-overlay:0.9;--alpha-tint:0.12;--alpha-halo:0.2;--alpha-on-dark-strong:0.95;--alpha-on-dark-text:0.85;--alpha-on-dark-muted:0.6;--alpha-on-dark-faint:0.5;--alpha-on-dark-line:0.12;
+  --space-xxs:2px;--space-xs:4px;--space-sm:8px;--space-md:12px;--space-lg:16px;--space-xl:24px;--space-xxl:32px;--space-3xl:48px;--space-4xl:64px;
+  --radius-sm:8px;--radius-md:12px;--radius-lg:18px;--radius-pill:999px;
+  --font-display:"Bricolage Grotesque","DM Sans",sans-serif;--font-body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --text-display:26px;--leading-display:30px;--weight-display:700;
+  --text-heading:24px;--leading-heading:28px;--weight-heading:700;
+  --text-title:17px;--leading-title:21px;--weight-title:600;
+  --text-body:15px;--leading-body:22px;--weight-body:400;
+  --text-label:13px;--leading-label:18px;--weight-label:400;
+  --text-caption:12px;--leading-caption:15px;--weight-caption:400;
+  --tracking-eyebrow:0.5px;
+  --shadow-card:0 4px 12px rgba(28,43,43,0.08);--shadow-sheet:0 -6px 20px rgba(28,43,43,0.18);
+}

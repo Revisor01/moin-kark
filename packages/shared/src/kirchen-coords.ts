@@ -9,8 +9,20 @@ export interface LatLng {
   lng: number;
 }
 
-/** Gemeinde-Name (wie in parishes[0].title) → Koordinate. */
-export const PARISH_COORDS: Record<string, LatLng> = {
+/**
+ * Titel-basierte Koordinaten-Korrektur: Präfix-Match auf dem normalisierten
+ * Titel. `force` überstimmt auch eine gepflegte ChurchDesk-Koordinate — in der
+ * statischen Tabelle unten steckt das in TITLE_OVERRIDES, die über /admin
+ * gepflegten Einträge tragen das Flag direkt am Eintrag.
+ */
+export interface TitleCoordFix {
+  prefix: string;
+  coords: LatLng;
+  force?: boolean;
+}
+
+/** Gemeinde-Name (wie in parishes[0].title) → Koordinate. Nur über fallbackCoords() erreichbar. */
+const PARISH_COORDS: Record<string, LatLng> = {
   Albersdorf: { lat: 54.147538, lng: 9.28266 },
   Brunsbüttel: { lat: 53.898038, lng: 9.141931 },
   Burg: { lat: 53.996541, lng: 9.265128 },
@@ -171,7 +183,7 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
  * immer Vorrang. Der Vergleich ist ein Präfix-Match auf dem normalisierten Titel,
  * damit Varianten wie „Kirchenkiste" / „Kirchenkiste!" beide erfasst werden.
  */
-export const TITLE_COORD_FIXES: Array<{ prefix: string; coords: LatLng }> = [
+export const TITLE_COORD_FIXES: TitleCoordFix[] = [
   // Die Kirchenkiste steht auf der „Watt'n Insel" in der Familienlagune. ChurchDesk
   // setzt für alle Termine dort die Gelände-Adresse (Nordseestraße 79X) — die
   // Kiste selbst steht aber an einer bestimmten Stelle. Diese Koordinate ist die
@@ -243,7 +255,10 @@ export function coordOverrideForTitle(title: string | undefined): LatLng | undef
  */
 export function coordFixFor(locationName: string | undefined): LatLng | undefined {
   if (!locationName) return undefined;
-  return LOCATION_COORD_FIXES[normalize(locationName)];
+  const key = normalize(locationName);
+  // Nur eigene Einträge: „constructor" träfe sonst Object.prototype und das
+  // Feature bekäme [null, null] als Koordinate.
+  return Object.hasOwn(LOCATION_COORD_FIXES, key) ? LOCATION_COORD_FIXES[key] : undefined;
 }
 
 
@@ -256,7 +271,7 @@ const PARISH_NORM: Record<string, LatLng> = Object.fromEntries(
 export function fallbackCoords(parish: string | undefined, orgId: number): LatLng {
   if (parish) {
     const key = normalize(parish);
-    if (PARISH_NORM[key]) return PARISH_NORM[key];
+    if (Object.hasOwn(PARISH_NORM, key)) return PARISH_NORM[key];
     for (const [name, c] of Object.entries(PARISH_NORM)) {
       if (key.includes(name) || name.includes(key)) return c;
     }

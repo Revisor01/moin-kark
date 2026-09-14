@@ -13,15 +13,15 @@
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspace apps/api && npm run typecheck --workspace apps/app",
-    "test": "npm test --workspace packages/shared && npm test --workspace apps/api",
+    "test": "npm test --workspace packages/shared && npm test --workspace apps/api && npm test --workspace apps/app",
     "typecheck:api": "npm run typecheck --workspace apps/api",
     "typecheck:app": "npm run typecheck --workspace apps/app",
     "dev:api": "npm run dev --workspace apps/api",
+    "sync:theme-css": "npm run sync:theme-css --workspace packages/shared",
     "audit:prod": "npm audit --omit=dev"
   },
   "overrides": {
     "nanoid": "^3.3.18",
-    "uuid": "^11.1.1",
-    "maplibre-gl": "^6.4.1"
+    "uuid": "^11.1.1"
   }
 }

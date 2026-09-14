@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { EXCLUDED_CATEGORIES } from "../src/aggregate.js";
 import { KIRCHSPIELE } from "@moinkark/shared";
+import { META_FIELDS } from "./meta-fields.js";
 
 /**
  * Die OpenAPI-Datei ist ein Vertrag gegenüber den Apps auf den Geräten — sie
@@ -21,6 +22,7 @@ describe("docs/openapi.yaml", () => {
 
   it("dokumentiert alle öffentlichen Routen", () => {
     expect(Object.keys(doc.paths).sort()).toEqual([
+      "/",
       "/categories.json",
       "/events.geojson",
       "/healthz",
@@ -29,14 +31,49 @@ describe("docs/openapi.yaml", () => {
     ]);
   });
 
+  it("beschreibt alle Meta-Felder des Feeds", () => {
+    // Dieselbe Liste prüft aggregate.test.ts gegen die Antwort der API.
+    const meta = doc.components.schemas.FeedMeta;
+    expect(Object.keys(meta.properties).sort()).toEqual(META_FIELDS);
+    expect(meta.required.sort()).toEqual(META_FIELDS);
+  });
+
+  it("nennt die Zustandszahlen, die /healthz wirklich liefert", () => {
+    expect(Object.keys(doc.components.schemas.Health.properties).sort()).toEqual([
+      "cacheAgeSeconds",
+      "events",
+      "generatedAt",
+      "orgsConfigured",
+      "orgsFailed",
+      "orgsMissing",
+      "orgsOk",
+      "status",
+    ]);
+  });
+
+  it("dokumentiert bedingte Anfragen und Zwischenspeichern der Feed-Routen", () => {
+    for (const p of ["/events.geojson", "/categories.json", "/version.json"]) {
+      const get = doc.paths[p].get;
+      expect(Object.keys(get.responses["200"].headers).sort()).toEqual(["Cache-Control", "ETag"]);
+      expect(get.responses["304"]).toEqual({ $ref: "#/components/responses/NotModified" });
+      expect(get.parameters).toEqual([{ $ref: "#/components/parameters/IfNoneMatch" }]);
+    }
+    expect(Object.keys(doc.components.responses.NotModified.headers).sort()).toEqual([
+      "Cache-Control",
+      "ETag",
+    ]);
+    expect(doc.components.headers.CacheControl.schema.const).toBe("public, max-age=60");
+  });
+
   it("dokumentiert die Admin-Routen nicht als öffentliche Schnittstelle", () => {
     expect(Object.keys(doc.paths).some((p) => p.startsWith("/admin"))).toBe(false);
   });
 
   it("nennt zu jeder Route die Statuscodes, die der Server wirklich sendet", () => {
-    expect(Object.keys(doc.paths["/events.geojson"].get.responses).sort()).toEqual(["200", "500"]);
-    expect(Object.keys(doc.paths["/categories.json"].get.responses).sort()).toEqual(["200", "500"]);
-    expect(Object.keys(doc.paths["/version.json"].get.responses).sort()).toEqual(["200", "500"]);
+    expect(Object.keys(doc.paths["/"].get.responses)).toEqual(["200"]);
+    expect(Object.keys(doc.paths["/events.geojson"].get.responses).sort()).toEqual(["200", "304", "500"]);
+    expect(Object.keys(doc.paths["/categories.json"].get.responses).sort()).toEqual(["200", "304", "500"]);
+    expect(Object.keys(doc.paths["/version.json"].get.responses).sort()).toEqual(["200", "304", "500"]);
     // /healthz meldet 503, wenn kein brauchbarer Datenstand vorliegt.
     expect(Object.keys(doc.paths["/healthz"].get.responses).sort()).toEqual(["200", "503"]);
     // /status.json antwortet immer mit 200, auch beim Kaltstart.

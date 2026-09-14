@@ -1,8 +1,9 @@
 import { useCallback } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { EventFeature } from "@moinkark/shared";
 import EventCard from "./EventCard";
-import { colors, fonts, spacing } from "../lib/theme";
+import { CARD_GAP, LIST_PADDING_TOP, listItemLayout } from "../lib/listLayout";
+import { colors, spacing, text } from "../lib/theme";
 
 /**
  * Atempause unter dem letzten Eintrag. Die Liste endet exakt an der sichtbaren
@@ -11,13 +12,9 @@ import { colors, fonts, spacing } from "../lib/theme";
  * Scroll-Blocker (RefreshControl im Sheet) noch unerkannt war, und erzeugte am
  * Listenende eine bildschirmfüllende Leerfläche.
  */
-const TAIL_SPACE = 24;
+const TAIL_SPACE = spacing.xl;
 
-/** Kartenhöhe (s. EventCard styles.pressArea) + Trenner — für getItemLayout. */
-const CARD_HEIGHT = 104;
-const ROW_HEIGHT = CARD_HEIGHT + spacing.md;
-
-const ItemSeparator = () => <View style={{ height: spacing.md }} />;
+const ItemSeparator = () => <View style={{ height: CARD_GAP }} />;
 
 interface Props {
   features: EventFeature[];
@@ -49,12 +46,17 @@ export default function EventList({
   refreshing = false,
   inSheet = false,
 }: Props) {
+  const { fontScale } = useWindowDimensions();
+
+  // `onSelect` wird direkt durchgereicht (EventCard ruft es mit der ID). Ein
+  // Wrapper pro Karte wäre bei jedem Render neu und hebelte das memo der Karte
+  // aus — dann renderten alle sichtbaren Karten bei jeder Positionsmeldung.
   const renderItem = useCallback(
     ({ item }: { item: EventFeature }) => (
       <EventCard
         feature={item}
         active={item.properties.id === selectedId}
-        onPress={() => onSelect(item.properties.id)}
+        onPress={onSelect}
         saved={isSaved?.(item.properties.id)}
         onToggleSave={onToggleSave}
       />
@@ -62,21 +64,24 @@ export default function EventList({
     [selectedId, onSelect, isSaved, onToggleSave]
   );
 
+  // Alle Karten sind exakt gleich hoch (s. lib/listLayout). Damit kann FlatList
+  // Positionen ausrechnen, statt sie zu messen — spart Arbeit beim Scrollen und
+  // macht scrollToIndex verlässlich. Die Höhe hängt an der Systemschrift.
+  const getItemLayout = useCallback(
+    (_: ArrayLike<EventFeature> | null | undefined, index: number) => listItemLayout(index, fontScale),
+    [fontScale]
+  );
+
   return (
     <FlatList
       data={features}
       keyExtractor={(f) => String(f.properties.id)}
-      extraData={{ selectedId, isSaved }}
+      // Kein extraData nötig: selectedId und isSaved stecken in den
+      // Abhängigkeiten von renderItem — ändert sich eines, ist renderItem neu
+      // und FlatList rendert. Ein Objekt-Literal hier wäre bei JEDEM Render neu.
       renderItem={renderItem}
       ItemSeparatorComponent={ItemSeparator}
-      // Alle Karten sind exakt gleich hoch (CARD_HEIGHT + Trenner). Damit kann
-      // FlatList Positionen ausrechnen, statt sie zu messen — spart Arbeit beim
-      // Scrollen und macht scrollToIndex verlässlich.
-      getItemLayout={(_, index) => ({
-        length: ROW_HEIGHT,
-        offset: ROW_HEIGHT * index,
-        index,
-      })}
+      getItemLayout={getItemLayout}
       // Großzügige Reserve am Listenende: Das Sheet steht je nach Snap-Stufe nur
       // teilweise im Bild — ohne diesen Leerraum bleibt der letzte Eintrag im
       // abgeschnittenen Bereich hängen und ist nicht lesbar. Als Scroll-INHALT
@@ -113,12 +118,12 @@ export default function EventList({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg },
+  // paddingTop = LIST_PADDING_TOP: derselbe Wert steckt in getItemLayout.
+  content: { paddingHorizontal: spacing.lg, paddingTop: LIST_PADDING_TOP },
   empty: { alignItems: "center", paddingVertical: spacing.xxl, gap: spacing.sm },
-  emptyTitle: { fontFamily: fonts.display, fontSize: 18, color: colors.foreground },
+  emptyTitle: { ...text.title, color: colors.ink },
   emptyText: {
-    fontFamily: fonts.body,
-    fontSize: 14,
+    ...text.body,
     color: colors.muted,
     textAlign: "center",
     maxWidth: 280,

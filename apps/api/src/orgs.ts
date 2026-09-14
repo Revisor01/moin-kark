@@ -11,18 +11,23 @@ export interface OrgConfig {
   token: string;
 }
 
+/**
+ * Orgs, für die kein Token gesetzt ist. Die werden nie abgefragt — zählen also
+ * weder als ok noch als ausgefallen. Für /healthz und die Feed-Meta, damit eine
+ * beim Redeploy verlorene Token-Zeile nicht nur als Log-Zeile auffällt.
+ */
+export function missingOrgIds(): number[] {
+  return ALL_ORG_IDS.filter((id) => !process.env[`CD_TOKEN_${id}`]?.trim());
+}
+
 /** Liest die Org-Tokens aus der Umgebung. Loggt fehlende Tokens, ohne sie auszugeben. */
 export function loadOrgs(): OrgConfig[] {
   const orgs: OrgConfig[] = [];
-  const missing: number[] = [];
   for (const id of ALL_ORG_IDS) {
     const token = process.env[`CD_TOKEN_${id}`]?.trim();
-    if (token) {
-      orgs.push({ id, token });
-    } else {
-      missing.push(id);
-    }
+    if (token) orgs.push({ id, token });
   }
+  const missing = missingOrgIds();
   if (missing.length) {
     console.warn(
       `[orgs] Kein Token für ${missing.length} Org(s): ${missing.join(", ")} — werden übersprungen.`

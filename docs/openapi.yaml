@@ -37,6 +37,31 @@ tags:
     description: Zustand der Schnittstelle.
 
 paths:
+  /:
+    get:
+      tags: [Betrieb]
+      summary: Lebenszeichen
+      description: |
+        Nennt den Dienst und antwortet immer mit `ok`, solange der Prozess
+        läuft — unabhängig vom Datenstand. Für „ist da überhaupt etwas?";
+        den Zustand der Daten meldet `/healthz`.
+      operationId: getRoot
+      responses:
+        "200":
+          description: Der Dienst läuft.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, status]
+                properties:
+                  service:
+                    type: string
+                    const: moinkark-api
+                  status:
+                    type: string
+                    const: ok
+
   /events.geojson:
     get:
       tags: [Feed]
@@ -52,23 +77,31 @@ paths:
 
         Antworten werden server-seitig zwischengespeichert. Fällt ChurchDesk
         vorübergehend aus, bleibt der letzte erfolgreiche Stand stehen, statt
-        eine leere Sammlung zu liefern.
+        eine leere Sammlung zu liefern. Fällt eine einzelne Organisation aus,
+        fehlen ihre Termine — welche das ist, steht in `meta.orgsFailedIds`.
+
+        Die Antwort trägt einen `ETag` (dieselbe Kennung wie `/version.json`);
+        mit `If-None-Match` antwortet der Server bei unverändertem Stand mit
+        304 ohne Inhalt. Sie darf eine Minute lang zwischengespeichert werden.
       operationId: getEvents
+      parameters:
+        - $ref: "#/components/parameters/IfNoneMatch"
       responses:
         "200":
           description: Der aktuelle Terminbestand.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/EventFeatureCollection"
+        "304":
+          $ref: "#/components/responses/NotModified"
         "500":
-          description: |
-            Es liegt kein Datenstand vor und es konnte auch keiner geladen werden
-            (etwa weil alle Organisationen ausgefallen sind).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/FeedUnavailable"
 
   /categories.json:
     get:
@@ -80,23 +113,29 @@ paths:
         (der Vergleich ignoriert Groß- und Kleinschreibung sowie Randleerzeichen).
         Sortiert nach Häufigkeit, bei Gleichstand alphabetisch.
 
-        Die Antwort ist ein **Array**.
+        Die Antwort ist ein **Array**. `ETag`, `If-None-Match` und
+        Zwischenspeichern wie bei `/events.geojson`.
       operationId: getCategories
+      parameters:
+        - $ref: "#/components/parameters/IfNoneMatch"
       responses:
         "200":
           description: Die Kategorien mit ihrer Häufigkeit.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Category"
+        "304":
+          $ref: "#/components/responses/NotModified"
         "500":
-          description: Es konnte kein Datenstand geladen werden.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/FeedUnavailable"
 
   /version.json:
     get:
@@ -109,12 +148,22 @@ paths:
 
         Die Kennung ändert sich, sobald sich an einem Termin etwas ändert, das in
         der App sichtbar ist — Titel, Zeiten, Ort, Beschreibung, Bild, Kategorien,
-        Preis oder die Hervorhebung. Eine andere Reihenfolge derselben Termine
-        ändert sie nicht.
+        Preis, Ansprechperson, Gemeindezuordnung oder die Hervorhebung. Eine
+        andere Reihenfolge derselben Termine ändert sie nicht.
+
+        Dieselbe Kennung steht im `ETag`; mit `If-None-Match` kommt bei
+        unverändertem Stand ein 304 ohne Inhalt.
       operationId: getVersion
+      parameters:
+        - $ref: "#/components/parameters/IfNoneMatch"
       responses:
         "200":
           description: Kennung und Anzahl der Termine.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
           content:
             application/json:
               schema:
@@ -130,12 +179,10 @@ paths:
                     type: integer
                     description: Anzahl der Termine im Feed.
                     examples: [742]
+        "304":
+          $ref: "#/components/responses/NotModified"
         "500":
-          description: Es konnte kein Datenstand geladen werden.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/FeedUnavailable"
 
   /healthz:
     get:
@@ -146,9 +193,10 @@ paths:
         zu holen. Gedacht für Container-Healthchecks und Monitoring.
 
         `ok` und `degraded` gelten als gesund (Status 200): Bei `degraded` ist
-        mindestens eine Organisation ausgefallen, deren Termine fehlen also im
-        Feed — der Dienst liefert aber weiter aus. `stale` und `starting` gelten
-        als ungesund (Status 503).
+        mindestens eine Organisation ausgefallen oder gar nicht eingerichtet
+        (kein Zugang hinterlegt), deren Termine fehlen also im Feed — der
+        Dienst liefert aber weiter aus. `stale` und `starting` gelten als
+        ungesund (Status 503).
       operationId: getHealth
       responses:
         "200":
@@ -187,6 +235,54 @@ paths:
                 $ref: "#/components/schemas/Status"
 
 components:
+  parameters:
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: |
+        Die zuletzt erhaltene Kennung (`ETag`). Stimmt sie mit dem aktuellen
+        Stand überein, antwortet der Server mit 304 ohne Inhalt. Schwache
+        (`W/"…"`) und starke Form sowie Listen werden angenommen.
+      schema:
+        type: string
+        examples: ['W/"3f1c9a2b7d4e5061"']
+
+  headers:
+    ETag:
+      description: |
+        Kennung des Datenstands in schwacher Form — dieselbe wie `version` in
+        `/version.json`. Schwach, weil die Antwort komprimiert ausgeliefert wird.
+      schema:
+        type: string
+        pattern: '^W/"[0-9a-f]{16}"$'
+    CacheControl:
+      description: Die Antwort darf eine Minute lang zwischengespeichert werden.
+      schema:
+        type: string
+        const: "public, max-age=60"
+
+  responses:
+    NotModified:
+      description: Der Stand ist unverändert; die Antwort hat keinen Inhalt.
+      headers:
+        ETag:
+          $ref: "#/components/headers/ETag"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+    FeedUnavailable:
+      description: |
+        Es liegt kein Datenstand vor und es konnte auch keiner geladen werden
+        (etwa weil alle Organisationen ausgefallen sind). Der Text ist fest;
+        die Ursache steht im Server-Log.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            unavailable:
+              value: { error: "Datenstand nicht verfügbar." }
+
   schemas:
     EventFeatureCollection:
       type: object
@@ -400,11 +496,16 @@ components:
         - generatedAt
         - from
         - to
+        - windowFrom
+        - windowTo
         - total
         - withEventCoords
         - withFallbackCoords
         - orgsOk
         - orgsFailed
+        - orgsFailedIds
+        - orgsConfigured
+        - orgsMissing
       properties:
         generatedAt:
           type: string
@@ -413,11 +514,29 @@ components:
         from:
           type: string
           format: date-time
-          description: Beginn des Zeitfensters.
+          description: |
+            Zeitpunkt, zu dem dieser Stand angefordert wurde — **nicht** der
+            Beginn des Zeitfensters. Das Fenster beginnt am Berliner
+            Kalendertag dieses Zeitpunkts, siehe `windowFrom`: Termine von
+            heute früh sind enthalten, auch wenn `from` später am Tag liegt.
         to:
           type: string
           format: date-time
-          description: Ende des Zeitfensters.
+          description: |
+            Ein Zeitpunkt am letzten Tag des Zeitfensters (Mittag UTC). Der
+            Tag selbst steht in `windowTo`.
+        windowFrom:
+          type: string
+          format: date
+          description: |
+            Erster Kalendertag des Zeitfensters in Europe/Berlin. Genau dieses
+            Datum bekommt ChurchDesk als Beginn.
+          examples: ["2026-09-14"]
+        windowTo:
+          type: string
+          format: date
+          description: Letzter Kalendertag des Zeitfensters in Europe/Berlin.
+          examples: ["2026-11-13"]
         total:
           type: integer
           description: Anzahl der Termine.
@@ -434,7 +553,29 @@ components:
           type: integer
           description: |
             Organisationen, die ausgefallen sind. Deren Termine fehlen im Feed,
-            ohne dass die Antwort sonst darauf hinweist.
+            ohne dass die Antwort sonst darauf hinweist — welche es sind, steht
+            in `orgsFailedIds`.
+        orgsFailedIds:
+          type: array
+          description: |
+            Die `orgId`s der ausgefallenen Organisationen (gleiche Kennung wie
+            `orgId` in den Termin-Eigenschaften). Leer, wenn alle geantwortet
+            haben. Die App darf gemerkte Termine dieser Organisationen nicht
+            als abgesagt behandeln, nur weil sie im Feed fehlen.
+          items:
+            type: integer
+          examples: [[2725]]
+        orgsConfigured:
+          type: integer
+          description: |
+            Organisationen mit hinterlegtem Zugang — nur die werden abgefragt
+            (`orgsOk` + `orgsFailed`).
+        orgsMissing:
+          type: integer
+          description: |
+            Organisationen **ohne** hinterlegten Zugang. Sie werden gar nicht
+            abgefragt; ihre Termine fehlen dauerhaft, ohne je als Ausfall zu
+            zählen. Im Normalbetrieb 0.
 
     Health:
       type: object
@@ -449,6 +590,13 @@ components:
           type: integer
         orgsFailed:
           type: integer
+        orgsConfigured:
+          type: integer
+          description: Organisationen mit hinterlegtem Zugang (siehe Feed-Meta).
+        orgsMissing:
+          type: integer
+          description: |
+            Organisationen ohne hinterlegten Zugang. Größer 0 ⇒ `degraded`.
         generatedAt:
           type: string
           format: date-time
@@ -508,7 +656,8 @@ components:
       description: |
         `ok` — Daten liegen vor, alle Organisationen haben geantwortet.
         `degraded` — Daten liegen vor, mindestens eine Organisation ist
-        ausgefallen; deren Termine fehlen im Feed.
+        ausgefallen oder hat keinen hinterlegten Zugang; deren Termine fehlen
+        im Feed.
         `stale` — der letzte erfolgreiche Abruf liegt zu lange zurück.
         `starting` — es liegt noch kein Datenstand vor (Kaltstart).
       enum: [ok, degraded, stale, starting]
@@ -525,6 +674,8 @@ components:
 #
 # Dort werden Koordinaten-Korrekturen, Kategorie-Ausschlüsse und
 # Hervorhebungen zur Laufzeit gepflegt. Die Oberfläche liegt unter /admin, die
-# zugehörigen Routen unter /admin/api/. Sie sind durch ein Token geschützt und
-# ohne gesetztes Token abgeschaltet. Sie gehören nicht zur öffentlichen
-# Schnittstelle und keine App ruft sie.
+# zugehörigen Routen unter /admin/api/. Sie sind durch ein Token geschützt
+# (mindestens 24 Zeichen, sonst bleibt die Verwaltung abgeschaltet) und ohne
+# gesetztes Token abgeschaltet; nach zehn Fehlversuchen von einer Adresse
+# innerhalb einer Minute antworten sie mit 429. Sie gehören nicht zur
+# öffentlichen Schnittstelle und keine App ruft sie.

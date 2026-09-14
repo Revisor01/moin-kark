@@ -118,6 +118,21 @@ describe("coordFixFor", () => {
     expect(coordFixFor(undefined)).toBeUndefined();
     expect(coordFixFor("")).toBeUndefined();
   });
+
+  it("trifft keine Einträge aus der Prototypkette", () => {
+    // Ein Ortsname „Constructor" fand bisher Object.prototype.constructor und das
+    // Feature bekam [null, null] als Koordinate.
+    expect(coordFixFor("Constructor")).toBeUndefined();
+    expect(coordFixFor("__proto__")).toBeUndefined();
+    expect(coordFixFor("hasOwnProperty")).toBeUndefined();
+  });
+});
+
+describe("fallbackCoords mit Namen aus der Prototypkette", () => {
+  it("fällt auf die Organisation zurück statt auf Object.prototype", () => {
+    expect(fallbackCoords("constructor", 2729)).toEqual(BUESUM);
+    expect(fallbackCoords("__proto__", 2729)).toEqual(BUESUM);
+  });
 });
 
 describe("coordFixForTitle", () => {

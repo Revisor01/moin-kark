@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { DateFilter } from "../lib/filters";
-import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import { colorForCategory, colors, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
 
 interface Props {
   visible: boolean;
@@ -57,6 +58,9 @@ function Chip({
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
+      // Chips sind 38 pt hoch; die 4 pt Zuschlag oben und unten bringen das
+      // Tippziel auf die empfohlenen 44 pt — passt in den 8-pt-Abstand.
+      hitSlop={{ top: 4, bottom: 4 }}
       style={[styles.chip, active && activeBg]}
     >
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
@@ -90,15 +94,22 @@ export default function FilterSheet({
   onReset,
   resultCount,
 }: Props) {
+  // Vor dem frühen Return: Hooks müssen in jedem Render laufen.
+  const insets = useSafeAreaInsets();
   if (!visible) return null;
 
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
-      <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      {/* Untere Safe Area (Home-Indicator, Gesten-Navigation) dazurechnen —
+          sonst liegt der Button „… zeigen“ in der Zone der System-Geste. */}
+      <Pressable
+        style={[styles.sheet, { paddingBottom: spacing.lg + insets.bottom }]}
+        onPress={(e) => e.stopPropagation()}
+      >
         <View style={styles.grabber} />
         <View style={styles.headerRow}>
           <Text style={styles.heading}>Filter</Text>
-          <TouchableOpacity onPress={onReset} accessibilityRole="button">
+          <TouchableOpacity onPress={onReset} accessibilityRole="button" hitSlop={12}>
             <Text style={styles.reset}>Zurücksetzen</Text>
           </TouchableOpacity>
         </View>
@@ -163,7 +174,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(28,43,43,0.6)",
+    backgroundColor: overlays.backdrop,
     justifyContent: "flex-end",
     alignItems: "center",
     zIndex: 1000,
@@ -173,18 +184,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     width: "100%",
-    maxWidth: 520,
+    maxWidth: sizes.sheetMaxWidth,
     maxHeight: "85%",
-    paddingBottom: spacing.lg,
+    // paddingBottom kommt inline (spacing.lg + Safe Area).
     borderWidth: 1,
     borderColor: colors.borderStrong,
     ...shadow.sheet,
   },
   grabber: {
     alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    ...sizes.grabber,
+    borderRadius: radius.pill,
     backgroundColor: colors.borderStrong,
     marginTop: spacing.sm,
   },
@@ -196,18 +206,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  heading: { fontFamily: fonts.displayBold, fontSize: 22, color: colors.foreground },
-  reset: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.primary },
+  heading: { ...text.heading, color: colors.ink },
+  reset: { ...text.labelMedium, color: colors.primary },
   scrollView: { flexShrink: 1 },
   scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.lg },
   group: { gap: spacing.sm, marginTop: spacing.md },
-  groupLabel: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 12,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    color: colors.faint,
-  },
+  groupLabel: { ...text.eyebrow, color: colors.faint },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: {
     paddingHorizontal: spacing.lg,
@@ -216,12 +220,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
-    minHeight: 38,
+    minHeight: sizes.chipMinHeight,
     justifyContent: "center",
   },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.foreground },
-  chipTextActive: { color: colors.onPrimary },
+  chipText: { ...text.bodyMedium, color: colors.ink },
+  chipTextActive: { color: colors.onColor },
   apply: {
     marginHorizontal: spacing.xl,
     marginTop: spacing.md,
@@ -230,5 +234,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: "center",
   },
-  applyText: { fontFamily: fonts.bodySemibold, fontSize: 16, color: colors.onAccent },
+  applyText: { ...text.bodyStrong, color: colors.onColor },
 });

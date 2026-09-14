@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, fonts, shadow, spacing } from "../lib/theme";
+import { colors, radius, shadow, sizes, spacing, text } from "../lib/theme";
 
 interface Props {
   onOpenFilters: () => void;
@@ -37,7 +37,7 @@ export default function FilterBar({
           activeCount > 0 ? `Filter (${activeCount} aktiv)` : "Filter öffnen"
         }
       >
-        <Ionicons name="search" size={22} color={colors.primary} />
+        <Ionicons name="search" size={sizes.icon.md} color={colors.primary} />
         {activeCount > 0 ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{activeCount}</Text>
@@ -56,8 +56,8 @@ export default function FilterBar({
       >
         <Ionicons
           name="star"
-          size={21}
-          color={highlightsOnly ? colors.onAccent : colors.accent}
+          size={sizes.icon.md}
+          color={highlightsOnly ? colors.onColor : colors.accent}
         />
       </TouchableOpacity>
 
@@ -71,14 +71,12 @@ export default function FilterBar({
           accessibilityRole="button"
           accessibilityLabel="Zu meinem Standort"
         >
-          <Ionicons name="navigate" size={22} color={colors.primary} />
+          <Ionicons name="navigate" size={sizes.icon.md} color={colors.primary} />
         </TouchableOpacity>
       ) : null}
     </View>
   );
 }
-
-const BTN = 46;
 
 const styles = StyleSheet.create({
   bar: {
@@ -89,9 +87,9 @@ const styles = StyleSheet.create({
   },
   // Wie das Herz-Icon: weißer Kreis, feine Umrandung, kräftiger Schatten zur Karte.
   iconBtn: {
-    width: BTN,
-    height: BTN,
-    borderRadius: BTN / 2,
+    width: sizes.iconButton,
+    height: sizes.iconButton,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -103,18 +101,18 @@ const styles = StyleSheet.create({
   tipBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   badge: {
     position: "absolute",
-    top: -2,
-    right: -2,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    top: -spacing.xxs,
+    right: -spacing.xxs,
+    minWidth: sizes.badge,
+    height: sizes.badge,
+    borderRadius: radius.pill,
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 5,
+    paddingHorizontal: spacing.xs,
     borderWidth: 2,
     borderColor: colors.surface,
   },
-  badgeText: { fontFamily: fonts.bodySemibold, fontSize: 11, color: colors.onAccent },
+  badgeText: { ...text.captionStrong, color: colors.onColor },
   spacer: { flex: 1 },
 });

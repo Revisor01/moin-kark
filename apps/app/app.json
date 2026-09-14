@@ -21,9 +21,7 @@
         "NSLocationWhenInUseUsageDescription": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte.",
         "LSApplicationQueriesSchemes": [
           "comgooglemaps"
-        ],
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte.",
-        "NSLocationAlwaysUsageDescription": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte."
+        ]
       }
     },
     "android": {
@@ -63,8 +61,8 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte.",
-          "locationAlwaysAndWhenInUsePermission": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte.",
-          "locationAlwaysPermission": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte."
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false
         }
       ]
     ],

@@ -4,7 +4,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import {
@@ -17,8 +17,21 @@ import { buildFeatureCollection, extractCategories, EXCLUDED_CATEGORIES } from "
 import { fmtDate } from "./churchdesk.js";
 import { SwrCache } from "./cache.js";
 import { hasHighlightTag } from "./geojson.js";
-import { getOverrides, loadOverrides, setOverrides } from "./locations.js";
+import {
+  getOverrides,
+  InvalidOverridesError,
+  loadOverrides,
+  overridesLoadError,
+  setOverrides,
+} from "./locations.js";
 import { adminPage, statusPage, type FallbackGroup, type StatusData } from "./pages.js";
+
+// Laufzeit-Korrekturen beim Import lesen, nicht erst im serve()-Callback: Sonst
+// bleibt der Ladezustand "unloaded", solange kein Server läuft (Tests, künftige
+// Einbindung als Modul) — und in diesem Zustand ist Speichern gesperrt, obwohl
+// die Datei in Ordnung ist. Der Zustand muss stehen, bevor der erste Request
+// /admin erreicht; der Aufruf ist idempotent und ohne Datei ein No-op.
+loadOverrides();
 
 /**
  * Zahl aus der Umgebung, mit Rückfall auf den Standard.
@@ -41,7 +54,32 @@ function envInt(name: string, fallback: number, min = 1): number {
 const PORT = envInt("PORT", 8787);
 const TTL_MS = envInt("CACHE_TTL_MS", 20 * 60 * 1000); // 20 min
 const DEFAULT_DAYS = envInt("DEFAULT_WINDOW_DAYS", 60);
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN?.trim() || undefined;
+
+/**
+ * Mindestlänge des Admin-Tokens. Der Vergleich ist konstantzeitig, aber die
+ * Sicherheit hängt allein an der Entropie des Tokens — und ein einstelliger
+ * Wert wurde bisher genauso angenommen wie ein langer. Zu kurz ⇒ /admin bleibt
+ * aus, als wäre gar keins gesetzt (Warnung im Log statt stiller Annahme).
+ */
+const ADMIN_TOKEN_MIN_LENGTH = 24;
+const ADMIN_TOKEN = readAdminToken();
+
+function readAdminToken(): string | undefined {
+  const raw = process.env.ADMIN_TOKEN?.trim();
+  if (!raw) return undefined;
+  if (raw.length < ADMIN_TOKEN_MIN_LENGTH) {
+    console.warn(
+      `[moinkark-api] ADMIN_TOKEN ist kürzer als ${ADMIN_TOKEN_MIN_LENGTH} Zeichen — /admin bleibt deaktiviert.`
+    );
+    return undefined;
+  }
+  return raw;
+}
+
+/** Feed-Antworten dürfen eine Minute lang aus Browser- und Proxy-Caches kommen. */
+const FEED_CACHE_CONTROL = "public, max-age=60";
+/** Fester Text für Clients — die Ursache steht im Log, nicht in der Antwort. */
+const FEED_UNAVAILABLE = "Datenstand nicht verfügbar.";
 
 // CORS-Allowlist: kommagetrennt in ALLOWED_ORIGINS, sonst Dev-Defaults.
 const ALLOWED_ORIGINS = (
@@ -62,7 +100,12 @@ const cache = new SwrCache<EventFeatureCollection>({ ttlMs: TTL_MS });
  */
 function currentWindow(): { from: Date; to: Date; key: string } {
   const from = new Date();
-  const to = new Date(from.getTime() + DEFAULT_DAYS * 86400_000);
+  // Endtag als Berliner Kalenderdatum: heutiger Berliner Tag + DEFAULT_DAYS.
+  // Ein Millisekunden-Offset (DEFAULT_DAYS × 24 h) ergäbe über einen
+  // Zeitumstellungs-Wechsel hinweg kurz nach Mitternacht 59 oder 61 Tage.
+  // Mittag UTC liegt in Berlin immer am selben Kalendertag (13/14 Uhr).
+  const [y, m, d] = fmtDate(from).split("-").map(Number);
+  const to = new Date(Date.UTC(y, m - 1, d + DEFAULT_DAYS, 12));
   // Schlüssel über den Berliner Kalendertag (wie das Abfragefenster selbst) —
   // mit UTC würde er kurz nach Mitternacht noch auf den Vortag zeigen.
   const key = `${fmtDate(from)}_${fmtDate(to)}`;
@@ -97,17 +140,24 @@ app.get("/", (c) => c.json({ service: "moinkark-api", status: "ok" }));
  * auszulösen (der Auto-Refresh hält den Cache warm):
  * - ok:       Daten da, alle Orgs haben geantwortet.
  * - degraded: Daten da, aber mind. eine Org fiel beim letzten Refresh aus
- *             (z. B. abgelaufener Einzeltoken — deren Events fehlen still!).
+ *             (z. B. abgelaufener Einzeltoken — deren Events fehlen still!)
+ *             oder hat gar kein Token (beim Redeploy verlorene ENV-Zeile —
+ *             deren Events fehlen dauerhaft, ohne je als Ausfall zu zählen).
  * - stale:    letzter erfolgreicher Refresh liegt > 3×TTL zurück (Refresh hängt/scheitert).
  * - starting: noch gar kein Datenstand (Kaltstart).
  */
-function statusData(): StatusData {
+function statusData(): StatusData & { orgsConfigured?: number; orgsMissing?: number } {
   const latest = cache.peekLatest();
   const meta = latest?.value.meta;
   if (!latest || !meta) return { status: "starting", fallback: [] };
   const ageSeconds = (Date.now() - latest.updatedAt) / 1000;
+  const orgsMissing = meta.orgsMissing ?? 0;
   const status: StatusData["status"] =
-    ageSeconds > (3 * TTL_MS) / 1000 ? "stale" : meta.orgsFailed > 0 ? "degraded" : "ok";
+    ageSeconds > (3 * TTL_MS) / 1000
+      ? "stale"
+      : meta.orgsFailed > 0 || orgsMissing > 0
+        ? "degraded"
+        : "ok";
 
   // Fallback-Sichtfenster: Welche Orte liegen mangels Koordinate auf dem
   // Gemeinde-Pin? Gruppiert nach Ortsname (bzw. Gemeinde, wenn keiner gepflegt ist).
@@ -130,6 +180,8 @@ function statusData(): StatusData {
     events: meta.total,
     orgsOk: meta.orgsOk,
     orgsFailed: meta.orgsFailed,
+    orgsConfigured: meta.orgsConfigured,
+    orgsMissing,
     withEventCoords: meta.withEventCoords,
     fallback,
   };
@@ -144,6 +196,8 @@ app.get("/healthz", (c) => {
       events: d.events,
       orgsOk: d.orgsOk,
       orgsFailed: d.orgsFailed,
+      orgsConfigured: d.orgsConfigured,
+      orgsMissing: d.orgsMissing,
       generatedAt: d.generatedAt,
       cacheAgeSeconds: d.ageSeconds == null ? undefined : Math.round(d.ageSeconds),
     },
@@ -154,14 +208,56 @@ app.get("/healthz", (c) => {
 app.get("/status.json", (c) => c.json(statusData()));
 app.get("/status", (c) => c.html(statusPage(statusData())));
 
-app.get("/events.geojson", async (c) => {
+/**
+ * Gemeinsamer Rahmen der drei Feed-Routen: Datenstand holen, Kennung als ETag
+ * mitgeben und bei passendem If-None-Match mit 304 ohne Inhalt antworten.
+ *
+ * Zwischen zwei Refreshes ist der Feed byte-identisch — ohne Kennung im Header
+ * serialisierte und komprimierte der Server ~700 KB trotzdem für jede Anfrage
+ * neu (gemessen 4,4 ms CPU pro Aufruf). Der Fingerprint existiert für
+ * /version.json ohnehin; als ETag ist er fertig.
+ *
+ * Fehler gehen als fester Text nach außen: Die interne Meldung nannte u. a. das
+ * Schema der Token-Variablen und Dateipfade — die gehören ins Log.
+ */
+async function feedResponse(
+  c: Context,
+  body: (fc: EventFeatureCollection) => unknown
+): Promise<Response> {
+  let fc: EventFeatureCollection;
   try {
-    return c.json(await getCollection());
+    fc = await getCollection();
   } catch (e: any) {
-    console.error("[/events.geojson]", e?.message ?? e);
-    return c.json({ error: e?.message ?? "internal error" }, 500);
+    console.error(`[${c.req.path}]`, e?.message ?? e);
+    return c.json({ error: FEED_UNAVAILABLE }, 500);
   }
-});
+  const etag = etagFor(fc);
+  c.header("ETag", etag);
+  c.header("Cache-Control", FEED_CACHE_CONTROL);
+  if (etagMatches(c.req.header("If-None-Match"), etag)) return c.body(null, 304);
+  return c.json(body(fc));
+}
+
+/**
+ * ETag von vornherein schwach (W/): Die Compress-Middleware liefert den Feed
+ * gzip-kodiert und stufte einen starken ETag ohnehin auf W/ herab — so ist die
+ * Kennung auf 200 und 304 dieselbe, und der Client schickt genau sie zurück.
+ */
+function etagFor(fc: EventFeatureCollection): string {
+  return `W/"${fingerprintOf(fc)}"`;
+}
+
+/** If-None-Match: Liste von Kennungen, schwach oder stark, oder `*`. */
+function etagMatches(header: string | undefined, etag: string): boolean {
+  if (!header) return false;
+  const want = etag.replace(/^W\//, "");
+  return header.split(",").some((t) => {
+    const tag = t.trim();
+    return tag === "*" || tag.replace(/^W\//, "") === want;
+  });
+}
+
+app.get("/events.geojson", (c) => feedResponse(c, (fc) => fc));
 
 /**
  * Kurz-Kennung des aktuellen Datenbestands (Hash über alle Events).
@@ -184,10 +280,12 @@ function fingerprint(fc: EventFeatureCollection): string {
   const lines = fc.features.map((f) => {
     const p = f.properties;
     return (
-      `${p.id}|${p.startUtc}|${p.endUtc ?? ""}|${p.title}|${p.highlight ? 1 : 0}|` +
+      `${p.id}|${p.startUtc}|${p.endUtc ?? ""}|${p.allDay ? 1 : 0}|${p.showEndtime ? 1 : 0}|` +
+      `${p.title}|${p.highlight ? 1 : 0}|` +
       `${f.geometry.coordinates.join(",")}|${p.locationName ?? ""}|` +
       `${p.summary ?? ""}|${p.descriptionHtml ?? ""}|${p.image?.url ?? ""}|` +
-      `${p.categories.map((c) => c.id).join(",")}|${p.parish ?? ""}|${p.address ?? ""}|${p.price ?? ""}`
+      `${p.categories.map((c) => c.id).join(",")}|${p.parish ?? ""}|${p.parishes?.join(",") ?? ""}|` +
+      `${p.contributor ?? ""}|${p.address ?? ""}|${p.city ?? ""}|${p.zipcode ?? ""}|${p.price ?? ""}`
     );
   });
   lines.sort();
@@ -195,24 +293,25 @@ function fingerprint(fc: EventFeatureCollection): string {
   return h.digest("hex").slice(0, 16);
 }
 
-app.get("/version.json", async (c) => {
-  try {
-    const fc = await getCollection();
-    return c.json({ version: fingerprint(fc), count: fc.features.length });
-  } catch (e: any) {
-    console.error("[/version.json]", e?.message ?? e);
-    return c.json({ error: e?.message ?? "internal error" }, 500);
+/**
+ * Fingerprint je Datenstand nur einmal rechnen: Der Cache hält dasselbe Objekt
+ * bis zum nächsten Refresh, und seit dem ETag braucht ihn jede Feed-Anfrage.
+ */
+const fingerprints = new WeakMap<EventFeatureCollection, string>();
+function fingerprintOf(fc: EventFeatureCollection): string {
+  let fp = fingerprints.get(fc);
+  if (!fp) {
+    fp = fingerprint(fc);
+    fingerprints.set(fc, fp);
   }
-});
+  return fp;
+}
 
-app.get("/categories.json", async (c) => {
-  try {
-    return c.json(extractCategories(await getCollection()));
-  } catch (e: any) {
-    console.error("[/categories.json]", e?.message ?? e);
-    return c.json({ error: e?.message ?? "internal error" }, 500);
-  }
-});
+app.get("/version.json", (c) =>
+  feedResponse(c, (fc) => ({ version: fingerprintOf(fc), count: fc.features.length }))
+);
+
+app.get("/categories.json", (c) => feedResponse(c, (fc) => extractCategories(fc)));
 
 // --- Admin: Orts-Korrekturen pflegen (Token in ADMIN_TOKEN, sonst deaktiviert) ---
 
@@ -224,11 +323,63 @@ function tokenOk(header: string | undefined): boolean {
   return timingSafeEqual(given, want);
 }
 
+/**
+ * Fehlversuche je Adresse: ab AUTH_FAIL_LIMIT innerhalb des Fensters 429 —
+ * auch für das richtige Token, bis das Fenster abläuft. Ohne das ließe sich
+ * ein Token unbegrenzt schnell durchprobieren.
+ *
+ * Die Adresse kommt aus X-Real-IP (setzt Apache aus REMOTE_ADDR, überschreibt
+ * damit, was der Client schickt), sonst aus dem ersten X-Forwarded-For-Eintrag.
+ * Ohne beides (lokal, Tests) landen alle in einem Topf — dort gibt es nur einen.
+ */
+const AUTH_FAIL_LIMIT = 10;
+const AUTH_FAIL_WINDOW_MS = 60_000;
+const authFailures = new Map<string, { count: number; until: number }>();
+
+function clientAddress(c: Context): string {
+  return (
+    c.req.header("x-real-ip")?.trim() ||
+    c.req.header("x-forwarded-for")?.split(",")[0].trim() ||
+    "unknown"
+  );
+}
+
+function authBlocked(address: string): boolean {
+  const entry = authFailures.get(address);
+  if (!entry) return false;
+  if (entry.until <= Date.now()) {
+    authFailures.delete(address);
+    return false;
+  }
+  return entry.count >= AUTH_FAIL_LIMIT;
+}
+
+function noteAuthFailure(address: string): void {
+  const now = Date.now();
+  const entry = authFailures.get(address);
+  if (!entry || entry.until <= now) {
+    authFailures.set(address, { count: 1, until: now + AUTH_FAIL_WINDOW_MS });
+  } else {
+    entry.count++;
+  }
+  // Abgelaufene Einträge nur bei Bedarf ausmisten — hält die Map klein, ohne Timer.
+  if (authFailures.size > 1000)
+    for (const [k, e] of authFailures) if (e.until <= now) authFailures.delete(k);
+}
+
 app.get("/admin", (c) => c.html(adminPage()));
 
 app.use("/admin/api/*", async (c, next) => {
-  if (!ADMIN_TOKEN) return c.json({ error: "Admin deaktiviert (ADMIN_TOKEN nicht gesetzt)." }, 503);
-  if (!tokenOk(c.req.header("Authorization"))) return c.json({ error: "unauthorized" }, 401);
+  if (!ADMIN_TOKEN)
+    return c.json({ error: "Admin deaktiviert (ADMIN_TOKEN nicht gesetzt oder zu kurz)." }, 503);
+  const address = clientAddress(c);
+  if (authBlocked(address))
+    return c.json({ error: "Zu viele Fehlversuche — bitte eine Minute warten." }, 429);
+  if (!tokenOk(c.req.header("Authorization"))) {
+    noteAuthFailure(address);
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  authFailures.delete(address);
   await next();
 });
 
@@ -249,6 +400,10 @@ app.get("/admin/api/locations", (c) => {
     },
     overrides: getOverrides(),
     feedCategories: latest ? extractCategories(latest.value).map((cat) => cat.title) : [],
+    // Konnte die Overrides-Datei beim Start nicht gelesen werden, ist Speichern
+    // gesperrt (sonst überschriebe der leere Stand die Korrekturen auf Platte).
+    // Die Oberfläche muss das vor dem ersten Klick zeigen, nicht erst danach.
+    loadError: overridesLoadError(),
   });
 });
 
@@ -295,15 +450,29 @@ app.get("/admin/api/highlights", (c) => {
 });
 
 app.put("/admin/api/locations", async (c) => {
+  let raw: unknown;
   try {
-    const saved = setOverrides(await c.req.json());
+    raw = await c.req.json();
+  } catch {
+    return c.json({ error: "Ungültiges JSON." }, 400);
+  }
+  try {
+    const saved = setOverrides(raw);
     // Korrekturen sollen sofort sichtbar werden, nicht erst beim nächsten TTL-Tick.
     // `afterChange`: einen ggf. laufenden Refresh abwarten, der die neuen
     // Overrides noch nicht kennt — sonst bliebe die Korrektur eine TTL lang aus.
     void warmCache(true);
     return c.json({ ok: true, overrides: saved });
   } catch (e: any) {
-    return c.json({ error: e?.message ?? "invalid payload" }, 400);
+    // Drei Fälle, die Oberfläche und Logs auseinanderhalten müssen:
+    // 400 — Eingabefehler des Admins, mit Grund (der Text ist für ihn gemacht).
+    // 409 — gesperrt, weil die Datei beim Start unlesbar war: Zustand des Servers.
+    // 500 — Schreibfehler (Volume-Rechte, Platte voll): Details nur ins Log,
+    //       die Meldung nennt sonst Dateipfade.
+    if (e instanceof InvalidOverridesError) return c.json({ error: e.message }, 400);
+    if (overridesLoadError() !== null) return c.json({ error: String(e?.message ?? e) }, 409);
+    console.error("[/admin/api/locations] Speichern fehlgeschlagen:", e?.message ?? e);
+    return c.json({ error: "Korrekturen konnten nicht gespeichert werden." }, 500);
   }
 });
 
@@ -342,7 +511,6 @@ if (isMain)
     console.log(`[moinkark-api] CORS erlaubt: ${ALLOWED_ORIGINS.join(", ")}`);
     if (!ADMIN_TOKEN)
       console.warn("[moinkark-api] ADMIN_TOKEN nicht gesetzt — /admin ist deaktiviert.");
-    loadOverrides();
     // Sofort einmal laden, danach im TTL-Takt.
     void warmCache();
     const timer = setInterval(() => void warmCache(), TTL_MS);

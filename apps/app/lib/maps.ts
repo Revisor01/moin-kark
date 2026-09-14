@@ -1,6 +1,10 @@
 import { Linking, Platform } from "react-native";
 import type { MapsApp } from "./store";
 
+/** Google Maps im Browser, Kartenmittelpunkt auf der Koordinate — der Web-Fallback für alle Plattformen. */
+const GOOGLE_MAPS_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=";
+const googleMapsWebUrl = (lat: number, lng: number) => `${GOOGLE_MAPS_SEARCH_URL}${lat},${lng}`;
+
 /** Öffnet Koordinaten/Adresse in der gewählten Karten-App. */
 export function openInMaps(
   app: MapsApp,
@@ -12,7 +16,7 @@ export function openInMaps(
 
   // Web/Desktop: keine native App → immer Google Maps im Browser (neuer Tab).
   if (Platform.OS === "web") {
-    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const url = googleMapsWebUrl(lat, lng);
     if (typeof window !== "undefined") window.open(url, "_blank");
     else Linking.openURL(url);
     return;
@@ -23,7 +27,7 @@ export function openInMaps(
     // iOS braucht „comgooglemaps" in LSApplicationQueriesSchemes, sonst liefert
     // canOpenURL immer false und es landet trotz App im Browser (siehe app.json).
     const appUrl = `comgooglemaps://?q=${q}&center=${lat},${lng}`;
-    const webUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const webUrl = googleMapsWebUrl(lat, lng);
     Linking.canOpenURL(appUrl)
       .then((ok) => Linking.openURL(ok ? appUrl : webUrl))
       .catch(() => Linking.openURL(webUrl));
@@ -36,6 +40,6 @@ export function openInMaps(
     // Auf Android gibt es keine Apple-Karten-App. Die maps.apple.com-URL öffnete
     // hier nur eine Weboberfläche ohne Navigation — daher Google-Web, wie es der
     // Kommentar immer schon versprochen hat.
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
+    Linking.openURL(googleMapsWebUrl(lat, lng));
   }
 }

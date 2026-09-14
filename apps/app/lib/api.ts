@@ -1,7 +1,7 @@
-import type { EventFeatureCollection } from "@moinkark/shared";
+import type { EventFeatureCollection, FeedCategory } from "@moinkark/shared";
 
 // Proxy-URL: in Prod die Subdomain, in Dev lokal überschreibbar via EXPO_PUBLIC_API_URL.
-export const API_BASE =
+const API_BASE =
   process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? "https://api.moin-kark.de";
 
 export async function fetchEvents(): Promise<EventFeatureCollection> {
@@ -21,14 +21,8 @@ export async function fetchVersion(): Promise<string> {
   return j.version;
 }
 
-export interface CategoryInfo {
-  title: string;
-  color: number;
-  count: number;
-}
-
-export async function fetchCategories(): Promise<CategoryInfo[]> {
+export async function fetchCategories(): Promise<FeedCategory[]> {
   const res = await fetch(`${API_BASE}/categories.json`);
   if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-  return (await res.json()) as CategoryInfo[];
+  return (await res.json()) as FeedCategory[];
 }

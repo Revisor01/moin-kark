@@ -86,6 +86,24 @@ Die App zieht ihre Daten aus der API. Für lokale Entwicklung die eigene Origin 
 `ALLOWED_ORIGINS` eintragen; eine abweichende API-URL geht über
 `EXPO_PUBLIC_API_URL`.
 
+### Design-Werte ändern
+
+Farben, Abstände, Textgrößen, Radien und Schatten liegen **ausschließlich** in
+`packages/shared/src/theme.ts`. App, Landingpage und die Seiten `/admin` und
+`/status` beziehen alles von dort — Werte werden nicht in Komponenten oder CSS
+geschrieben.
+
+Die Landingpage ist statisch und kann kein TypeScript importieren; sie lädt
+`apps/web/theme.css`. Nach jeder Theme-Änderung deshalb:
+
+```bash
+npm run sync:theme-css
+```
+
+Wird das vergessen, schlägt der Test in `packages/shared` fehl und nennt den
+Befehl — die Landingpage kann also nicht unbemerkt auf einem alten Farbstand
+stehen bleiben.
+
 ## Endpoints
 
 | Route               | Inhalt                                                            |
@@ -126,6 +144,12 @@ Der Release-Keystore liegt **außerhalb des Repos**:
 
 Die Datei wird mit *anders erzählt* geteilt, Moin Kark hat darin aber einen
 **eigenen Alias** — die Schlüssel sind getrennt, nur der Container ist derselbe.
+
+Der Build liest die Werte als Gradle-Properties oder Umgebungsvariablen
+`MOINKARK_KEYSTORE_PATH`, `MOINKARK_KEYSTORE_PASSWORD`, `MOINKARK_KEY_ALIAS`,
+`MOINKARK_KEY_PASSWORD` (lokal: `source` der Env-Datei, dann
+`cd apps/app/android && ./gradlew bundleRelease`). Ohne sie bleibt das Release
+unsigniert — nie mit dem Debug-Key.
 
 > **Ohne diesen Schlüssel sind keine Play-Store-Updates mehr möglich.** Google
 > akzeptiert Updates nur, wenn sie mit demselben Key signiert sind wie die
@@ -313,3 +337,7 @@ Nach dem Deploy prüfen, ob `/maplibre-gl-worker.mjs` HTTP 200 liefert.
 
 [SemVer](https://semver.org/lang/de/); Änderungen stehen im [CHANGELOG.md](CHANGELOG.md).
 Jede ausgelieferte Version bekommt einen Tag `vX.Y.Z` und ein GitHub-Release.
+
+Einzige Quelle für Version, iOS-Build-Nummer und Android-versionCode ist
+`apps/app/app.json`. Store-Builds laufen über GitHub Actions — Ablauf, Dry-Run
+und die nötigen Secrets stehen in [docs/store-release.md](docs/store-release.md).

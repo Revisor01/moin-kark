@@ -23,6 +23,13 @@ describe("resolveKirchspiel", () => {
     expect(resolveKirchspiel("Heide St.-Jürgen", 2596)).toBe("Heide und Umgebung");
   });
 
+  it("fällt bei Gemeindenamen aus der Prototypkette auf die orgId zurück", () => {
+    // „constructor" traf bisher Object.prototype.constructor — das Kirchspiel
+    // wurde eine Funktion und fehlte dann im JSON, obwohl es Pflichtfeld ist.
+    expect(resolveKirchspiel("constructor", 2729)).toBe("West");
+    expect(resolveKirchspiel("__proto__", 2725)).toBe("Eider");
+  });
+
   it("fällt auf die orgId zurück, wenn die Gemeinde unbekannt ist", () => {
     expect(resolveKirchspiel("Irgendwo", 2725)).toBe("Eider");
     expect(resolveKirchspiel(undefined, 2729)).toBe("West");

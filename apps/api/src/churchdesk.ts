@@ -1,6 +1,7 @@
 // Dünner ChurchDesk-REST-Client (NUR Lesen). Pagination über itemsNumber=100.
 // Referenz: kk-termine/web/churchdesk_api.py (Auth-/Pagination-Verhalten).
 
+import { berlinDayKey } from "@moinkark/shared";
 import type { OrgConfig } from "./orgs.js";
 
 const BASE = "https://api2.churchdesk.com/api/v3.0.0";
@@ -37,18 +38,18 @@ export interface CdEvent {
   image?: { [key: string]: unknown; title?: string; copyright?: string } | null;
 }
 
-const BERLIN = "Europe/Berlin";
-
 /**
- * Kalendertag in Europe/Berlin als YYYY-MM-DD.
+ * Kalendertag in Europe/Berlin als YYYY-MM-DD — Grenze des Abfragefensters.
  *
  * Bewusst NICHT toISOString(): das liefert immer UTC. Zwischen Mitternacht und
  * 01:00 (Winter) bzw. 02:00 (Sommer) Berliner Zeit ist das UTC-Datum noch der
  * Vortag — das Fenster hätte nachts beim Vortag begonnen und bereits gelaufene
  * Events eingeschlossen. Das TZ=Europe/Berlin des Containers ändert daran nichts.
+ * Die Logik selbst liegt in packages/shared (berlinDayKey), damit API und App
+ * denselben Tag meinen.
  */
 export function fmtDate(d: Date): string {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: BERLIN }).format(d); // sv-SE ⇒ YYYY-MM-DD
+  return berlinDayKey(d);
 }
 
 /**
