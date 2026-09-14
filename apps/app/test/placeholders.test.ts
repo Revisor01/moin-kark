@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -57,5 +57,22 @@ describe("Platzhalter-Motive", () => {
       const v = seitenverhaeltnis(join(ASSETS, `ph-${m}-wide.jpg`));
       expect(v, `ph-${m}-wide.jpg ist ${v.toFixed(2)}:1 statt ~2,36:1`).toBeGreaterThan(1.8);
     }
+  });
+});
+
+describe("Bildrahmen der Listenkarte", () => {
+  it("setzt eine feste Bildhöhe statt alignSelf:stretch", () => {
+    // Der Fehler, den das verhindert: Mit `alignSelf: "stretch"` und ohne Höhe
+    // zog das Bild die Zelle im Web auf seine NATÜRLICHE Höhe (381 px). Die
+    // Karte schnitt bei 106 px ab — sichtbar war nur das obere Viertel, bei
+    // Hennstedt Himmel und Turmspitze. Im Browser gemessen: Rahmen 96×381
+    // statt 96×106.
+    const quelle = readFileSync(join(__dirname, "..", "components", "EventCard.tsx"), "utf8");
+    const thumb = /thumb:\s*\{([^}]*)\}/.exec(quelle)?.[1] ?? "";
+    expect(thumb, "thumb darf kein alignSelf:stretch haben").not.toMatch(/alignSelf/);
+    // Die Höhe kommt inline aus cardOuterHeight() — dieselbe Quelle wie die Karte.
+    expect(quelle, "Bild braucht eine explizite Höhe").toMatch(
+      /style=\{\[styles\.thumb,\s*\{\s*height\s*\}\]\}/
+    );
   });
 });

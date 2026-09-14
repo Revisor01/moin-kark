@@ -61,7 +61,9 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
             lib/placeholders.ts), hier quadratisch mittig zugeschnitten. */}
         <Image
           source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id, p.parish, p.city)}
-          style={styles.thumb}
+          // Höhe inline aus derselben Quelle wie die Karte: sonst zieht das Bild
+          // im Web die Zelle auf seine eigene Höhe und wird oben abgeschnitten.
+          style={[styles.thumb, { height }]}
           resizeMode="cover"
         />
         <View style={styles.body}>
@@ -143,9 +145,13 @@ const styles = StyleSheet.create({
   },
   highlightBadgeText: { ...text.captionStrong, color: colors.onColor },
   accent: { width: spacing.xs },
-  // alignSelf:stretch → Thumbnail folgt der Kartenhöhe (cover füllt, beschneidet
-  // mittig). KEIN minHeight → das Bild-Seitenverhältnis bläht die Karte nicht auf.
-  thumb: { width: 96, alignSelf: "stretch" },
+  // Feste Höhe, NICHT alignSelf:"stretch": Im Web zog `stretch` die Zelle auf die
+  // natürliche Bildhöhe (bei den Ortsmotiven 381 px) statt auf die Kartenhöhe —
+  // die Karte schnitt bei 104 px ab, sichtbar war nur das obere Viertel, bei
+  // Hennstedt Himmel und Turmspitze. Mit `height` bezieht sich `cover` auf den
+  // Rahmen, wie gemeint. Der Wert folgt der Kartenhöhe (s. lib/listLayout), damit
+  // beide bei großer Systemschrift zusammen wachsen.
+  thumb: { width: 96 },
   body: { flex: 1, padding: spacing.md, gap: spacing.xxs, justifyContent: "center" },
   time: { ...text.captionStrong, color: colors.primary },
   title: { ...text.title, color: colors.ink },

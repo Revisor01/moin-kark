@@ -236,3 +236,24 @@ export async function rescheduleAll(saved: EventFeature[], pref: ReminderPref): 
 export async function setReminderPref(pref: ReminderPref): Promise<void> {
   await AsyncStorage.setItem(REMINDER_KEY, pref).catch(() => {});
 }
+
+/**
+ * Die zuletzt angetippte Mitteilung — oder `null` im Web.
+ *
+ * `Notifications.useLastNotificationResponse()` wirft im Web („is not available
+ * on web"), und zwar beim Rendern: Die Web-Fassung startete dadurch gar nicht
+ * mehr. Hier gekapselt statt am Aufrufer verzweigt, weil ein Hook nicht bedingt
+ * aufgerufen werden darf — die Reihenfolge muss auf jeder Plattform gleich sein.
+ */
+export function useLastNotificationTap(): Notifications.NotificationResponse | null {
+  // Im Web existiert der Hook nicht; der Platzhalter hält die Hook-Reihenfolge
+  // stabil und liefert immer null.
+  const hook = IS_WEB ? () => null : Notifications.useLastNotificationResponse;
+  return hook() ?? null;
+}
+
+/** Verbraucht die gespeicherte Antwort, damit sie nicht erneut greift. */
+export function clearLastNotificationTap(): void {
+  if (IS_WEB) return;
+  Notifications.clearLastNotificationResponse();
+}
