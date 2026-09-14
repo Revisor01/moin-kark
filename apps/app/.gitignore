@@ -36,6 +36,20 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
-/android
+# Native Projekte sind versioniert (Release-Signing in android/app/build.gradle,
+# Store-Builds per GitHub Actions). Ignoriert wird nur, was Gradle, CocoaPods
+# und Xcode selbst erzeugen.
+android/.gradle/
+android/build/
+android/app/build/
+android/app/.cxx/
+android/local.properties
+android/keystore.properties
+ios/build/
+ios/Pods/
+ios/.xcode.env.local
+xcuserdata/
+# Lokaler SwiftPM-Mirror fuer MapLibre (README „iOS-Build: MapLibre-Workaround")
+# pinnt eine Revision, die es upstream nicht gibt — auf dem Runner wuerde die
+# Aufloesung daran scheitern. Die Version ist ohnehin exakt im Podspec festgelegt.
+ios/MoinKark.xcworkspace/xcshareddata/swiftpm/

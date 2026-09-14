@@ -1,0 +1,147 @@
+name: Android Release Build
+
+# Baut das signierte AAB und lädt es per Google-Play-API in die angegebenen
+# Tracks. Google startet die Prüfung mit dem Track-Commit von selbst.
+#
+# Version und versionCode kommen aus apps/app/app.json (einzige Quelle;
+# `expo prebuild` schreibt sie in android/app/build.gradle). Vor dem Dispatch:
+# versionCode bumpen, apps/app/release-notes-de.txt aktualisieren, committen.
+# Ablauf und Secrets: docs/store-release.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tracks:
+        description: "Ziel-Tracks (kommagetrennt, z. B. internal oder internal,production)"
+        # Erste Einreichung, geschlossener Test — Produktion erst bewusst per Input.
+        default: "internal"
+        required: true
+      dry_run:
+        description: "Dry-Run: kompletter Durchlauf, aber Play-Edit wird verworfen (kein Release)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: JDK 21 einrichten
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Node einrichten
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          # Workspace: allein der Root-Lock ist maßgeblich (apps/app hat keinen).
+          cache-dependency-path: package-lock.json
+
+      - name: Abhängigkeiten installieren
+        run: npm ci --no-audit --no-fund
+
+      - name: "Dry-Run: versionCode temporär anheben"
+        if: ${{ inputs.dry_run }}
+        working-directory: apps/app
+        # +10000, damit der Upload nicht an einem bereits verwendeten Code
+        # scheitert. Die Edit wird am Ende verworfen — der Code wird NICHT
+        # verbraucht, app.json im Repo bleibt unberührt.
+        run: |
+          node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('app.json'));j.expo.android.versionCode+=10000;fs.writeFileSync('app.json',JSON.stringify(j,null,2)+'\n');console.log('Dry-Run versionCode:',j.expo.android.versionCode)"
+
+      - name: Natives Projekt aus app.json aktualisieren
+        working-directory: apps/app
+        # Ohne --clean: Das versionierte android/ bleibt stehen (dort liegt das
+        # Release-Signing), prebuild trägt nur Version, versionCode und
+        # Plugin-Änderungen nach. --no-install, weil npm ci schon lief.
+        env:
+          CI: 1
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Signing und Version im Gradle-Projekt prüfen
+        working-directory: apps/app
+        # `expo prebuild --clean` setzt das Release auf den DEBUG-Key zurück —
+        # das fiele sonst erst beim Play-Upload auf. Hier bricht der Lauf ab,
+        # bevor Minuten in einen unbrauchbaren Build fließen.
+        run: |
+          set -euo pipefail
+          GRADLE=android/app/build.gradle
+          # Kommentarzeilen ausklammern — gezählt wird nur Code.
+          CODE=$(grep -vE '^\s*//' "$GRADLE")
+          echo "$CODE" | grep -q 'signingConfig signingConfigs.release' \
+            || { echo "FEHLER: $GRADLE hat kein Release-Signing (nach prebuild --clean wiederherstellen)."; exit 1; }
+          if [ "$(echo "$CODE" | grep -c 'signingConfig signingConfigs.debug')" != "1" ]; then
+            echo "FEHLER: $GRADLE signiert mehr als den Debug-Build mit dem Debug-Key."
+            exit 1
+          fi
+          ERWARTET_CODE=$(node -p "require('./app.json').expo.android.versionCode")
+          ERWARTET_NAME=$(node -p "require('./app.json').expo.version")
+          grep -q "versionCode $ERWARTET_CODE\$" "$GRADLE" \
+            || { echo "FEHLER: versionCode $ERWARTET_CODE fehlt in $GRADLE."; grep -n versionCode "$GRADLE"; exit 1; }
+          grep -q "versionName \"$ERWARTET_NAME\"" "$GRADLE" \
+            || { echo "FEHLER: versionName $ERWARTET_NAME fehlt in $GRADLE."; grep -n versionName "$GRADLE"; exit 1; }
+          echo "OK: Release-Signing vorhanden, Version $ERWARTET_NAME ($ERWARTET_CODE)."
+
+      - name: Keystore ablegen
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
+
+      - name: Signiertes AAB bauen
+        working-directory: apps/app/android
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew bundleRelease \
+            "-PMOINKARK_KEYSTORE_PATH=/tmp/release.jks" \
+            "-PMOINKARK_KEYSTORE_PASSWORD=$KS_PASS" \
+            "-PMOINKARK_KEY_ALIAS=$KEY_ALIAS" \
+            "-PMOINKARK_KEY_PASSWORD=$KEY_PASS"
+          ls -la app/build/outputs/bundle/release/app-release.aab
+
+      - name: Signatur und Version des AAB prüfen
+        working-directory: apps/app
+        # Der Debug-Key trägt „CN=Android Debug“; ein unsigniertes Bundle
+        # meldet keytool als „Not a signed jar file“. Beides darf nicht zu
+        # Google — und das gemergte Manifest muss die erwartete Version tragen.
+        run: |
+          set -euo pipefail
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          CERT=$(keytool -printcert -jarfile "$AAB" 2>&1 || true)
+          if echo "$CERT" | grep -q "Not a signed jar file"; then
+            echo "FEHLER: AAB ist nicht signiert."; exit 1
+          fi
+          if echo "$CERT" | grep -q "Android Debug"; then
+            echo "FEHLER: AAB ist mit dem DEBUG-Key signiert."; exit 1
+          fi
+          echo "$CERT" | grep -m1 "Owner:"
+          MANIFEST=$(find android/app/build/intermediates/merged_manifests -path '*release*' -name AndroidManifest.xml | head -1)
+          [ -n "$MANIFEST" ] || { echo "FEHLER: gemergtes Release-Manifest nicht gefunden."; exit 1; }
+          ERWARTET_CODE=$(node -p "require('./app.json').expo.android.versionCode")
+          ERWARTET_NAME=$(node -p "require('./app.json').expo.version")
+          grep -q "android:versionCode=\"$ERWARTET_CODE\"" "$MANIFEST" \
+            || { echo "FEHLER: Manifest trägt nicht versionCode $ERWARTET_CODE."; grep -o 'android:versionCode="[^"]*"' "$MANIFEST"; exit 1; }
+          grep -q "android:versionName=\"$ERWARTET_NAME\"" "$MANIFEST" \
+            || { echo "FEHLER: Manifest trägt nicht versionName $ERWARTET_NAME."; grep -o 'android:versionName="[^"]*"' "$MANIFEST"; exit 1; }
+          echo "OK: Release-Signatur, Version $ERWARTET_NAME ($ERWARTET_CODE)."
+
+      - name: Zu Google Play hochladen
+        env:
+          GPLAY_SA_JSON_BASE64: ${{ secrets.GPLAY_SA_JSON_BASE64 }}
+        run: |
+          echo "$GPLAY_SA_JSON_BASE64" | base64 --decode > /tmp/gplay-sa.json
+          python3 .github/scripts/upload-play.py /tmp/gplay-sa.json \
+            apps/app/android/app/build/outputs/bundle/release/app-release.aab \
+            apps/app/release-notes-de.txt \
+            "${{ inputs.tracks }}" \
+            "${{ inputs.dry_run && 'validate' || 'commit' }}"
