@@ -19,9 +19,11 @@ build/
 apps/app/.expo/
 apps/app/web-build/
 apps/app/dist/
-apps/app/ios/
-apps/app/android/
 *.orig.*
+
+# Native Projekte (apps/app/ios, apps/app/android) sind VERSIONIERT — die
+# Release-Workflows bauen daraus. Ignoriert wird nur Generiertes; die
+# Einzelheiten stehen in apps/app/.gitignore.
 
 # Logs
 *.log
@@ -60,3 +62,7 @@ apps/app/package-lock.json
 # die Kopie still, wenn MapLibre aktualisiert wird.
 apps/app/public/maplibre-gl-worker.mjs
 apps/app/public/maplibre-gl-shared.mjs
+
+# Python-Bytecode des Play-Upload-Skripts (entsteht beim lokalen Probelauf)
+__pycache__/
+*.pyc

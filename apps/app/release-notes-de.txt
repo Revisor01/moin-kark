@@ -1,0 +1,8 @@
+Moin Kark zeigt, was in den Kirchengemeinden Dithmarschens los ist: Gottesdienste, Konzerte, Gruppen und Feste aller 14 Gemeinden auf einer Karte und in einer Liste.
+
+Erste Fassung mit:
+– Karte und Liste, Filter nach Gemeinde, Kategorie und Woche
+– Termine merken und sich daran erinnern lassen – auf dem Gerät, ohne Konto
+– Standort: Was ist gerade in meiner Nähe?
+– Route direkt in der Karten-App öffnen
+– Termine bleiben auch ohne Netz sichtbar

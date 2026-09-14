@@ -15,6 +15,8 @@ jobs:
   test:
     name: Tests und Typecheck
     runs-on: ubuntu-latest
+    # Ohne Limit läuft ein hängender Job bis zum Standard von sechs Stunden.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -34,6 +36,7 @@ jobs:
   audit:
     name: Abhängigkeiten prüfen
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 

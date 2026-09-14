@@ -45,6 +45,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "sync:map-worker": "node scripts/sync-map-worker.mjs",
+    "sync:native-version": "expo prebuild --no-install && ./scripts/apply-version.sh",
     "build:web": "npm run sync:map-worker && expo export --platform web"
   },
   "private": true
