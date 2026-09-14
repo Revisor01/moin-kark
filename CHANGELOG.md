@@ -182,6 +182,11 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 - Die Web-Fassung startete nicht mehr: Beim Öffnen brach sie mit einem Fehler
   ab, weil sie eine Funktion für Mitteilungen aufrief, die es nur auf dem Handy
   gibt. Auch die Zurück-Navigation warf dort einen Fehler.
+- Auf der Karte fehlten ausgerechnet die Namen der Orte, an denen etwas
+  stattfindet — Büsum, Meldorf, Heide, Wesselburen und Albersdorf blieben
+  unbeschriftet, während kleine Weiler ihren Namen trugen. Jetzt stehen die
+  Städtenamen auf der Übersicht; Dörfer erscheinen erst, wenn man weit
+  hineinzoomt.
 - Beim Öffnen zeigt die Karte jetzt die eigene Umgebung, sobald der Standort
   freigegeben ist. Bisher blieb sie oft auf der Dithmarschen-Übersicht stehen,
   weil dafür zusätzlich ein Termin in der Nähe liegen musste.

@@ -118,17 +118,44 @@ export const MAP_STYLE: any = {
       },
     },
     // Ortsnamen — ruhig, in Tinte mit Sand-Halo.
+    //
+    // Bis Zoom 12 nur Städte (`city`/`town`), darüber auch Dörfer.
+    //
+    // `rank` taugt hier NICHT zur Unterscheidung, obwohl es danach aussieht: Im
+    // Ausschnitt um Hennstedt tragen Büsum, Meldorf, Albersdorf, Wesselburen
+    // und Heide alle Rang 11 — und Weiler wie Rehm, Fiel, Lieth und Stelle
+    // ebenfalls. Nach Rang gefiltert erschienen deshalb ausgerechnet die
+    // Kleinstorte, während die Orte mit Terminen fehlten. Die Klasse trennt
+    // sauber: `town` sind genau die Orte, um die es geht.
+    //
+    // `symbol-sort-key` nach Rang bleibt für den Fall, dass bei Platzmangel
+    // zwischen gleichrangigen Beschriftungen entschieden werden muss.
     {
       id: "place-labels",
       type: "symbol",
       source: "openmaptiles",
       "source-layer": "place",
-      filter: ["in", "class", "city", "town", "village"],
+      filter: [
+        "match",
+        ["get", "class"],
+        ["city", "town"],
+        true,
+        ["village"],
+        [">=", ["zoom"], 12],
+        false,
+      ],
       layout: {
-        "text-field": ["get", "name:de"],
+        // Rückfall auf `name`: In den Kacheln über Dithmarschen ist `name:de`
+        // bei 80 von 124 Orten LEER — darunter Büsum, Meldorf, Albersdorf,
+        // Wesselburen und Heide. Mit `["get","name:de"]` allein blieben genau
+        // die Orte namenlos, an denen Termine stattfinden; beschriftet waren
+        // nur die wenigen Dörfer, die zufällig ein deutsches Namensfeld haben.
+        // Die Namen sind hier ohnehin deutsch, `name` ist also kein Rückschritt.
+        "text-field": ["coalesce", ["get", "name:de"], ["get", "name"]],
         "text-font": ["Noto Sans Bold"],
         "text-size": ["interpolate", ["linear"], ["zoom"], 8, 11, 13, 16],
         "text-max-width": 8,
+        "symbol-sort-key": ["coalesce", ["get", "rank"], 99],
       },
       paint: {
         "text-color": mapColors.label,
@@ -188,6 +215,12 @@ export const clusterCountLayer = {
     "text-field": ["get", "point_count_abbreviated"] as any,
     "text-font": ["Noto Sans Bold"] as any,
     "text-size": 13,
+    // Die Zahl gehört fest auf ihren Kreis und darf nie ausgeblendet werden;
+    // zugleich soll sie keine Ortsnamen verdrängen (sie liegt über ihnen und
+    // gewönne sonst jede Kollision — genau daran fehlten die Namen der Orte
+    // mit Terminen).
+    "text-allow-overlap": true as any,
+    "text-ignore-placement": true as any,
   },
   paint: { "text-color": mapColors.ring },
 };
