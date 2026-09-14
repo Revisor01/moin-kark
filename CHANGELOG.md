@@ -85,6 +85,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   `ok`/`degraded` (mind. eine Gemeinde ausgefallen — z.B. abgelaufener
   Einzeltoken)/`stale` (Refresh hängt, HTTP 503) samt `orgsFailed` und
   Cache-Alter — als Andockpunkt für einen Uptime-Monitor.
+- Die Datenschutzerklärung ist jetzt aus dem Profil heraus erreichbar und
+  beschreibt, was die App tatsächlich tut: Standort und gemerkte Termine
+  bleiben auf dem Gerät, es gibt kein Konto und keine Auswertung des
+  Nutzungsverhaltens.
 
 ### Infrastruktur
 
@@ -151,6 +155,22 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 - Listen-Sheet hat eine vierte Snap-Stufe (fast volle Höhe) und mehr Leerraum am
   Listenende. Vorher endete es bei ~412 px — die Liste scrollte zwar, aber die
   letzten Einträge lagen im abgeschnittenen Bereich unterhalb des Bildschirms.
+- Die Terminkarten in der Liste wachsen mit der Systemschriftgröße mit (bis
+  150 %), damit Ort und Kategorie bei großer Schrift nicht abgeschnitten werden.
+  Darüber bleibt die Schrift auf den Karten gedeckelt — sonst passte nur noch
+  ein Eintrag ins Listen-Sheet.
+- Kleine Bedienelemente reagieren jetzt auf eine größere Tippfläche:
+  „Zurücksetzen“ und die Auswahl-Chips im Filter, „Schließen“ im Profil, Herz
+  und „Schließen“ in der Terminansicht.
+- Kartenschwenken mit offener Liste ruckelt weniger: Die sichtbaren Terminkarten
+  rendern nicht mehr bei jeder Positionsmeldung und jedem Minutentakt neu, und
+  die Zeitformatierung baut ihre Werkzeuge einmal statt vier neue je Karte und
+  Render.
+- Nebentexte (Datum, Ort, Hinweise, Fußzeilen) sind etwas dunkler und damit
+  besser lesbar: Der Grauton erreicht jetzt das Kontrastverhältnis 4,5:1, das
+  für Fließtext empfohlen wird — vorher waren es 2,9:1. Kleine Textgrößen sind
+  zugleich auf wenige feste Stufen vereinheitlicht; einzelne Zeilen sind dadurch
+  um ein Pixel größer oder kleiner als bisher.
 
 ### Behoben
 
@@ -257,11 +277,123 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   stand dadurch ein Termin nächste Woche oben statt des Gottesdienstes am selben
   Vormittag. Der Cache gilt jetzt nur noch für den Tag, an dem er geschrieben
   wurde; zusätzlich wird beim Tageswechsel aus dem Hintergrund neu geladen.
+- Termine bleiben nachts sichtbar, auch wenn ChurchDesk gerade nicht erreichbar
+  ist: Bisher galt der Datenstand um Mitternacht als nicht vorhanden, die Karte
+  bekam dann statt der Termine vom Abend einen Fehler — und die erste Abfrage
+  nach Mitternacht wartete auf das komplette Neuladen aller Gemeinden. Jetzt
+  liefert die Schnittstelle den letzten Stand sofort weiter und lädt den neuen
+  Tag im Hintergrund nach.
+- Das Zeitfenster der Termine umfasste rund um die Zeitumstellung einen Tag zu
+  wenig oder zu viel; es sind jetzt immer genau 60 Kalendertage ab heute.
+- Änderungen an Ganztägig-Kennzeichnung, Endzeit-Anzeige, Ansprechperson, Ort,
+  Postleitzahl oder Gemeindezuordnung eines Termins kamen nicht bei den Geräten
+  an, solange sich sonst nichts änderte.
+- Die in der Orts-Verwaltung gepflegten Korrekturen, Kategorie-Ausschlüsse und
+  Highlights konnten komplett verloren gehen: Ließ sich die Ablage nach einem
+  Neustart nicht lesen, zeigte die Verwaltung nur den Code-Stand — und der
+  nächste Klick auf „Speichern" überschrieb damit alles Gepflegte. Speichern ist
+  in diesem Fall jetzt gesperrt und die Verwaltung sagt warum; außerdem bleibt
+  vor jedem Speichern eine Sicherungskopie des vorherigen Stands liegen.
+- Eine in der Orts-Verwaltung ausgeschlossene Kategorie mit doppeltem Leerzeichen
+  im Namen (kommt in ChurchDesk vor) galt als ausgeschlossen, die Termine
+  blieben aber auf der Karte. Der Ausschluss greift jetzt unabhängig von
+  Leerzeichen; die Kategorienliste fasst solche Schreibweisen zusammen.
+- Eine veraltete Vorgabe erlaubte der Kartendarstellung, hinter die gerade
+  angehobene Fassung zurückzufallen — also genau in den Fehler, der zuvor
+  behoben wurde. Die Vorgabe ist entfernt.
+- Der eigene Standort fehlte manchmal komplett — kein blauer Punkt, kein
+  Sprung in die Nähe — und kam erst nach einem Neustart der App wieder. Schlug
+  die allererste Ortung nach dem Start fehl (kaltes GPS, im Gebäude), gab die
+  App die Ortung still auf. Jetzt erscheint sofort der zuletzt bekannte
+  Standort, die Ortung läuft unabhängig vom ersten Versuch weiter, und ein
+  abgerissenes Standort-Signal wird von selbst wieder aufgenommen — auch beim
+  Zurückkehren in die App. Im Browser bleibt die Ortung außerdem nicht mehr
+  endlos in der Warteschleife hängen.
+- Android: Die Zurücktaste schließt jetzt die offene Terminansicht, den Filter
+  oder das Profil, statt die App in den Hintergrund zu schicken — beim
+  Zurückholen war das Sheet dann noch offen.
+- Filter und Profil endeten auf iPhones mit Home-Indicator zu dicht an der
+  Bildschirmkante; der Button „… Veranstaltungen zeigen“ lag in der Zone der
+  System-Geste.
+- Screenreader: Der Griff des Listen-Sheets ist jetzt bedienbar — die Stufe
+  wird angesagt, Wischen nach oben oder unten vergrößert oder verkleinert die
+  Liste. Vorher blieb die Liste für VoiceOver-Nutzer ein Ein-Karten-Fenster.
+  Die Auswahl-Schalter im Profil melden Rolle und aktiven Zustand, der
+  Karten-Button in der Terminansicht seine Rolle.
+- Ein Tipp auf eine Erinnerung öffnet den Termin jetzt auch, wenn die App zuvor
+  vollständig beendet war — bisher startete sie dann nur auf der Karte.
+- Schlägt das Laden der Schriften fehl, startet die App mit der Systemschrift,
+  statt dauerhaft eine leere Fläche zu zeigen.
+- Die Terminansicht sprang beim Lesen an den Anfang, sobald frische Daten den
+  zwischengespeicherten Stand ablösten (etwa eine Sekunde nach dem Start).
+- Beim schnellen Scrollen langer Listen erschienen die unteren Einträge
+  verspätet: Die Positionsrechnung der Liste ließ Rahmen und oberen Abstand
+  aus und lag nach 50 Einträgen über 100 Pixel daneben.
+- Der Standort-Marker auf der Karte wurde bei jeder Kartenbewegung neu
+  gesetzt, auch wenn sich die Position nicht geändert hatte.
+- Fällt beim Aktualisieren eine einzelne Gemeinde aus, nennt die Schnittstelle
+  jetzt, welche — die App kann deren gemerkte Termine damit schonen, statt sie
+  für abgesagt zu halten und falsche Absage-Mitteilungen zu verschicken.
+- Ein einziger unbrauchbarer Termin einer Gemeinde (etwa eine Kategorie ohne
+  Namen) ließ die Aktualisierung für alle Gemeinden scheitern. Der Termin wird
+  jetzt übersprungen, alle anderen kommen an.
+- In der Orts-Verwaltung ließ sich „Überstimmt ChurchDesk" bei einem im Code
+  vorgegebenen Eintrag nicht abwählen: Die Oberfläche zeigte das Häkchen als
+  entfernt, die Karte verwendete weiterhin die überstimmende Position.
+- Fehlte für eine Gemeinde der Zugang, meldete der Zustand der Schnittstelle
+  weiter „ok", obwohl deren Termine dauerhaft fehlten. Das zählt jetzt als
+  eingeschränkter Betrieb und steht in den Zustandsangaben.
+- Fehlermeldungen der Schnittstelle nannten Einzelheiten aus dem Inneren des
+  Servers (Namen von Umgebungsvariablen, Dateipfade). Nach außen gehen jetzt
+  feste Texte; in der Orts-Verwaltung sind Eingabefehler von Speicherfehlern
+  unterscheidbar.
+- Die Orts-Verwaltung nahm ein beliebig kurzes Zugangs-Token an und ließ
+  unbegrenzt viele Anmeldeversuche zu. Jetzt gilt eine Mindestlänge (sonst
+  bleibt die Verwaltung abgeschaltet), und nach zehn Fehlversuchen von einer
+  Adresse ist eine Minute Pause.
+- Die Zustandsangaben des Feeds beschrieben `from`/`to` als Zeitfenster; sie
+  sind aber Zeitpunkte. Das tatsächliche Fenster steht jetzt als Kalendertage
+  in eigenen Feldern, und das Lebenszeichen unter `/` ist dokumentiert.
+- Fiel bei der Aktualisierung eine einzelne Gemeinde vorübergehend aus, meldete
+  die App für jeden gemerkten Termin dieser Gemeinde fälschlich „Veranstaltung
+  entfällt“, löschte die Erinnerung und plante sie auch dann nicht mehr, wenn
+  die Gemeinde wieder erreichbar war. Termine gerade nicht erreichbarer
+  Gemeinden werden jetzt geschont, und fehlende Erinnerungen gemerkter Termine
+  werden beim nächsten Abgleich nachgeplant.
+- Verschobene oder abgesagte gemerkte Termine wurden erst beim übernächsten
+  Start gemeldet — oft erst nach dem Termin — und die Erinnerung blieb bis dahin
+  auf der alten Uhrzeit stehen. Der Abgleich läuft jetzt gegen die frisch
+  geladenen Daten, auch bei jeder Aktualisierung in laufender Sitzung.
+- Entfallene Termine blieben unsichtbar in der Merkliste und zählten im Profil
+  weiter mit.
+- Schlug bei „Vorabend und 2 Stunden vorher“ die zweite Planung fehl, ließ sich
+  die erste Erinnerung nicht mehr abbrechen und meldete sich für einen längst
+  entmerkten Termin.
+- Ein Herz-Tipp direkt nach dem Start konnte die gespeicherte Merkliste
+  überschreiben; ließ sich der Speicher nicht lesen, blieben Abgleich und
+  Aufräumen dauerhaft stumm.
+- Bei vielen gemerkten Terminen gingen auf iOS die spätesten Erinnerungen still
+  verloren (Systemgrenze für ausstehende Mitteilungen). Geplant werden jetzt die
+  nächsten 30 Termine; weitere rücken bei jedem Abgleich nach.
 
 ### Sonstiges
 
 - Tests und Typecheck laufen bei jeder Änderung automatisch, dazu wöchentlich
   eine Prüfung auf neu gemeldete Sicherheitslücken in den verwendeten
   Fremdbibliotheken.
+- Doppelte Logik zusammengeführt: Der Berliner Kalendertag, die Auswahl des
+  nächsten Termins an einem Pin und die Kategorie-Form der Schnittstelle haben
+  jetzt je eine gemeinsame Quelle für Server und App; intern genutzte Werte sind
+  nicht mehr nach außen sichtbar. Verhaltensgleich.
+- Der Feed trägt jetzt eine Kennung und darf eine Minute zwischengespeichert
+  werden; wer den Stand schon hat, bekommt eine leere Kurzantwort statt der
+  vollen Übertragung.
+- Farben, Abstände, Schriften und Textgrößen von App, Startseite und
+  Betriebsseiten kommen jetzt aus einer gemeinsamen Quelle; die Startseite
+  bekommt ihre Werte als erzeugte Datei, ein Test hält beides auf einem Stand.
+- Die Store-Fassungen für iOS und Android entstehen jetzt reproduzierbar aus
+  einem festen Stand statt vom Entwickler-Rechner; Version und Build-Nummern
+  haben dafür eine einzige Quelle, und ein Test wacht darüber, dass ein
+  Android-Release nie mit dem Entwicklungsschlüssel signiert wird.
 
 [Unreleased]: https://github.com/Revisor01/moin-kark/commits/main
