@@ -35,7 +35,6 @@ import { resolveBackPress } from "../lib/backNavigation";
 import {
   DEFAULT_FILTERS,
   applyFilters,
-  distanceKm,
   isInDithmarschen,
   isPast,
   sortByStart,
@@ -134,18 +133,21 @@ export default function Home() {
     else setOverviewToken((t) => t + 1);
   };
 
-  // Dynamischer Start-Zoom: ist der User nah an Events (≤8 km) → reinzoomen, sonst Übersicht.
+  // Start-Ansicht: Sobald der Standort da ist, einmal dorthin zoomen.
+  //
+  // Vorher hing das an zwei Bedingungen, die es in der Praxis oft verhinderten:
+  // Es musste ein Termin ≤ 8 km entfernt liegen (in dünn besetzten Wochen traf
+  // das selbst in der eigenen Gemeinde nicht zu), und der Effekt lief nur, wenn
+  // die Termine schon geladen waren — traf der Standort später ein, war
+  // `didInitialZoom` längst gesetzt und die Karte blieb auf der Übersicht.
+  // Jetzt entscheidet allein, ob der Standort in Dithmarschen liegt; außerhalb
+  // bleibt die Übersicht, sonst flöge die Karte ins Leere und der
+  // Kartenausschnitt filterte die Liste auf null.
   useEffect(() => {
-    if (didInitialZoom || !location || allFeatures.length === 0) return;
-    const near = allFeatures.some((f) => {
-      const [lng, lat] = f.geometry.coordinates;
-      return distanceKm(location, { lat, lng }) <= 8;
-    });
-    if (near) {
-      setFlyToken((t) => t + 1); // EventMap fliegt zur Position (Zoom 11.5)
-    }
+    if (didInitialZoom || !location) return;
+    if (isInDithmarschen(location)) setFlyToken((t) => t + 1);
     setDidInitialZoom(true);
-  }, [location, allFeatures, didInitialZoom]);
+  }, [location, didInitialZoom]);
 
   // Abgleich gemerkter Events gegen frische Netzdaten (entfällt / verschoben →
   // lokale Mitteilung, Erinnerungen nachziehen). Läuft bei jeder neuen Netzantwort.

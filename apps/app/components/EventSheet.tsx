@@ -208,7 +208,9 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
     <View>
       {/* Kein Event-Bild → wechselndes Dithmarschen-Motiv, stabil pro Event. */}
       <Image
-        source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id, p.parish, p.city)}
+        source={
+          p.image?.url ? { uri: p.image.url } : placeholderFor(p.id, p.parish, p.city, "wide")
+        }
         style={styles.hero}
         resizeMode="cover"
       />

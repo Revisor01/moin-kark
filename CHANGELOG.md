@@ -174,6 +174,14 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- In der Terminliste war von den Ortsbildern nur ein schmaler Ausschnitt zu
+  sehen — bei Hennstedt etwa nur die Turmspitze statt der Kirche. Die Motive
+  gibt es jetzt in einem eigenen Zuschnitt für die Liste; das Gebäude ist
+  vollständig und unverzerrt zu sehen. In der Detailansicht bleibt das
+  bisherige Breitbild.
+- Beim Öffnen zeigt die Karte jetzt die eigene Umgebung, sobald der Standort
+  freigegeben ist. Bisher blieb sie oft auf der Dithmarschen-Übersicht stehen,
+  weil dafür zusätzlich ein Termin in der Nähe liegen musste.
 - Erinnerungen konnten trotz Einstellung „Aus" verschickt werden, wenn die App
   gestartet wurde, bevor die gespeicherte Einstellung gelesen war.
 - Wurde ein Termin schnell hintereinander gemerkt und wieder entfernt, blieb
