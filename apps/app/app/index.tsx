@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   BackHandler,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -26,9 +26,11 @@ import { useSavedSync } from "../lib/hooks/useSavedSync";
 import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
 import {
   cancelForEvent,
+  clearLastNotificationTap,
   ensurePermission,
   rescheduleAll,
   scheduleForEvent,
+  useLastNotificationTap,
   type ReminderPref,
 } from "../lib/reminders";
 import { resolveBackPress } from "../lib/backNavigation";
@@ -168,7 +170,7 @@ export default function Home() {
   // Listener verpasste sie, die App startete nur auf der Karte. Der Hook liest
   // beim Mount die zuletzt gespeicherte Antwort und hört danach weiter zu
   // (s. expo-notifications 56, useLastNotificationResponse).
-  const lastNotificationResponse = Notifications.useLastNotificationResponse();
+  const lastNotificationResponse = useLastNotificationTap();
   useEffect(() => {
     if (!lastNotificationResponse) return;
     const id = lastNotificationResponse.notification.request.content.data?.eventId;
@@ -176,13 +178,18 @@ export default function Home() {
     // Verbraucht: sonst öffnete dieselbe Antwort das Event bei einem späteren
     // Neu-Mount erneut, und ein zweiter Tipp auf dieselbe Mitteilung gälte als
     // unverändert.
-    Notifications.clearLastNotificationResponse();
+    clearLastNotificationTap();
   }, [lastNotificationResponse]);
 
   // Android-Zurücktaste: offene Sheets schließen statt die App in den
-  // Hintergrund zu schicken. Reihenfolge s. lib/backNavigation. Auf iOS und
-  // im Web ist der Handler wirkungslos.
+  // Hintergrund zu schicken. Reihenfolge s. lib/backNavigation.
+  //
+  // Nur Android: Im Web wirft `BackHandler.addEventListener` („not supported"),
+  // auf iOS gibt es keine Hardware-Taste. Der Effekt läuft trotzdem auf jeder
+  // Plattform — nur der Inhalt ist plattformabhängig, damit die Hook-Reihenfolge
+  // gleich bleibt.
   useEffect(() => {
+    if (Platform.OS !== "android") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       const target = resolveBackPress({
         eventOpen: selectedId !== null,
