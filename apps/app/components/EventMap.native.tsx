@@ -11,47 +11,22 @@ import {
   type GeoJSONSourceRef,
 } from "@maplibre/maplibre-react-native";
 import type { EventFeatureCollection } from "@moinkark/shared";
-import { MAP_STYLE, SOURCE_ID, sourceConfig } from "../lib/mapStyle";
-import { DITHMARSCHEN, colors } from "../lib/theme";
+import {
+  DITHMARSCHEN,
+  MAP_STYLE,
+  SOURCE_ID,
+  clusterCountLayer,
+  clusterLayer,
+  fogPaint,
+  outlinePaint,
+  pointLayer,
+  sourceConfig,
+  toNativeStyle,
+  userMarker,
+} from "../lib/mapStyle";
 import { DITHMARSCHEN_MASK, DITHMARSCHEN_OUTLINE } from "../lib/dithmarschen-boundary";
+import { pickNearestAtSpot } from "../lib/nearestEvent";
 import type { EventMapProps } from "./EventMap";
-
-/**
- * Wählt aus den angetippten Pins den zeitlich nächsten Termin.
- *
- * Nötig, weil an einem Ort viele Events auf EXAKT derselben Koordinate liegen
- * (St. Bartholomäus Wesselburen: 13 Termine). MapLibre meldet dann entweder nur
- * den obersten Pin oder mehrere in beliebiger Reihenfolge — in beiden Fällen ist
- * `features[0]` Zufall. Darum: alle Events an dieser Koordinate aus den Daten
- * heraussuchen und den nehmen, der als nächstes stattfindet.
- */
-function nearestEventId(hits: any[], features: EventMapProps["features"]): number | null {
-  const ids = new Set(hits.map((h) => Number(h?.properties?.id)).filter(Number.isFinite));
-  const first = hits[0];
-  const [hlng, hlat] = first?.geometry?.coordinates ?? [];
-
-  // Alle Events auf derselben Koordinate einsammeln (nicht nur die gemeldeten).
-  const sameSpot = features.filter((f) => {
-    const [lng, lat] = f.geometry.coordinates;
-    return lng === hlng && lat === hlat;
-  });
-
-  const candidates = sameSpot.length > 0 ? sameSpot : features.filter((f) => ids.has(f.properties.id));
-  if (candidates.length === 0) {
-    // Ohne Kandidaten lieber gar nichts auswählen: Number(undefined) wäre NaN
-    // gewesen und der Tap liefe ins Leere (Sheet öffnet ohne Inhalt).
-    const raw = Number(first?.properties?.id);
-    return Number.isFinite(raw) ? raw : null;
-  }
-
-  // Frühester Start gewinnt. Vergangene sind hier bereits ausgefiltert
-  // (applyFilters/isPast laufen vor der Übergabe an die Karte).
-  let best = candidates[0];
-  for (const f of candidates) {
-    if (new Date(f.properties.startUtc) < new Date(best.properties.startUtc)) best = f;
-  }
-  return best.properties.id;
-}
 
 export default function EventMap({
   features,
@@ -139,8 +114,13 @@ export default function EventMap({
     // Mehrere Events am GLEICHEN Ort (Kirche mit Gottesdienst, Orgelkonzert, …)
     // liegen als deckungsgleiche Pins übereinander. features[0] ist dabei
     // willkürlich — beim Tippen kam so das Orgelkonzert nächste Woche statt des
-    // Gottesdienstes in einer Stunde. Darum den zeitlich NÄCHSTEN Termin wählen.
-    const id = nearestEventId(hits, features);
+    // Gottesdienstes in einer Stunde. Darum den zeitlich NÄCHSTEN Termin wählen
+    // (Logik in lib/nearestEvent.ts, geteilt mit der Web-Karte).
+    const id = pickNearestAtSpot(
+      features,
+      feat.geometry?.coordinates,
+      hits.map((h) => Number(h?.properties?.id))
+    );
     if (id != null) onSelect(id);
   };
 
@@ -170,18 +150,27 @@ export default function EventMap({
     }
   };
 
-  const userPointFC: EventFeatureCollection | any = userLocation
-    ? {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: {},
-            geometry: { type: "Point", coordinates: [userLocation.lng, userLocation.lat] },
-          },
-        ],
-      }
-    : null;
+  // Nur bei neuer Koordinate ein neues Objekt — sonst setzte MapLibre die
+  // Standort-Source bei JEDEM Render neu (jede Minute, jeder Sheet-Snap, jede
+  // Kartenbewegung), obwohl sich der Punkt nicht bewegt hatte.
+  const userLat = userLocation?.lat;
+  const userLng = userLocation?.lng;
+  const userPointFC: EventFeatureCollection | any = useMemo(
+    () =>
+      userLat !== undefined && userLng !== undefined
+        ? {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: {},
+                geometry: { type: "Point", coordinates: [userLng, userLat] },
+              },
+            ],
+          }
+        : null,
+    [userLat, userLng]
+  );
 
   return (
     <View style={styles.container}>
@@ -208,14 +197,14 @@ export default function EventMap({
           <Layer
             id="dith-mask-fill"
             type="fill"
-            style={{ fillColor: "#0A1F1F", fillOpacity: 0.55 }}
+            style={toNativeStyle(fogPaint)}
           />
         </GeoJSONSource>
         <GeoJSONSource id="dith-outline" data={DITHMARSCHEN_OUTLINE}>
           <Layer
             id="dith-outline-line"
             type="line"
-            style={{ lineColor: colors.primary, lineWidth: 3, lineOpacity: 0.9 }}
+            style={toNativeStyle(outlinePaint)}
           />
         </GeoJSONSource>
 
@@ -229,39 +218,26 @@ export default function EventMap({
           clusterRadius={sourceConfig.clusterRadius}
           onPress={onSourcePress}
         >
+          {/* Dieselben Layer wie im Web (lib/mapStyle.ts), nur in die native
+              camelCase-Schreibweise übersetzt — nichts hier doppelt pflegen. */}
           <Layer
-            id="clusters"
+            id={clusterLayer.id}
             type="circle"
-            filter={["has", "point_count"]}
-            style={{
-              circleColor: colors.primary,
-              circleOpacity: 0.94,
-              circleRadius: ["step", ["get", "point_count"], 16, 5, 20, 15, 26, 40, 34],
-              circleStrokeWidth: 3,
-              circleStrokeColor: "#FFFFFF",
-            }}
+            filter={clusterLayer.filter}
+            style={toNativeStyle(clusterLayer.paint)}
           />
           <Layer
-            id="cluster-count"
+            id={clusterCountLayer.id}
             type="symbol"
-            filter={["has", "point_count"]}
-            style={{
-              textField: ["get", "point_count_abbreviated"],
-              textSize: 13,
-              textColor: "#FFFFFF",
-              textFont: ["Noto Sans Bold"],
-            }}
+            filter={clusterCountLayer.filter}
+            style={toNativeStyle(clusterCountLayer.layout, clusterCountLayer.paint)}
           />
           <Layer
-            id="unclustered-point"
+            id={pointLayer.id}
             type="circle"
-            filter={["!", ["has", "point_count"]]}
-            style={{
-              circleColor: colors.accent,
-              circleRadius: 8,
-              circleStrokeWidth: 2.5,
-              circleStrokeColor: "#FFFFFF",
-            }}
+            filter={pointLayer.filter}
+            // Pin-Radius nativ fest 8 (Web: 6→9 nach Zoom) — bewusst beibehalten.
+            style={{ ...toNativeStyle(pointLayer.paint), circleRadius: 8 }}
           />
         </GeoJSONSource>
 
@@ -271,16 +247,16 @@ export default function EventMap({
             <Layer
               id="user-loc-halo"
               type="circle"
-              style={{ circleColor: "#2563EB", circleOpacity: 0.2, circleRadius: 16 }}
+              style={{ circleColor: userMarker.color, circleOpacity: userMarker.haloOpacity, circleRadius: 16 }}
             />
             <Layer
               id="user-loc-dot"
               type="circle"
               style={{
-                circleColor: "#2563EB",
+                circleColor: userMarker.color,
                 circleRadius: 7,
-                circleStrokeWidth: 3,
-                circleStrokeColor: "#FFFFFF",
+                circleStrokeWidth: userMarker.ringWidth,
+                circleStrokeColor: userMarker.ring,
               }}
             />
           </GeoJSONSource>

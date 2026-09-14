@@ -1,125 +1,99 @@
-// Design-Tokens für „Was ist los in Dithmarschen".
-// Küstlich-evangelischer, warm-redaktioneller Look: Nordsee-Teal + warmer Sand + Koralle.
-// Schriften: Bricolage Grotesque (Headlines) + DM Sans (Body).
+// React-Native-Seite des Themes. Die Werte kommen aus @moinkark/shared
+// (packages/shared/src/theme.ts) — DORT ändern, nicht hier. Diese Datei
+// re-exportiert die Tokens und baut daraus nur, was React Native konkret
+// braucht: Schriftschnitt-Namen, Schatten mit `elevation`, fertige Textstufen.
 
-export const colors = {
-  // Marke / Primär — Nordsee-Teal
-  primary: "#0E6E6E",
-  primaryDark: "#0A5252",
-  onPrimary: "#FFFFFF",
+import {
+  colors,
+  eyebrow,
+  shadows,
+  sizes,
+  type,
+  withAlpha,
+  alpha,
+  type TypeStep,
+} from "@moinkark/shared";
+import type { TextStyle, ViewStyle } from "react-native";
 
-  // Akzent — Koralle (Pins, CTAs)
-  accent: "#E4572E",
-  onAccent: "#FFFFFF",
+export {
+  alpha,
+  categoryColors,
+  colorForCategory,
+  colors,
+  mapColors,
+  radius,
+  sizes,
+  spacing,
+  withAlpha,
+} from "@moinkark/shared";
 
-  // Flächen
-  background: "#FBF6EE", // warmer Sand
-  surface: "#FFFFFF",
-  surfaceMuted: "#F3ECE0",
-
-  // Text
-  foreground: "#1C2B2B", // tiefes Tannengrün-Schwarz
-  muted: "#5C6B6B",
-  faint: "#8A9595",
-
-  // Linien
-  border: "#E6DCCB",
-  borderStrong: "#D6C8B0",
-
-  // Status
-  danger: "#C0392B",
-  success: "#2E7D5B",
-
-  // Karten-Style-Farben (für map-style.json verwendet)
-  mapWater: "#A9D6D6",
-  mapLand: "#FBF6EE",
-  mapGreen: "#E4EBDA",
-  mapRoad: "#EAD9C0",
-  mapLabel: "#3A4A4A",
-} as const;
-
-// Kategorie-Farben (Pins/Chips). Gemappt auf semantische Event-Gruppen.
-export const categoryColors: Record<string, string> = {
-  Gottesdienst: "#0E6E6E",
-  Andacht: "#3A8A8A",
-  Konzerte: "#8E44AD",
-  "Sela-Yoga": "#2E7D5B",
-  Treffpunkt: "#E4572E",
-  Senioren: "#C97B2C",
-  "Kinder / Jugendliche": "#D4A017",
-  default: "#5C6B6B",
-};
-
-export function colorForCategory(title?: string): string {
-  if (!title) return categoryColors.default;
-  // Erst exakter Match, dann grober Schlüsselwort-Match.
-  if (categoryColors[title]) return categoryColors[title];
-  const t = title.toLowerCase();
-  if (t.includes("gottesdienst")) return categoryColors.Gottesdienst;
-  if (t.includes("andacht")) return categoryColors.Andacht;
-  if (t.includes("konzert") || t.includes("musik")) return categoryColors.Konzerte;
-  if (t.includes("yoga")) return categoryColors["Sela-Yoga"];
-  if (t.includes("kind") || t.includes("jugend")) return categoryColors["Kinder / Jugendliche"];
-  if (t.includes("senior")) return categoryColors.Senioren;
-  if (t.includes("treff")) return categoryColors.Treffpunkt;
-  return categoryColors.default;
-}
-
-// Bricolage Grotesque = charaktervolle Display-Grotesk für Headlines + Lesetitel.
+// Bricolage Grotesque = charaktervolle Display-Grotesk für Headlines + Titel.
 // DM Sans = ruhiger, gut lesbarer Body für Fließtext und UI.
+// Die Namen sind die Schnitte aus @expo-google-fonts (s. app/_layout.tsx).
 export const fonts = {
   display: "BricolageGrotesque_600SemiBold",
   displayBold: "BricolageGrotesque_700Bold",
-  // Lesetitel (Event-Titel).
-  serif: "DMSans_400Regular",
-  serifBold: "BricolageGrotesque_600SemiBold",
   body: "DMSans_400Regular",
   bodyMedium: "DMSans_500Medium",
   bodySemibold: "DMSans_600SemiBold",
 } as const;
 
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-} as const;
+/** Schnittname zu Familie + Gewicht der Leiter. */
+function fontFor(family: "display" | "body", weight: 400 | 500 | 600 | 700): string {
+  if (family === "display") return weight >= 700 ? fonts.displayBold : fonts.display;
+  return weight >= 600 ? fonts.bodySemibold : weight >= 500 ? fonts.bodyMedium : fonts.body;
+}
 
-export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 18,
-  pill: 999,
-} as const;
+function step(name: TypeStep, weight?: 400 | 500 | 600 | 700): TextStyle {
+  const t = type[name];
+  return { fontFamily: fontFor(t.family, weight ?? t.weight), fontSize: t.size, lineHeight: t.lineHeight };
+}
+
+/**
+ * Fertige Textstufen fürs StyleSheet — Größe und Zeilenhöhe kommen aus der
+ * Leiter, body/label/caption zusätzlich als Medium (500) und Strong (600).
+ * Eigene fontSize/lineHeight in Komponenten sind seitdem ein Verstoß.
+ */
+export const text = {
+  display: step("display"),
+  heading: step("heading"),
+  title: step("title"),
+  body: step("body"),
+  bodyMedium: step("body", 500),
+  bodyStrong: step("body", 600),
+  label: step("label"),
+  labelMedium: step("label", 500),
+  labelStrong: step("label", 600),
+  caption: step("caption"),
+  captionMedium: step("caption", 500),
+  captionStrong: step("caption", 600),
+  /** Kicker und Abschnitts-Labels: Versalien, leicht gesperrt. */
+  eyebrow: { ...step("caption", 600), letterSpacing: eyebrow.letterSpacing, textTransform: "uppercase" },
+} as const satisfies Record<string, TextStyle>;
+
+/** Text-Glyphen als Icons (♥ ♡ × ★): Größe aus sizes.icon, Zeilenhöhe knapp darüber. */
+export const glyph = {
+  sm: { fontSize: sizes.icon.sm, lineHeight: sizes.icon.sm + 2 },
+  md: { fontSize: sizes.icon.md, lineHeight: sizes.icon.md + 2 },
+} as const satisfies Record<string, TextStyle>;
+
+function rnShadow(s: (typeof shadows)[keyof typeof shadows]): ViewStyle {
+  return {
+    shadowColor: s.color,
+    shadowOpacity: s.opacity,
+    shadowRadius: s.blur,
+    shadowOffset: { width: 0, height: s.y },
+    elevation: s.elevation,
+  };
+}
 
 export const shadow = {
-  card: {
-    shadowColor: "#1C2B2B",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  sheet: {
-    shadowColor: "#0A1F1F",
-    shadowOpacity: 0.28,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: -10 },
-    elevation: 24,
-  },
+  card: rnShadow(shadows.card),
+  sheet: rnShadow(shadows.sheet),
 } as const;
 
-// Dithmarschen-Kartengrenzen + Startansicht.
-export const DITHMARSCHEN = {
-  center: [9.0, 54.13] as [number, number], // [lng, lat]
-  zoom: 9.4,
-  /**
-   * Kartengrenzen als [west, south, east, north] — das flache Format, das
-   * MapLibre auf beiden Plattformen erwartet. (Die frühere verschachtelte
-   * SW/NE-Schreibweise akzeptierten die Typen ab @vis.gl/react-maplibre 8.1.2
-   * nicht mehr, und nativ wurde sie ohnehin von Hand flachgeklopft.)
-   */
-  bounds: [8.3, 53.8, 9.6, 54.5] as [number, number, number, number],
-};
+/** Halbtransparente Flächen — Alpha-Regeln aus dem Theme, fertig als rgba. */
+export const overlays = {
+  backdrop: withAlpha(colors.ink, alpha.backdrop),
+  onImage: withAlpha(colors.onColor, alpha.overlay),
+} as const;

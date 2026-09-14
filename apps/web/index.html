@@ -28,40 +28,48 @@
   @font-face{font-family:"DM Sans";src:url("fonts/DMSans_500Medium.ttf") format("truetype");font-weight:500;font-display:swap}
   @font-face{font-family:"DM Sans";src:url("fonts/DMSans_700Bold.ttf") format("truetype");font-weight:700;font-display:swap}
 </style>
+<!-- Design-Tokens (Farben, Abstände, Radien, Textstufen) kommen aus
+     theme.css — erzeugt aus packages/shared/src/theme.ts, derselben Quelle
+     wie App und API-Seiten. Dort ändern, nicht hier. -->
+<link rel="stylesheet" href="theme.css">
 <style>
   :root{
-    --primary:#0E6E6E; --primary-dark:#0A5252; --accent:#E4572E;
-    --bg:#FBF2E3; --surface:#FFFFFF; --surface-muted:#F3ECE0;
-    --fg:#1C2B2B; --muted:#5C6B6B; --faint:#8A9595;
-    --border:#E6DCCB;
-    /* Dithmarscher Grün — aus dem Kartenstil der App (mapGreen/success). */
-    --green:#2E7D5B; --green-soft:#E4EBDA; --marsch:#73A89A;
     --maxw:1080px;
+    /* Zwei Bildfarben aus dem Landschaftsband (deich.jpg), keine UI-Tokens:
+       der Himmel ist zugleich der Seitenhintergrund (sonst zeichnet sich die
+       Oberkante des Bildes als Linie ab), der Marschton startet den Verlauf
+       der Features. Sie müssen zur Illustration passen, nicht zur App. */
+    --sky:#FBF2E3;
+    --marsch:#73A89A;
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
   body{
-    margin:0; background:var(--bg); color:var(--fg);
-    font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    margin:0; background:var(--sky); color:var(--ink);
+    font-family:var(--font-body);
     font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased;
   }
-  h1,h2,h3{font-family:"Bricolage Grotesque","DM Sans",sans-serif; line-height:1.12; margin:0; letter-spacing:-.02em}
+  /* Überschriften skalieren mit der Breite (clamp) — die Pixel-Leiter der
+     App passt hier nur für Titel und Fließtext. */
+  h1,h2,h3{font-family:var(--font-display); line-height:1.12; margin:0; letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3vw,2rem);font-weight:var(--weight-heading)}
+  h3{font-size:var(--text-title);font-weight:var(--weight-heading)}
   a{color:var(--primary); text-underline-offset:3px}
-  a:hover{color:var(--primary-dark)}
-  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+  a:hover{color:color-mix(in srgb,var(--primary) 80%,black)}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 var(--space-xl)}
   .skip{position:absolute;left:-9999px}
-  .skip:focus{left:16px;top:16px;background:var(--surface);padding:10px 16px;border-radius:8px;z-index:99}
+  .skip:focus{left:var(--space-lg);top:var(--space-lg);background:var(--surface);padding:var(--space-sm) var(--space-lg);border-radius:var(--radius-sm);z-index:99}
 
   /* Header */
-  header{padding:22px 0}
-  .brand{display:flex;align-items:center;gap:12px;font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.02em}
-  .brand img{width:38px;height:38px;border-radius:9px;display:block}
+  header{padding:var(--space-xl) 0}
+  .brand{display:flex;align-items:center;gap:var(--space-md);font-family:var(--font-display);font-weight:var(--weight-display);font-size:var(--text-title);letter-spacing:-.02em}
+  .brand img{width:38px;height:38px;border-radius:var(--radius-sm);display:block}
 
   /* Hero — der Text sitzt im beigen Himmel des Landschaftsbandes, das unten
      bündig im Hintergrund liegt. */
   /* Unten so viel Raum, dass das Landschaftsband dort Platz hat; der Text
      sitzt im beigen Himmel des Bildes. */
-  .hero{padding:40px 0 clamp(150px,21vw,300px); position:relative; overflow:hidden}
+  .hero{padding:var(--space-3xl) 0 clamp(150px,21vw,300px); position:relative; overflow:hidden}
   .hero .wrap{position:relative; z-index:3}
   /* Das Landschaftsband liegt HINTER dem Hero-Text und schließt unten bündig
      an den nächsten Abschnitt an. Der beige Himmel des Bildes ist zugleich der
@@ -73,74 +81,74 @@
     z-index:1; pointer-events:none;
   }
   .launch{
-    display:inline-block;margin:0 0 18px;padding:7px 15px;border-radius:999px;
-    background:rgba(228,87,46,.12);color:#B8431F;
-    font-size:13.5px;font-weight:700;letter-spacing:.02em;
+    display:inline-block;margin:0 0 var(--space-lg);padding:var(--space-sm) var(--space-lg);border-radius:var(--radius-pill);
+    background:rgba(var(--accent-rgb),var(--alpha-tint));color:var(--accent-dark);
+    font-size:var(--text-label);font-weight:600;letter-spacing:var(--tracking-eyebrow);
   }
-  .hero h1{font-size:clamp(2.4rem,6.2vw,4.2rem); font-weight:800; max-width:16ch}
+  .hero h1{font-size:clamp(2.4rem,6.2vw,4.2rem); font-weight:var(--weight-display); max-width:16ch}
   .hero h1 em{font-style:normal;color:var(--primary)}
-  .lead{font-size:clamp(1.06rem,2.2vw,1.3rem); color:var(--muted); max-width:56ch; margin:22px 0 0}
-  .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
+  .lead{font-size:clamp(1.06rem,2.2vw,1.3rem); color:var(--muted); max-width:56ch; margin:var(--space-xl) 0 0}
+  .cta{display:flex;flex-wrap:wrap;gap:var(--space-lg);margin-top:var(--space-xxl)}
   .btn{
-    display:inline-flex;align-items:center;gap:9px;
-    padding:15px 26px;border-radius:999px;font-weight:700;font-size:16px;
+    display:inline-flex;align-items:center;gap:var(--space-sm);
+    padding:var(--space-lg) var(--space-xl);border-radius:var(--radius-pill);font-weight:600;font-size:var(--text-body);
     text-decoration:none;border:2px solid transparent;transition:transform .12s ease,background .12s ease;
   }
   .btn:active{transform:translateY(1px)}
-  .btn-primary{background:var(--accent);color:#fff}
-  .btn-primary:hover{background:#c9481f;color:#fff}
+  .btn-primary{background:var(--accent);color:var(--on-color)}
+  .btn-primary:hover{background:var(--accent-dark);color:var(--on-color)}
   .btn-ghost{background:transparent;color:var(--primary);border-color:var(--border)}
   .btn-ghost:hover{background:var(--surface);border-color:var(--primary)}
-  .note{margin-top:16px;font-size:14.5px;color:var(--faint)}
+  .note{margin-top:var(--space-lg);font-size:var(--text-body);color:var(--faint)}
 
   /* Store-Badges: noch nicht verlinkt (Launch steht bevor), daher bewusst
      gedämpft und ohne href — sie zeigen an, was kommt, statt ins Leere zu führen. */
-  .stores{margin-top:30px}
-  .stores-hint{display:block;font-size:14px;color:var(--faint);margin-bottom:11px}
-  .store-row{display:flex;flex-wrap:wrap;gap:12px}
+  .stores{margin-top:var(--space-xxl)}
+  .stores-hint{display:block;font-size:var(--text-label);color:var(--faint);margin-bottom:var(--space-md)}
+  .store-row{display:flex;flex-wrap:wrap;gap:var(--space-md)}
   .store-badge{
-    display:inline-flex;align-items:center;gap:10px;
-    padding:9px 17px 9px 14px;border-radius:11px;
+    display:inline-flex;align-items:center;gap:var(--space-sm);
+    padding:var(--space-sm) var(--space-lg) var(--space-sm) var(--space-lg);border-radius:var(--radius-md);
     border:1px solid var(--border);background:var(--surface);
     color:var(--muted);opacity:.72;cursor:default;
   }
   .store-badge svg{width:22px;height:22px;flex:none}
-  .store-badge span{display:flex;flex-direction:column;line-height:1.15;font-weight:700;font-size:15px}
-  .store-badge small{font-weight:500;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--faint)}
+  .store-badge span{display:flex;flex-direction:column;line-height:1.15;font-weight:600;font-size:var(--text-body)}
+  .store-badge small{font-weight:500;font-size:var(--text-caption);letter-spacing:var(--tracking-eyebrow);text-transform:uppercase;color:var(--faint)}
 
 
   /* Features — sanfter Grünton als Fortsetzung des Landschaftsbandes. */
   .features{
     /* Startet im Marschton des Landschaftsbandes und läuft in den Sand aus —
        so wirkt der Abschnitt als Fortsetzung der Illustration, nicht als Bruch. */
-    background:linear-gradient(180deg,var(--marsch) 0%,var(--green-soft) 16%,var(--surface-muted) 58%);
-    padding:64px 0 72px;
+    background:linear-gradient(180deg,var(--marsch) 0%,var(--map-green) 16%,var(--surface-muted) 58%);
+    padding:var(--space-4xl) 0;
   }
-  .features h2{font-size:clamp(1.6rem,3.4vw,2.2rem);font-weight:700;margin-bottom:8px}
-  .features .sub{color:var(--muted);margin:0 0 38px;max-width:52ch}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:22px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px 24px}
-  .card h3{font-size:1.12rem;font-weight:700;margin-bottom:8px}
-  .card p{margin:0;color:var(--muted);font-size:15.5px}
-  .ico{width:42px;height:42px;border-radius:11px;background:rgba(14,110,110,.10);display:grid;place-items:center;margin-bottom:15px}
+  .features h2{margin-bottom:var(--space-sm)}
+  .features .sub{color:var(--muted);margin:0 0 var(--space-xxl);max-width:52ch}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:var(--space-xl)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-xl)}
+  .card h3{margin-bottom:var(--space-sm)}
+  .card p{margin:0;color:var(--muted);font-size:var(--text-body)}
+  .ico{width:42px;height:42px;border-radius:var(--radius-md);background:rgba(var(--primary-rgb),var(--alpha-tint));display:grid;place-items:center;margin-bottom:var(--space-lg)}
   .ico svg{width:22px;height:22px;stroke:var(--primary);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   /* Zwei Karten in Marsch-Grün, eine in Koralle — bricht das Einerlei auf,
      ohne bunt zu werden. */
-  .card:nth-child(3) .ico, .card:nth-child(5) .ico{background:rgba(46,125,91,.12)}
-  .card:nth-child(3) .ico svg, .card:nth-child(5) .ico svg{stroke:var(--green)}
-  .card:nth-child(4) .ico{background:rgba(228,87,46,.11)}
+  .card:nth-child(3) .ico, .card:nth-child(5) .ico{background:rgba(var(--success-rgb),var(--alpha-tint))}
+  .card:nth-child(3) .ico svg, .card:nth-child(5) .ico svg{stroke:var(--success)}
+  .card:nth-child(4) .ico{background:rgba(var(--accent-rgb),var(--alpha-tint))}
   .card:nth-child(4) .ico svg{stroke:var(--accent)}
 
   /* Orte — die Illustrationen als eigener Abschnitt. Vier Kacheln im Raster,
      das Kohlfeld darunter über die volle Breite als Abschluss. */
-  .places{padding:62px 0 8px}
-  .places h2{font-size:clamp(1.6rem,3.4vw,2.2rem);font-weight:700;margin-bottom:8px}
-  .places .sub{color:var(--muted);margin:0 0 34px;max-width:52ch}
-  .place-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
-  .place{margin:0;border-radius:16px;overflow:hidden;background:var(--surface);border:1px solid var(--border)}
+  .places{padding:var(--space-4xl) 0 var(--space-sm)}
+  .places h2{margin-bottom:var(--space-sm)}
+  .places .sub{color:var(--muted);margin:0 0 var(--space-xxl);max-width:52ch}
+  .place-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-xl)}
+  .place{margin:0;border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);border:1px solid var(--border)}
   .place img{display:block;width:100%;height:clamp(130px,17vw,190px);object-fit:cover;object-position:center 62%}
   .place figcaption{
-    padding:11px 16px;font-weight:700;font-size:15px;color:var(--fg);
+    padding:var(--space-md) var(--space-lg);font-weight:600;font-size:var(--text-body);color:var(--ink);
     border-top:1px solid var(--border);
   }
   .place-wide{grid-column:1 / -1}
@@ -149,37 +157,40 @@
   @media (max-width:640px){ .place-grid{grid-template-columns:1fr} }
 
   /* Info */
-  .info{padding:66px 0}
-  .info-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:52px;align-items:start}
-  .info h2{font-size:clamp(1.5rem,3vw,2rem);font-weight:700;margin-bottom:14px}
-  .info p{color:var(--muted);margin:0 0 15px}
+  .info{padding:var(--space-4xl) 0}
+  .info-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:var(--space-3xl);align-items:start}
+  .info h2{margin-bottom:var(--space-lg)}
+  .info p{color:var(--muted);margin:0 0 var(--space-lg)}
   .panel{
-    background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-xl);
     /* Grüne Kante als ruhiger Akzent — nimmt das Marschland-Motiv auf. */
-    border-top:3px solid var(--green);
+    border-top:3px solid var(--success);
   }
-  .panel h3{font-size:1rem;font-weight:700;margin-bottom:14px}
+  .panel h3{margin-bottom:var(--space-lg)}
+  .panel p{margin:0 0 var(--space-lg);font-size:var(--text-body);color:var(--muted)}
 
-  /* Footer */
-  footer{background:var(--fg);color:#D9E2E2;padding:52px 0 40px;font-size:15px}
-  footer a{color:#8FD3D3}
-  footer a:hover{color:#B6E4E4}
-  .f-grid{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start}
-  .f-logo{background:#fff;border-radius:12px;padding:16px 22px;display:inline-block}
+  /* Footer — Text auf Tinte: Weiß mit Alpha statt eigener Grautöne, Links im
+     hellen Teal. */
+  footer{background:var(--ink);color:rgba(var(--on-color-rgb),var(--alpha-on-dark-text));padding:var(--space-3xl) 0;font-size:var(--text-body)}
+  footer a{color:var(--primary-soft)}
+  footer a:hover{color:var(--on-color)}
+  .f-grid{display:grid;grid-template-columns:1fr auto;gap:var(--space-xxl);align-items:start}
+  .f-logo{background:var(--surface);border-radius:var(--radius-md);padding:var(--space-lg) var(--space-xl);display:inline-block}
   .f-logo img{height:64px;display:block}
-  .carrier{margin:14px 0 0;font-weight:500;color:#EDF2F2}
-  .attr{margin:16px 0 0;color:#9FB0B0;font-size:14px;max-width:56ch}
+  .carrier{margin:var(--space-lg) 0 0;font-weight:500;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-strong))}
+  .attr{margin:var(--space-lg) 0 0;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-muted));font-size:var(--text-label);max-width:56ch}
   /* Branding-Pattern: Zeile 1 App+Version, Zeile 2 mit rotem Vogel,
      Zeile 3 kursiv und am gedämpftesten. Abstände 4px wie in der Spec. */
-  .appver{margin:0;text-align:right;color:#9FB0B0;font-size:14px}
-  .made{margin:4px 0 0;text-align:right;color:#9FB0B0;font-size:14px}
-  .bird{display:inline-block;vertical-align:-2px;margin:0 3px}
-  .blessing{margin:4px 0 0;text-align:right;color:#8FD3D3;font-size:12px;font-style:italic;opacity:.85}
-  .copy{margin:10px 0 0;text-align:right;font-size:14px}
-  hr.f-div{border:0;border-top:1px solid rgba(255,255,255,.13);margin:30px 0 22px}
+  .appver{margin:0;text-align:right;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-muted));font-size:var(--text-label)}
+  .made{margin:var(--space-xs) 0 0;text-align:right;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-muted));font-size:var(--text-label)}
+  .bird{display:inline-block;vertical-align:-2px;margin:0 var(--space-xxs)}
+  .blessing{margin:var(--space-xs) 0 0;text-align:right;color:var(--primary-soft);font-size:var(--text-caption);font-style:italic;opacity:.85}
+  .copy{margin:var(--space-sm) 0 0;text-align:right;font-size:var(--text-label)}
+  hr.f-div{border:0;border-top:1px solid rgba(var(--on-color-rgb),var(--alpha-on-dark-line));margin:var(--space-xxl) 0 var(--space-xl)}
+  .legal{margin:0;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-faint));font-size:var(--text-label)}
 
   @media (max-width:820px){
-    .info-grid{grid-template-columns:1fr;gap:32px}
+    .info-grid{grid-template-columns:1fr;gap:var(--space-xxl)}
     .f-grid{grid-template-columns:1fr}
     .appver,.made,.blessing,.copy{text-align:left}
   }
@@ -330,7 +341,7 @@
       </div>
       <div class="panel">
         <h3>Direkt loslegen</h3>
-        <p style="margin:0 0 18px;font-size:15px;color:var(--muted)">
+        <p>
           Die Karte läuft im Browser — ohne Installation, ohne Konto.
         </p>
         <a class="btn btn-primary" style="width:100%;justify-content:center" href="https://karte.moin-kark.de">
@@ -368,7 +379,7 @@
       </div>
     </div>
     <hr class="f-div">
-    <p style="margin:0;color:#849494;font-size:14px">
+    <p class="legal">
       <a href="https://www.kirche-dithmarschen.de/impressum">Impressum</a> ·
       <a href="https://www.kirche-dithmarschen.de/datenschutz">Datenschutz</a>
     </p>
@@ -376,6 +387,5 @@
 </footer>
 
 <script>document.getElementById('jahr').textContent=new Date().getFullYear()</script>
-<!-- Version wird beim Deploy aus package.json gesetzt (s. README) -->
 </body>
 </html>

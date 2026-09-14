@@ -1,6 +1,10 @@
 // Server-gerenderte Mini-Seiten der API: öffentlicher Status-Monitor (/status)
 // und die Admin-Oberfläche für Orts-Korrekturen (/admin). Bewusst ohne Build-Step
 // und ohne externe Assets — beides sind Betriebs-Werkzeuge, keine Produkt-UI.
+// Farben, Abstände und Radien kommen als CSS-Variablen aus dem geteilten Theme
+// (packages/shared/src/theme.ts) — derselben Quelle wie App und Landingpage.
+
+import { themeCss } from "@moinkark/shared";
 
 export interface FallbackGroup {
   name: string;
@@ -23,31 +27,31 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-const BASE_CSS = `
-  :root{--primary:#0E6E6E;--accent:#E4572E;--bg:#FBF2E3;--surface:#fff;--fg:#1C2B2B;
-    --muted:#5C6B6B;--border:#E6DCCB;--ok:#2E7D5B;--warn:#C97B2C;--bad:#B8431F}
+// Betriebsseiten laufen in der Systemschrift (keine Webfonts, keine externen
+// Assets); Größen und Abstände folgen der Leiter aus dem Theme.
+const BASE_CSS = `${themeCss()}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}
+  body{margin:0;background:var(--background);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:var(--space-xl)}
   .wrap{max-width:860px;margin:0 auto}
-  h1{font-size:1.5rem;margin:0 0 4px}
-  h2{font-size:1.05rem;margin:28px 0 10px}
-  .sub{color:var(--muted);margin:0 0 22px;font-size:14px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:14px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  h1{font-size:var(--text-heading);margin:0 0 var(--space-xs)}
+  h2{font-size:var(--text-title);margin:var(--space-xxl) 0 var(--space-sm)}
+  .sub{color:var(--muted);margin:0 0 var(--space-xl);font-size:var(--text-label)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-lg) var(--space-xl);margin-bottom:var(--space-lg)}
+  table{width:100%;border-collapse:collapse;font-size:var(--text-label)}
+  th,td{text-align:left;padding:var(--space-sm);border-bottom:1px solid var(--border);vertical-align:top}
   th{color:var(--muted);font-weight:600}
-  .pill{display:inline-block;padding:3px 12px;border-radius:999px;color:#fff;font-weight:700;font-size:14px}
-  .ok{background:var(--ok)}.degraded{background:var(--warn)}.stale{background:var(--bad)}.starting{background:var(--muted)}
-  .kpis{display:flex;flex-wrap:wrap;gap:10px}
-  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 18px;min-width:120px}
-  .kpi b{display:block;font-size:1.4rem}
-  .kpi span{color:var(--muted);font-size:13px}
+  .pill{display:inline-block;padding:var(--space-xxs) var(--space-md);border-radius:var(--radius-pill);color:var(--on-color);font-weight:700;font-size:var(--text-label)}
+  .ok{background:var(--success)}.degraded{background:var(--warning)}.stale{background:var(--accent-dark)}.starting{background:var(--muted)}
+  .kpis{display:flex;flex-wrap:wrap;gap:var(--space-sm)}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-md) var(--space-lg);min-width:120px}
+  .kpi b{display:block;font-size:var(--text-heading)}
+  .kpi span{color:var(--muted);font-size:var(--text-label)}
   .muted{color:var(--muted)}
-  button{background:var(--primary);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;font-size:14px}
+  button{background:var(--primary);color:var(--on-color);border:0;border-radius:var(--radius-sm);padding:var(--space-sm) var(--space-lg);font-weight:600;cursor:pointer;font-size:var(--text-label)}
   button.ghost{background:transparent;color:var(--primary);border:1px solid var(--border)}
-  button.danger{background:transparent;color:var(--bad);border:0;padding:4px 8px}
-  input,select{border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;background:#fff;color:var(--fg)}
-  input:invalid{border-color:var(--bad)}
+  button.danger{background:transparent;color:var(--accent-dark);border:0;padding:var(--space-xs) var(--space-sm)}
+  input,select{border:1px solid var(--border);border-radius:var(--radius-sm);padding:var(--space-sm);font-size:var(--text-label);background:var(--surface);color:var(--ink)}
+  input:invalid{border-color:var(--accent-dark)}
 `;
 
 /** Öffentliche Monitor-Seite — lädt sich alle 60 s selbst neu. */
@@ -89,16 +93,20 @@ export function adminPage(): string {
   return `<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Moin Kark — Orte verwalten</title><style>${BASE_CSS}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .row{display:flex;gap:var(--space-sm);align-items:center;flex-wrap:wrap}
+  .row.spaced{margin-top:var(--space-sm)}
   #app{display:none}
   td input{width:100%;min-width:70px}
-  details{margin-top:10px}
+  details{margin-top:var(--space-sm)}
   summary{cursor:pointer;color:var(--primary);font-weight:600}
-  .hint{font-size:13px;color:var(--muted)}
-  #msg{margin-left:10px;font-size:14px}
+  .hint{font-size:var(--text-label);color:var(--muted)}
+  #msg{margin-left:var(--space-sm);font-size:var(--text-label)}
+  #map{display:none;position:fixed;right:var(--space-lg);bottom:var(--space-lg);width:360px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-sheet);overflow:hidden;z-index:9}
+  #map .bar{display:flex;justify-content:space-between;align-items:center;gap:var(--space-sm);padding:var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md)}
 </style></head><body><div class="wrap">
 <h1>Moin Kark — Orte verwalten</h1>
 <p class="sub">Laufzeit-Korrekturen für Orts-Koordinaten. Sie überstimmen die im Code gepflegten Tabellen und greifen beim nächsten Daten-Refresh (sofort nach dem Speichern angestoßen).</p>
+<p id="loadWarn" class="card" style="display:none;color:var(--accent-dark);font-weight:600"></p>
 
 <div class="card" id="login">
   <div class="row">
@@ -114,18 +122,18 @@ export function adminPage(): string {
 versionierten Tabelle — eine Änderung daran wird als Laufzeit-Override gespeichert und lässt sich durch
 Zurücksetzen auf die Originalwerte wieder aufheben (ganz löschen geht nur im Code).</p>
 <div class="card"><table id="locTable"><tr><th>Ortsname</th><th>Lat</th><th>Lng</th><th></th><th>Herkunft</th><th></th></tr></table>
-<div class="row" style="margin-top:10px"><button class="ghost" onclick="addLoc('','','')">+ Ort hinzufügen</button></div></div>
+<div class="row spaced"><button class="ghost" onclick="addLoc('','','')">+ Ort hinzufügen</button></div></div>
 
 <h2>Titel-Korrekturen (Titel-Präfix → Koordinate)</h2>
 <p class="hint">Für Termine ganz ohne Ortsangabe. „Überstimmt ChurchDesk" nur setzen, wenn die gepflegte Adresse bewusst falsch ist (Familienlagune-Fall).</p>
 <div class="card"><table id="titleTable"><tr><th>Titel beginnt mit</th><th>Lat</th><th>Lng</th><th>Überstimmt ChurchDesk</th><th></th><th>Herkunft</th><th></th></tr></table>
-<div class="row" style="margin-top:10px"><button class="ghost" onclick="addTitle('','','',false)">+ Titel hinzufügen</button></div></div>
+<div class="row spaced"><button class="ghost" onclick="addTitle('','','',false)">+ Titel hinzufügen</button></div></div>
 
 <h2>Ausgeschlossene Kategorien</h2>
 <p class="hint">Termine dieser Kategorien erscheinen NICHT auf der Karte. Im Code fest ausgeschlossen: <span id="staticCats"></span>. Hier lassen sich weitere ergänzen — Klick auf einen Vorschlag übernimmt ihn.</p>
 <div class="card">
   <table id="catTable"><tr><th>Kategorie</th><th></th></tr></table>
-  <div class="row" style="margin-top:10px"><button class="ghost" onclick="addCat('')">+ Kategorie hinzufügen</button></div>
+  <div class="row spaced"><button class="ghost" onclick="addCat('')">+ Kategorie hinzufügen</button></div>
   <p class="hint" style="margin-bottom:0">Aktuelle Kategorien im Feed: <span id="catSuggest"></span></p>
 </div>
 
@@ -134,7 +142,7 @@ Zurücksetzen auf die Originalwerte wieder aufheben (ganz löschen geht nur im C
 Häkchen = hier gesetztes Zusatz-Highlight; es hängt an genau diesem Termin (bei Serien: an der einzelnen Wiederholung).</p>
 <div class="card" id="hlContainer"><p class="hint">Lade …</p></div>
 
-<div class="row" style="margin:18px 0">
+<div class="row" style="margin:var(--space-lg) 0">
   <button onclick="save()">Speichern &amp; Refresh anstoßen</button><span id="msg"></span>
 </div>
 
@@ -145,8 +153,8 @@ Häkchen = hier gesetztes Zusatz-Highlight; es hängt an genau diesem Termin (be
 </div>
 </div>
 
-<div id="map" style="display:none;position:fixed;right:18px;bottom:18px;width:360px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow:hidden;z-index:9">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 6px 6px 12px">
+<div id="map">
+  <div class="bar">
     <span id="mapTitle" class="hint" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
     <button class="danger" onclick="document.getElementById('map').style.display='none'">✕</button>
   </div>
@@ -172,7 +180,7 @@ async function login() {
 function coordCell(v) { return '<td><input value="' + v + '" size="10" required pattern="-?\\\\d+([.,]\\\\d+)?"></td>'; }
 function nameCell(v) { return '<td><input value="' + v.replace(/"/g, "&quot;") + '"></td>'; }
 function delCell() { return '<td><button class="danger" onclick="this.closest(\\'tr\\').remove()">✕</button></td>'; }
-function pinCell() { return '<td><button class="ghost" style="padding:4px 9px" title="Auf Minikarte zeigen" onclick="rowMap(this)">📍</button></td>'; }
+function pinCell() { return '<td><button class="ghost" style="padding:var(--space-xs) var(--space-sm)" title="Auf Minikarte zeigen" onclick="rowMap(this)">📍</button></td>'; }
 function originCell(origin) { return '<td class="hint" style="white-space:nowrap">' + (origin || "") + '</td>'; }
 
 function addLoc(name, lat, lng, origin) {
@@ -223,6 +231,14 @@ function render(data) {
   for (const id of ["locTable", "titleTable", "catTable"])
     while ($(id).rows.length > 1) $(id).deleteRow(1);
   STATIC_LOC = {}; STATIC_TITLES = {};
+
+  // Konnte die Overrides-Datei beim Start nicht gelesen werden, zeigt die Tabelle
+  // nur den Code-Stand — Speichern ist dann serverseitig gesperrt, sonst würde
+  // dieser leere Stand die echten Korrekturen überschreiben. Vor dem ersten Klick
+  // sichtbar machen, nicht erst als Fehler nach dem Speichern.
+  const warn = $("loadWarn");
+  warn.style.display = data.loadError ? "block" : "none";
+  warn.textContent = data.loadError ? "Speichern gesperrt: " + data.loadError : "";
 
   // Zusammengeführte Sicht: Code-Einträge zuerst, Laufzeit-Overrides überschreiben
   // bzw. ergänzen sie — genau die Vorrang-Logik des Servers.

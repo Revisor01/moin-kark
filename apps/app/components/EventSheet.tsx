@@ -22,7 +22,7 @@ import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
 import { placeholderFor } from "../lib/placeholders";
 import type { MapsApp } from "../lib/store";
-import { colorForCategory, colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import { colorForCategory, colors, glyph, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
 
 interface Props {
   feature: EventFeature | null;
@@ -98,7 +98,7 @@ const IS_WEB = Platform.OS === "web";
 // Maße für die Abschätzung, ob die Beschreibung genug Platz hat (müssen grob zu
 // den Styles unten passen — kleine Abweichungen sind unkritisch, es geht nur um
 // die Entscheidung „fixer Kopf" vs. „alles scrollt").
-const HERO_HEIGHT = 200; // styles.hero
+const HERO_HEIGHT = sizes.heroHeight; // styles.hero
 const HEAD_BASE = 130; // Padding + Zeit + Titel + Badges + Trenner
 const META_ROW = 24; // eine Meta-Zeile inkl. Abstand
 const FOOTER_BASE = 86; // Maps-Button + Padding (ohne Safe Area)
@@ -111,7 +111,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   const { height: winH } = useWindowDimensions();
   // Feste Sheet-Höhe (statt maxHeight%) — nur so bekommt die ScrollView einen
   // klar begrenzten Raum und scrollt zuverlässig intern bis zum Maps-Button.
-  const sheetHeight = Math.min(winH * 0.88, winH - insets.top - 24);
+  const sheetHeight = Math.min(winH * 0.88, winH - insets.top - spacing.xl);
 
   // Swipe-down zum Schließen — über dem GANZEN Sheet, nicht nur am oberen Rand.
   // Damit das Scrollen frei bleibt, läuft die Pan-Geste simultan zur ScrollView
@@ -153,8 +153,13 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   // atTop ebenfalls zurücksetzen: das frische Sheet startet immer ungescrollt,
   // sonst bliebe der Wert vom vorher gescrollten Event stehen und der Swipe
   // zum Schließen würde beim nächsten Event nicht greifen.
+  //
+  // Hängt an der ID, nicht am Feature-Objekt: Wenn der Cache durch frische
+  // Netzdaten ersetzt wird, sind alle Features neue Referenzen — dasselbe Event
+  // sähe sonst wie ein neues aus und die Beschreibung spränge beim Lesen nach oben.
+  const featureId = feature?.properties.id ?? null;
   useEffect(() => {
-    if (feature) {
+    if (featureId !== null) {
       translateY.value = 0;
       atTop.value = true;
       // Auch die ScrollView zurücksetzen. Wird bei OFFENEM Sheet direkt ein
@@ -163,7 +168,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
       // atTop bereits true meldet.
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
-  }, [feature, translateY, atTop]);
+  }, [featureId, translateY, atTop]);
 
   if (!feature) return null;
   const p = feature.properties;
@@ -269,9 +274,11 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
         {/* Tap auf das Sheet schließt NICHT (stopPropagation), Swipe-down am Kopf schließt. */}
         <Pressable onPress={(e) => e.stopPropagation()} style={styles.flex}>
           {/* Merken (Herz) */}
+          {/* Herz und Schließen sind 36 pt groß; 6 pt Zuschlag rundum → 48 pt Tippziel. */}
           <TouchableOpacity
             style={styles.heart}
             onPress={() => onToggleSave(p.id)}
+            hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel={isSaved ? "Nicht mehr merken" : "Merken"}
           >
@@ -283,6 +290,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
           <TouchableOpacity
             style={styles.close}
             onPress={onClose}
+            hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel="Schließen"
           >
@@ -342,6 +350,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             <TouchableOpacity
               style={styles.mapButton}
               activeOpacity={0.85}
+              accessibilityRole="button"
               onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? p.title)}
             >
               <Text style={styles.mapButtonText}>
@@ -371,7 +380,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(28,43,43,0.6)",
+    backgroundColor: overlays.backdrop,
     justifyContent: "flex-end",
     alignItems: "center",
     zIndex: 1000, // über Karten-Controls (Attribution etc.)
@@ -382,7 +391,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     width: "100%",
-    maxWidth: 520,
+    maxWidth: sizes.sheetMaxWidth,
     overflow: "hidden", // clippt das Hero-Bild auf die obere Rundung (kein weißer Strich)
     // Höhe wird inline gesetzt (feste Höhe → ScrollView scrollt zuverlässig).
     // Kein Rahmen/Schatten nötig: der dunkle Backdrop setzt das Sheet schon klar ab.
@@ -391,10 +400,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: spacing.sm,
     alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    ...sizes.grabber,
+    borderRadius: radius.pill,
+    backgroundColor: overlays.onImage,
     zIndex: 2,
   },
   // Nur die Beschreibung scrollt — nimmt den Restplatz zwischen fixer Kopf- und Fußsektion.
@@ -414,7 +422,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
   },
-  savedNoteText: { fontFamily: fonts.body, fontSize: 12.5, color: colors.muted, lineHeight: 17 },
+  savedNoteText: { ...text.label, color: colors.muted },
   // Bild und Kopfsektion bringen ihr eigenes Padding mit → hier nur unten Luft,
   // damit die letzte Textzeile nicht am Footer klebt.
   descScrollInner: { paddingBottom: spacing.xl },
@@ -433,39 +441,37 @@ const styles = StyleSheet.create({
   },
   hero: {
     width: "100%",
-    height: 200,
+    height: sizes.heroHeight,
     flexShrink: 0, // im Scroll-Container nicht zusammendrücken lassen
     // Bild selbst auf die obere Sheet-Rundung clippen (Web-Subpixel-Glitch vermeiden)
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
   },
   content: { flexShrink: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, gap: spacing.xs },
-  time: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
+  time: { ...text.labelStrong, color: colors.primary },
   title: {
-    fontFamily: fonts.serifBold,
-    fontSize: 26,
-    color: colors.foreground,
-    lineHeight: 30,
+    ...text.display,
+    color: colors.ink,
     marginBottom: spacing.xs,
   },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   highlightBadge: {
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     backgroundColor: colors.accent,
   },
-  highlightBadgeText: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.onAccent },
-  badge: { borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 4 },
-  badgeText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.onAccent },
+  highlightBadgeText: { ...text.captionStrong, color: colors.onColor },
+  badge: { borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  badgeText: { ...text.captionMedium, color: colors.onColor },
   badgeOutline: {
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     borderWidth: 1,
     borderColor: colors.borderStrong,
   },
-  badgeOutlineText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.muted },
+  badgeOutlineText: { ...text.captionMedium, color: colors.muted },
   divider: {
     height: 1,
     backgroundColor: colors.border,
@@ -473,20 +479,17 @@ const styles = StyleSheet.create({
   },
   metaBlock: { gap: spacing.sm },
   metaRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.lg },
-  metaLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.faint },
+  metaLabel: { ...text.labelMedium, color: colors.faint },
   metaValue: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 13,
-    color: colors.foreground,
+    ...text.labelMedium,
+    color: colors.ink,
     flexShrink: 1,
     textAlign: "right",
   },
-  metaValueHighlight: { fontFamily: fonts.bodySemibold, color: colors.primary },
+  metaValueHighlight: { ...text.labelStrong, color: colors.primary },
   desc: {
-    fontFamily: fonts.serif,
-    fontSize: 15,
-    color: colors.foreground,
-    lineHeight: 22,
+    ...text.body,
+    color: colors.ink,
     paddingHorizontal: spacing.xl, // kam vorher vom Container (descScrollInner)
   },
   mapButton: {
@@ -496,34 +499,35 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: "center",
   },
-  mapButtonText: { fontFamily: fonts.bodySemibold, fontSize: 15, color: colors.onPrimary },
+  mapButtonText: { ...text.bodyStrong, color: colors.onColor },
   close: {
     position: "absolute",
     zIndex: 6, // über der Inhalts-ScrollView
     top: spacing.md,
     right: spacing.md,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    width: sizes.sheetButton,
+    height: sizes.sheetButton,
+    borderRadius: radius.pill,
+    backgroundColor: overlays.onImage,
     alignItems: "center",
     justifyContent: "center",
     ...shadow.card,
   },
-  closeText: { fontSize: 24, color: colors.foreground, lineHeight: 26, marginTop: -2 },
+  closeText: { ...glyph.md, color: colors.ink, marginTop: -spacing.xxs },
   heart: {
     position: "absolute",
     zIndex: 6, // über der Inhalts-ScrollView
     top: spacing.md,
-    right: spacing.md + 44,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    // links neben dem Schließen-Button, mit einer Lücke sm
+    right: spacing.md + sizes.sheetButton + spacing.sm,
+    width: sizes.sheetButton,
+    height: sizes.sheetButton,
+    borderRadius: radius.pill,
+    backgroundColor: overlays.onImage,
     alignItems: "center",
     justifyContent: "center",
     ...shadow.card,
   },
-  heartIcon: { fontSize: 20, color: colors.muted, lineHeight: 22 },
+  heartIcon: { ...glyph.md, color: colors.muted },
   heartActive: { color: colors.accent },
 });

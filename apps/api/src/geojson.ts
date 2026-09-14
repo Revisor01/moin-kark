@@ -12,12 +12,7 @@ import {
   type EventImage,
 } from "@moinkark/shared";
 import type { CdEvent } from "./churchdesk.js";
-import {
-  dynamicCoordFixFor,
-  dynamicCoordFixForTitle,
-  dynamicCoordOverrideForTitle,
-  isDynamicHighlight,
-} from "./locations.js";
+import { dynamicCoordFixFor, dynamicTitleFixFor, isDynamicHighlight } from "./locations.js";
 
 /**
  * Erkennt das redaktionelle „KAT: …, Highlight, …"-Tag in Summary/Beschreibung.
@@ -92,18 +87,25 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
   // Über /admin gepflegte Laufzeit-Korrekturen überstimmen jeweils die statische Tabelle.
   const fix = dynamicCoordFixFor(locationName) ?? coordFixFor(locationName);
 
+  // Über /admin gepflegter Titel-Eintrag — wenn vorhanden, ist er maßgeblich,
+  // samt seinem „Überstimmt ChurchDesk"-Häkchen; die Code-Tabelle gilt nur ohne ihn.
+  const dynTitle = dynamicTitleFixFor(event.title);
+
   // Kein Ort und keine Koordinate in ChurchDesk → über den Titel zuordnen, bevor
   // der Gemeindepunkt greift (sonst liegen ganze Serien auf einer Nadel).
   const titleFix =
-    !locationName && !hasCoords
-      ? dynamicCoordFixForTitle(event.title) ?? coordFixForTitle(event.title)
-      : undefined;
+    !locationName && !hasCoords ? dynTitle?.coords ?? coordFixForTitle(event.title) : undefined;
 
   // Wenige Reihen ueberstimmen bewusst auch eine gepflegte ChurchDesk-Koordinate:
   // Auf dem Gelaende der Familienlagune tragen alle Termine dieselbe Adresse,
   // finden aber an verschiedenen Stellen statt (Kirchenkiste vs. Salzwiesen).
-  const titleOverride =
-    dynamicCoordOverrideForTitle(event.title) ?? coordOverrideForTitle(event.title);
+  // Ein Laufzeit-Eintrag ohne Häkchen überstimmt NICHTS — auch nicht über die
+  // Code-Tabelle; sonst ließe sich das Häkchen im Admin nie abwählen.
+  const titleOverride = dynTitle
+    ? dynTitle.force
+      ? dynTitle.coords
+      : undefined
+    : coordOverrideForTitle(event.title);
 
   const coords =
     titleOverride ??

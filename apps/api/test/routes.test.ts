@@ -1,17 +1,46 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { EventFeature, EventFeatureCollection } from "@moinkark/shared";
 
 // Die Routen sollen ohne Netz und ohne ChurchDesk-Tokens antworten: Die
 // Aggregation wird ersetzt, alles darüber (Cache, Fenster, Serialisierung) läuft echt.
-const buildFeatureCollection = vi.fn<() => Promise<EventFeatureCollection>>();
+const buildFeatureCollection = vi.fn<(from: Date, to: Date) => Promise<EventFeatureCollection>>();
 
 vi.mock("../src/aggregate.js", async (orig) => ({
   ...(await orig<typeof import("../src/aggregate.js")>()),
-  buildFeatureCollection: () => buildFeatureCollection(),
+  buildFeatureCollection: (from: Date, to: Date) => buildFeatureCollection(from, to),
 }));
 
-process.env.ADMIN_TOKEN = "geheim-fuer-den-test";
-const { app } = await import("../src/index.js");
+// Lang genug für die Mindestlänge — ein kurzes Token schaltet /admin ab (s. unten).
+const ADMIN_TOKEN = "geheim-fuer-den-test-und-lang-genug";
+process.env.ADMIN_TOKEN = ADMIN_TOKEN;
+const ADMIN = { Authorization: `Bearer ${ADMIN_TOKEN}` };
+
+// Die Overrides-Datei liegt in einem Temp-Verzeichnis, nie im Projekt.
+const DATA_DIR = mkdtempSync(join(tmpdir(), "moinkark-routes-"));
+const OVERRIDES_FILE = join(DATA_DIR, "location-overrides.json");
+process.env.DATA_DIR = DATA_DIR;
+afterAll(() => {
+  chmodSync(DATA_DIR, 0o755);
+  rmSync(DATA_DIR, { recursive: true, force: true });
+});
+// chmod hält root nicht auf — dort ist der Schreibfehler nicht nachstellbar.
+const isRoot = process.getuid?.() === 0;
+
+const { fmtDate } = await import("../src/churchdesk.js");
+
+// Jeder Test bekommt eine frische API-Instanz. Der Cache lebt im Modul, und
+// ein neuer Tages-Schlüssel liefert seit dem Mitternachts-Rückfall den
+// vorherigen Stand statt eines leeren Caches — mit einer geteilten Instanz
+// erbte jeder Test die Daten seines Vorgängers.
+let app: Awaited<typeof import("../src/index.js")>["app"];
+
+async function frischeApp(): Promise<void> {
+  vi.resetModules();
+  ({ app } = await import("../src/index.js"));
+}
 
 function feature(over: Partial<EventFeature["properties"]> = {}): EventFeature {
   return {
@@ -50,26 +79,42 @@ function collection(features: EventFeature[], meta: Partial<NonNullable<EventFea
       withFallbackCoords: features.length - withEventCoords,
       orgsOk: 14,
       orgsFailed: 0,
+      orgsFailedIds: [],
+      orgsConfigured: 14,
+      orgsMissing: 0,
+      windowFrom: "2026-06-15",
+      windowTo: "2026-08-14",
       ...meta,
     },
   };
 }
 
-// Der Cache-Schlüssel entsteht aus dem Berliner Kalendertag: Damit sich die Tests
-// nicht gegenseitig ihren Datenstand vererben, rückt jeder um einen Tag vor. Die
-// Zeit läuft dabei bewusst nur vorwärts — peekLatest() nimmt den jüngsten
-// Eintrag, ein Rücksprung würde einen alten Stand zum aktuellen machen.
-let testTag = Date.UTC(2026, 5, 15, 6, 0, 0);
+const TESTZEIT = "2026-06-15T06:00:00Z";
 
-/** Rückt die Testuhr vor — und merkt sich den Stand, damit der nächste Test dahinter beginnt. */
+/** Rückt die Testuhr vor — der Cache-Schlüssel entsteht aus dem Berliner Kalendertag. */
 function tageVor(tage: number): void {
-  testTag += tage * 86400_000;
-  vi.setSystemTime(new Date(testTag));
+  vi.setSystemTime(new Date(Date.now() + tage * 86400_000));
 }
 
-beforeEach(() => {
+/**
+ * Kennung eines Datenstands — jeweils aus einer frischen Instanz, damit kein
+ * Cache-Rückfall dazwischenliegt und wirklich dieser Stand gehasht wird.
+ */
+async function kennung(fc: EventFeatureCollection): Promise<string> {
+  await frischeApp();
+  buildFeatureCollection.mockResolvedValue(fc);
+  const res = await app.request("/version.json");
+  expect(res.status).toBe(200);
+  return ((await res.json()) as { version: string }).version;
+}
+
+beforeEach(async () => {
   buildFeatureCollection.mockReset();
-  tageVor(1);
+  vi.setSystemTime(new Date(TESTZEIT));
+  chmodSync(DATA_DIR, 0o755);
+  for (const f of [OVERRIDES_FILE, `${OVERRIDES_FILE}.bak`, `${OVERRIDES_FILE}.tmp`])
+    if (existsSync(f)) rmSync(f);
+  await frischeApp();
 });
 afterEach(() => vi.useRealTimers());
 
@@ -118,11 +163,15 @@ describe("GET /events.geojson", () => {
     }
   });
 
-  it("antwortet mit 500, wenn gar keine Daten geladen werden können", async () => {
-    buildFeatureCollection.mockRejectedValue(new Error("Alle 14 Org-Fetches fehlgeschlagen"));
+  it("antwortet mit 500 und festem Text, wenn gar keine Daten geladen werden können", async () => {
+    // Die interne Meldung verriet u. a. das Schema der Token-Variablen —
+    // die gehört ins Log, nicht zu jedem Aufrufer.
+    buildFeatureCollection.mockRejectedValue(
+      new Error("[orgs] Keine ChurchDesk-Tokens konfiguriert. Setze CD_TOKEN_<orgId> in der Umgebung (.env).")
+    );
     const res = await app.request("/events.geojson");
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: "Alle 14 Org-Fetches fehlgeschlagen" });
+    expect(await res.json()).toEqual({ error: "Datenstand nicht verfügbar." });
   });
 
   it("liefert eine leere Feature-Liste als Array, nicht als Objekt", async () => {
@@ -130,6 +179,97 @@ describe("GET /events.geojson", () => {
     buildFeatureCollection.mockResolvedValue(collection([]));
     const body = (await (await app.request("/events.geojson")).json()) as EventFeatureCollection;
     expect(body.features).toEqual([]);
+  });
+
+  it("liefert nach Mitternacht den Vortagesstand, wenn ChurchDesk gerade ausfällt", async () => {
+    // Der Cache-Schlüssel wechselt mit dem Kalendertag. Der Stand von gestern
+    // Abend liegt aber noch da — ein 500 leerte auf allen Geräten die Karte.
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 7, title: "Abendsegen" })]));
+    expect((await app.request("/events.geojson")).status).toBe(200);
+
+    tageVor(1);
+    buildFeatureCollection.mockRejectedValue(new Error("ChurchDesk weg"));
+    const res = await app.request("/events.geojson");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as EventFeatureCollection;
+    expect(body.features.map((f) => f.properties.id)).toEqual([7]);
+    // Der neue Tag wurde trotzdem im Hintergrund angefragt.
+    await vi.waitFor(() => expect(buildFeatureCollection).toHaveBeenCalledTimes(2));
+  });
+
+  it("fragt ChurchDesk immer genau 60 Kalendertage ab — auch über die Zeitumstellung", async () => {
+    // 2. Oktober 2026, 00:30 Berlin (Sommerzeit). Ein Millisekunden-Offset von
+    // 60 × 24 h landete am 30. November 23:30 Berlin (Winterzeit) — 59 Tage.
+    vi.setSystemTime(new Date("2026-10-01T22:30:00Z"));
+    buildFeatureCollection.mockResolvedValue(collection([feature()]));
+    await app.request("/events.geojson");
+
+    expect(buildFeatureCollection).toHaveBeenCalledTimes(1);
+    const [from, to] = buildFeatureCollection.mock.calls[0];
+    expect(fmtDate(from)).toBe("2026-10-02");
+    expect(fmtDate(to)).toBe("2026-12-01");
+  });
+});
+
+describe("Bedingte Anfragen und Zwischenspeichern", () => {
+  // Zwischen zwei Refreshes ist der Feed byte-identisch. Ohne Kennung im Header
+  // serialisierte und komprimierte der Server ihn trotzdem für jede Anfrage neu.
+  it.each(["/events.geojson", "/categories.json", "/version.json"])(
+    "%s trägt ETag und Cache-Control",
+    async (pfad) => {
+      buildFeatureCollection.mockResolvedValue(collection([feature()]));
+      const res = await app.request(pfad);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("public, max-age=60");
+      expect(res.headers.get("etag")).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    }
+  );
+
+  it("antwortet mit 304 ohne Inhalt, wenn der Client den Stand schon hat", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature()]));
+    const erste = await app.request("/events.geojson");
+    const etag = erste.headers.get("etag")!;
+
+    const res = await app.request("/events.geojson", { headers: { "If-None-Match": etag } });
+    expect(res.status).toBe(304);
+    expect(await res.text()).toBe("");
+    expect(res.headers.get("etag")).toBe(etag);
+    expect(res.headers.get("cache-control")).toBe("public, max-age=60");
+  });
+
+  it("nimmt auch die komprimierte (schwache) Kennung und Listen an", async () => {
+    // Nach gzip meldet der Server die Kennung als W/"…" — genau die schickt der
+    // Client zurück, oft zusammen mit älteren.
+    buildFeatureCollection.mockResolvedValue(collection([feature()]));
+    const etag = (await app.request("/version.json")).headers.get("etag")!;
+    const stark = etag.replace(/^W\//, "");
+    const res = await app.request("/version.json", {
+      headers: { "If-None-Match": `"veraltet", ${stark}` },
+    });
+    expect(res.status).toBe(304);
+  });
+
+  it("liefert den vollen Feed, sobald sich der Stand geändert hat", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ title: "Andacht" })]));
+    const etag = (await app.request("/events.geojson")).headers.get("etag")!;
+
+    // Nächster Tag, neuer Stand — die alte Kennung passt nicht mehr.
+    tageVor(1);
+    buildFeatureCollection.mockResolvedValue(collection([feature({ title: "Andacht (fällt aus)" })]));
+    await vi.waitFor(async () => {
+      const res = await app.request("/events.geojson", { headers: { "If-None-Match": etag } });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("etag")).not.toBe(etag);
+    });
+  });
+
+  it("gibt bei einer Kennung eines anderen Stands 200 mit Inhalt", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature()]));
+    const res = await app.request("/events.geojson", {
+      headers: { "If-None-Match": 'W/"0000000000000000"' },
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as EventFeatureCollection).features).toHaveLength(1);
   });
 });
 
@@ -154,11 +294,11 @@ describe("GET /categories.json", () => {
     ]);
   });
 
-  it("antwortet mit 500, wenn gar keine Daten geladen werden können", async () => {
+  it("antwortet mit 500 und festem Text, wenn gar keine Daten geladen werden können", async () => {
     buildFeatureCollection.mockRejectedValue(new Error("ChurchDesk weg"));
     const res = await app.request("/categories.json");
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: "ChurchDesk weg" });
+    expect(await res.json()).toEqual({ error: "Datenstand nicht verfügbar." });
   });
 });
 
@@ -177,44 +317,41 @@ describe("GET /version.json", () => {
     // Sonst lüde jedes Gerät ~700 KB, nur weil ChurchDesk anders sortiert hat.
     const a = feature({ id: 1, title: "Andacht" });
     const b = feature({ id: 2, title: "Konzert" });
-
-    buildFeatureCollection.mockResolvedValue(collection([a, b]));
-    const erste = (await (await app.request("/version.json")).json()) as { version: string };
-
-    tageVor(1);
-    buildFeatureCollection.mockResolvedValue(collection([b, a]));
-    const zweite = (await (await app.request("/version.json")).json()) as { version: string };
-
-    expect(zweite.version).toBe(erste.version);
+    expect(await kennung(collection([b, a]))).toBe(await kennung(collection([a, b])));
   });
 
   it("ändert die Kennung, wenn sich ein Titel ändert", async () => {
-    buildFeatureCollection.mockResolvedValue(collection([feature({ title: "Andacht" })]));
-    const erste = (await (await app.request("/version.json")).json()) as { version: string };
-
-    tageVor(1);
-    buildFeatureCollection.mockResolvedValue(collection([feature({ title: "Andacht (fällt aus)" })]));
-    const zweite = (await (await app.request("/version.json")).json()) as { version: string };
-
-    expect(zweite.version).not.toBe(erste.version);
+    const erste = await kennung(collection([feature({ title: "Andacht" })]));
+    const zweite = await kennung(collection([feature({ title: "Andacht (fällt aus)" })]));
+    expect(zweite).not.toBe(erste);
   });
 
   it("ändert die Kennung, wenn ein Highlight gesetzt wird", async () => {
-    buildFeatureCollection.mockResolvedValue(collection([feature()]));
-    const erste = (await (await app.request("/version.json")).json()) as { version: string };
-
-    tageVor(1);
-    buildFeatureCollection.mockResolvedValue(collection([feature({ highlight: true })]));
-    const zweite = (await (await app.request("/version.json")).json()) as { version: string };
-
-    expect(zweite.version).not.toBe(erste.version);
+    const erste = await kennung(collection([feature()]));
+    const zweite = await kennung(collection([feature({ highlight: true })]));
+    expect(zweite).not.toBe(erste);
   });
 
-  it("antwortet mit 500, wenn gar keine Daten geladen werden können", async () => {
+  // Alles, was die App anzeigt oder wonach sie filtert, muss die Kennung
+  // ändern — sonst bleibt eine Korrektur auf den Geräten unsichtbar.
+  it.each<[string, Partial<EventFeature["properties"]>]>([
+    ["allDay", { allDay: true }],
+    ["showEndtime", { showEndtime: false }],
+    ["contributor", { contributor: "Pastorin Petersen" }],
+    ["city", { city: "Büsum" }],
+    ["zipcode", { zipcode: "25761" }],
+    ["parishes", { parishes: ["Büsum", "Urlauberseelsorge"] }],
+  ])("ändert die Kennung, wenn sich %s ändert", async (_feld, aenderung) => {
+    const erste = await kennung(collection([feature()]));
+    const zweite = await kennung(collection([feature(aenderung)]));
+    expect(zweite).not.toBe(erste);
+  });
+
+  it("antwortet mit 500 und festem Text, wenn gar keine Daten geladen werden können", async () => {
     buildFeatureCollection.mockRejectedValue(new Error("ChurchDesk weg"));
     const res = await app.request("/version.json");
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: "ChurchDesk weg" });
+    expect(await res.json()).toEqual({ error: "Datenstand nicht verfügbar." });
   });
 });
 
@@ -246,6 +383,26 @@ describe("GET /healthz und /status.json", () => {
     const res = await app.request("/healthz");
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: "degraded", orgsOk: 13, orgsFailed: 1 });
+  });
+
+  it("meldet degraded, wenn für eine Organisation kein Token gesetzt ist", async () => {
+    // Beim Redeploy ging eine Token-Zeile verloren: Die Gemeinde wird gar nicht
+    // erst abgefragt, zählt also weder als ok noch als ausgefallen — und der
+    // Zustand blieb „ok", obwohl ihre Termine dauerhaft fehlen.
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature()], { orgsOk: 13, orgsFailed: 0, orgsConfigured: 13, orgsMissing: 1 })
+    );
+    await app.request("/events.geojson");
+
+    const res = await app.request("/healthz");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      status: "degraded",
+      orgsOk: 13,
+      orgsFailed: 0,
+      orgsConfigured: 13,
+      orgsMissing: 1,
+    });
   });
 
   it("meldet stale mit 503, wenn der Datenstand zu alt ist", async () => {
@@ -310,9 +467,7 @@ describe("Admin-Routen", () => {
   });
 
   it("lässt das richtige Token durch", async () => {
-    const res = await app.request("/admin/api/locations", {
-      headers: { Authorization: "Bearer geheim-fuer-den-test" },
-    });
+    const res = await app.request("/admin/api/locations", { headers: ADMIN });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       static: { excludedCategories: string[] };
@@ -330,6 +485,113 @@ describe("Admin-Routen", () => {
   it("weist auch die Highlight-Route ohne Token ab", async () => {
     const res = await app.request("/admin/api/highlights");
     expect(res.status).toBe(401);
+  });
+
+  // Ist die Overrides-Datei lesbar, ist Speichern erlaubt — das Feld sagt das
+  // ausdrücklich, damit die Oberfläche den Sperr-Banner verbergen kann. Ohne
+  // dieses Feld bliebe der Banner im Sperrfall unsichtbar (der Sperrzustand
+  // selbst ist in locations.test.ts geprüft).
+  it("meldet im Normalfall keinen Ladefehler der Korrekturen", async () => {
+    const res = await app.request("/admin/api/locations", { headers: ADMIN });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { loadError: string | null };
+    expect(body.loadError).toBeNull();
+  });
+
+  it("schaltet /admin ab, wenn das Token zu kurz ist", async () => {
+    // Ein einstelliges Token wurde bisher genauso angenommen wie ein langes —
+    // die Sicherheit hing allein daran, dass niemand raten würde.
+    process.env.ADMIN_TOKEN = "kurz";
+    try {
+      await frischeApp();
+      const res = await app.request("/admin/api/locations", {
+        headers: { Authorization: "Bearer kurz" },
+      });
+      expect(res.status).toBe(503);
+    } finally {
+      process.env.ADMIN_TOKEN = ADMIN_TOKEN;
+    }
+  });
+
+  it("nimmt ein Token mit genau der Mindestlänge an", async () => {
+    process.env.ADMIN_TOKEN = "x".repeat(24);
+    try {
+      await frischeApp();
+      const res = await app.request("/admin/api/locations", {
+        headers: { Authorization: `Bearer ${"x".repeat(24)}` },
+      });
+      expect(res.status).toBe(200);
+    } finally {
+      process.env.ADMIN_TOKEN = ADMIN_TOKEN;
+    }
+  });
+
+  it("sperrt eine Adresse nach zehn Fehlversuchen für eine Minute", async () => {
+    const versuch = (token: string) =>
+      app.request("/admin/api/locations", {
+        headers: { Authorization: `Bearer ${token}`, "X-Real-IP": "203.0.113.7" },
+      });
+    for (let i = 0; i < 10; i++) expect((await versuch(`falsch-${i}`)).status).toBe(401);
+
+    // Ab jetzt zählt nicht mehr, ob das Token stimmt — auch das richtige wartet.
+    const gesperrt = await versuch("falsch-10");
+    expect(gesperrt.status).toBe(429);
+    expect(await gesperrt.json()).toEqual({
+      error: "Zu viele Fehlversuche — bitte eine Minute warten.",
+    });
+    expect((await versuch(ADMIN_TOKEN)).status).toBe(429);
+
+    // Eine andere Adresse ist nicht betroffen.
+    const andere = await app.request("/admin/api/locations", {
+      headers: { ...ADMIN, "X-Real-IP": "203.0.113.8" },
+    });
+    expect(andere.status).toBe(200);
+
+    // Nach Ablauf der Minute geht es wieder.
+    vi.setSystemTime(Date.now() + 61_000);
+    expect((await versuch(ADMIN_TOKEN)).status).toBe(200);
+  });
+});
+
+describe("PUT /admin/api/locations", () => {
+  const put = (body: unknown) =>
+    app.request("/admin/api/locations", {
+      method: "PUT",
+      headers: { ...ADMIN, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const LEER = { locations: {}, titles: [], categories: [], highlights: [] };
+
+  it("speichert einen gültigen Stand und gibt ihn normalisiert zurück", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature()]));
+    const res = await put({ ...LEER, categories: ["Externe  Probe"] });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, overrides: { ...LEER, categories: ["externe probe"] } });
+    expect(existsSync(OVERRIDES_FILE)).toBe(true);
+  });
+
+  it("weist ungültige Eingaben mit 400 und dem Grund ab", async () => {
+    const res = await put({ ...LEER, locations: { Probe: { lat: 0, lng: 0 } } });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Ungültige Koordinate für „Probe\"." });
+  });
+
+  it("meldet 409, wenn Speichern wegen unlesbarer Ablage gesperrt ist", async () => {
+    writeFileSync(OVERRIDES_FILE, "{ kaputt", "utf8");
+    await frischeApp();
+    const res = await put(LEER);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/beim Start nicht gelesen werden/);
+  });
+
+  it.skipIf(isRoot)("meldet einen Schreibfehler als 500 ohne Dateipfad", async () => {
+    // Volume schreibgeschützt: Das ist kein Eingabefehler des Admins (400),
+    // und der Pfad der Ablage geht niemanden außerhalb des Logs etwas an.
+    chmodSync(DATA_DIR, 0o500);
+    const res = await put(LEER);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Korrekturen konnten nicht gespeichert werden." });
   });
 });
 

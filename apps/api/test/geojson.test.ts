@@ -1,6 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { hasHighlightTag, toFeature } from "../src/geojson.js";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { CdEvent } from "../src/churchdesk.js";
+
+// Laufzeit-Korrekturen laufen echt, aber gegen ein Temp-Verzeichnis — nie ins Projekt.
+const DATA_DIR = mkdtempSync(join(tmpdir(), "moinkark-geojson-"));
+process.env.DATA_DIR = DATA_DIR;
+const { loadOverrides, setOverrides } = await import("../src/locations.js");
+const { hasHighlightTag, toFeature } = await import("../src/geojson.js");
+afterAll(() => rmSync(DATA_DIR, { recursive: true, force: true }));
+
+const KEINE_OVERRIDES = { locations: {}, titles: [], categories: [], highlights: [] };
 
 /** Minimal-Event, in dem einzelne Felder gezielt überschrieben werden. */
 function cdEvent(over: Partial<CdEvent> = {}): CdEvent {
@@ -98,6 +109,68 @@ describe("toFeature — Koordinaten", () => {
       2729
     );
     expect(f.geometry.coordinates).toEqual([8.8382318, 54.1334736]);
+    expect(f.properties.coordSource).toBe("fix");
+  });
+});
+
+describe("toFeature — „Überstimmt ChurchDesk\" aus der Orts-Verwaltung", () => {
+  const kirchenkiste = () =>
+    cdEvent({
+      title: "Willkommen in der Kirchenkiste!",
+      locationName: "Familienlagune Perlebucht",
+      locationObj: { latitude: 54.14, longitude: 8.85 },
+    });
+
+  afterEach(() => {
+    loadOverrides();
+    setOverrides(KEINE_OVERRIDES);
+  });
+
+  it("lässt sich für einen Code-Eintrag abwählen", () => {
+    // Der Admin nimmt bei „Willkommen in der Kirchenkiste" das Häkchen
+    // „Überstimmt ChurchDesk" heraus. Die Oberfläche zeigte das als übernommen,
+    // der Feed fiel aber still auf die Code-Tabelle zurück — die ChurchDesk-
+    // Koordinate blieb überstimmt.
+    loadOverrides();
+    setOverrides({
+      ...KEINE_OVERRIDES,
+      titles: [
+        {
+          prefix: "willkommen in der kirchenkiste",
+          coords: { lat: 54.1334736, lng: 8.8382318 },
+          force: false,
+        },
+      ],
+    });
+    const f = toFeature(kirchenkiste(), 2729);
+    expect(f.geometry.coordinates).toEqual([8.85, 54.14]);
+    expect(f.properties.coordSource).toBe("event");
+  });
+
+  it("greift ohne Ortsangabe trotzdem als Titel-Zuordnung", () => {
+    // Abgewählt heißt: keine gepflegte Koordinate überstimmen — nicht: die
+    // Zuordnung ganz vergessen. Ohne Ort und Koordinate gilt sie weiterhin.
+    loadOverrides();
+    setOverrides({
+      ...KEINE_OVERRIDES,
+      titles: [{ prefix: "willkommen in der kirchenkiste", coords: { lat: 54.2, lng: 8.9 }, force: false }],
+    });
+    const f = toFeature(cdEvent({ title: "Willkommen in der Kirchenkiste!" }), 2729);
+    expect(f.geometry.coordinates).toEqual([8.9, 54.2]);
+    expect(f.properties.coordSource).toBe("fix");
+  });
+
+  it("überstimmt mit gesetztem Häkchen auch dort, wo der Code es nicht tut", () => {
+    loadOverrides();
+    setOverrides({
+      ...KEINE_OVERRIDES,
+      titles: [{ prefix: "pilgern in büsum", coords: { lat: 54.2, lng: 8.9 }, force: true }],
+    });
+    const f = toFeature(
+      cdEvent({ title: "Pilgern in Büsum", locationObj: { latitude: 54.15, longitude: 8.9 } }),
+      2729
+    );
+    expect(f.geometry.coordinates).toEqual([8.9, 54.2]);
     expect(f.properties.coordSource).toBe("fix");
   });
 });

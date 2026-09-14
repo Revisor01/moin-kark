@@ -9,10 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EventFeature } from "@moinkark/shared";
 import type { MapsApp } from "../lib/store";
 import type { ReminderPref } from "../lib/reminders";
-import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import { colors, glyph, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
 import Constants from "expo-constants";
 import EventCard from "./EventCard";
 
@@ -48,15 +49,26 @@ export default function ProfileSheet({
   onSelectEvent,
   onToggleSave,
 }: Props) {
+  // Vor dem frühen Return: Hooks müssen in jedem Render laufen.
+  const insets = useSafeAreaInsets();
   if (!visible) return null;
 
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
-      <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      {/* Untere Safe Area dazurechnen — sonst liegt die letzte Zeile hinter dem Home-Indicator. */}
+      <Pressable
+        style={[styles.sheet, { paddingBottom: spacing.lg + insets.bottom }]}
+        onPress={(e) => e.stopPropagation()}
+      >
         <View style={styles.grabber} />
         <View style={styles.headerRow}>
           <Text style={styles.heading}>Profil</Text>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Schließen">
+          <TouchableOpacity
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Schließen"
+            hitSlop={12}
+          >
             <Text style={styles.close}>×</Text>
           </TouchableOpacity>
         </View>
@@ -77,6 +89,8 @@ export default function ProfileSheet({
                 style={[styles.segmentBtn, mapsApp === a && styles.segmentBtnActive]}
                 onPress={() => onMapsApp(a)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mapsApp === a }}
               >
                 <Text style={[styles.segmentText, mapsApp === a && styles.segmentTextActive]}>
                   {a === "apple" ? "Apple Karten" : "Google Maps"}
@@ -117,6 +131,10 @@ export default function ProfileSheet({
                   style={[styles.segmentBtn, reminderPref === val && styles.segmentBtnActive]}
                   onPress={() => onReminderPref(val)}
                   activeOpacity={0.8}
+                  // Rolle + Zustand: VoiceOver las „Vorabend“ bisher als reinen
+                  // Text, und welche Option aktiv ist, war nicht hörbar.
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: reminderPref === val }}
                 >
                   <Text
                     style={[styles.segmentSmall, reminderPref === val && styles.segmentTextActive]}
@@ -144,9 +162,9 @@ export default function ProfileSheet({
                   feature={f}
                   saved
                   onToggleSave={onToggleSave}
-                  onPress={() => {
+                  onPress={(id) => {
                     onClose();
-                    onSelectEvent(f.properties.id);
+                    onSelectEvent(id);
                   }}
                 />
               ))}
@@ -182,6 +200,16 @@ export default function ProfileSheet({
               </Text>
               -Mitwirkende · Tiles: OpenFreeMap · Daten: ChurchDesk
             </Text>
+            {/* Die Stores verlangen eine erreichbare Datenschutzerklärung; sie
+                gehört auch in die App, nicht nur in den Store-Eintrag. */}
+            <Text
+              style={styles.privacyLink}
+              onPress={() => Linking.openURL("https://simonluthe.de/apps/moinkark/datenschutz/")}
+              accessibilityRole="link"
+              accessibilityLabel="Datenschutzerklärung öffnen"
+            >
+              Datenschutz
+            </Text>
 
             {/* 3) Autor — Branding-Pattern: App+Version, roter Vogel, Friedensgruß. */}
             <View style={styles.footerDivider} />
@@ -216,7 +244,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(28,43,43,0.6)",
+    backgroundColor: overlays.backdrop,
     justifyContent: "flex-end",
     alignItems: "center",
     zIndex: 1000,
@@ -226,18 +254,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     width: "100%",
-    maxWidth: 520,
+    maxWidth: sizes.sheetMaxWidth,
     maxHeight: "88%",
-    paddingBottom: spacing.lg,
+    // paddingBottom kommt inline (spacing.lg + Safe Area).
     borderWidth: 1,
     borderColor: colors.borderStrong,
     ...shadow.sheet,
   },
   grabber: {
     alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    ...sizes.grabber,
+    borderRadius: radius.pill,
     backgroundColor: colors.borderStrong,
     marginTop: spacing.sm,
   },
@@ -248,24 +275,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
   },
-  heading: { fontFamily: fonts.displayBold, fontSize: 24, color: colors.foreground },
-  close: { fontSize: 28, color: colors.muted, lineHeight: 30 },
+  heading: { ...text.heading, color: colors.ink },
+  close: { ...glyph.md, color: colors.muted },
   scrollView: { flexShrink: 1 },
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  sectionLabel: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 12,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    color: colors.faint,
-    marginBottom: spacing.sm,
-  },
+  sectionLabel: { ...text.eyebrow, color: colors.faint, marginBottom: spacing.sm },
   segment: {
     flexDirection: "row",
     backgroundColor: colors.surfaceMuted,
     borderRadius: radius.md,
-    padding: 4,
-    gap: 4,
+    padding: spacing.xs,
+    gap: spacing.xs,
   },
   segmentBtn: {
     flex: 1,
@@ -274,10 +294,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   segmentBtnActive: { backgroundColor: colors.surface, ...shadow.card },
-  segmentText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.muted },
-  segmentSmall: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.muted },
-  segmentTextActive: { color: colors.foreground },
-  hint: { fontFamily: fonts.body, fontSize: 13, color: colors.faint, marginTop: spacing.sm },
+  segmentText: { ...text.bodyMedium, color: colors.muted },
+  segmentSmall: { ...text.captionMedium, color: colors.muted },
+  segmentTextActive: { color: colors.ink },
+  hint: { ...text.label, color: colors.faint, marginTop: spacing.sm },
   // Web-Hinweis an Stelle des Erinnerungs-Wählers.
   webNote: {
     marginTop: spacing.sm,
@@ -287,13 +307,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  webNoteText: { fontFamily: fonts.body, fontSize: 13.5, color: colors.muted, lineHeight: 19 },
+  webNoteText: { ...text.label, color: colors.muted },
   empty: {
-    fontFamily: fonts.body,
-    fontSize: 14,
+    ...text.body,
     color: colors.muted,
     marginTop: spacing.sm,
-    lineHeight: 20,
   },
   footer: {
     marginTop: spacing.xxl,
@@ -304,42 +322,29 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   footerDivider: {
-    width: 32,
+    width: spacing.xxl,
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.sm,
   },
   kkdLogo: { width: 168, height: 59, marginBottom: spacing.xs },
-  carrier: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 13,
-    color: colors.foreground,
-    textAlign: "center",
-  },
+  carrier: { ...text.labelMedium, color: colors.ink, textAlign: "center" },
   geistRow: { flexDirection: "row", alignItems: "center" },
-  appVersion: { fontFamily: fonts.body, fontSize: 13, color: colors.muted, marginBottom: spacing.xs },
-  geistText: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
+  appVersion: { ...text.label, color: colors.muted, marginBottom: spacing.xs },
+  geistText: { ...text.label, color: colors.muted },
   geistBird: { width: 14, height: 14 },
-  geistBlessing: {
-    fontFamily: fonts.body,
-    fontStyle: "italic",
-    fontSize: 12,
-    color: colors.faint,
-  },
-  attr: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.faint,
-    textAlign: "center",
-    lineHeight: 16,
-  },
+  geistBlessing: { ...text.caption, fontStyle: "italic", color: colors.faint },
+  attr: { ...text.caption, color: colors.faint, textAlign: "center" },
   link: { color: colors.primary, textDecorationLine: "underline" },
-  copyright: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.faint,
+  // Eigene Zeile unter der Attributionszeile — der Inline-„link"-Stil bringt
+  // weder Größe noch Ausrichtung mit und stünde hier zu groß und linksbündig.
+  privacyLink: {
+    ...text.caption,
+    color: colors.primary,
+    textDecorationLine: "underline",
     textAlign: "center",
     marginTop: spacing.xs,
   },
+  copyright: { ...text.caption, color: colors.faint, textAlign: "center", marginTop: spacing.xs },
   copyrightLink: { color: colors.primary, textDecorationLine: "underline" },
 });

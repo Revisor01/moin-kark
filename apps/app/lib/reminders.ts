@@ -58,9 +58,14 @@ let mapQueue: Promise<unknown> = Promise.resolve();
 function withMap<T>(fn: (map: Record<number, string[]>) => Promise<T>): Promise<T> {
   const run = mapQueue.then(async () => {
     const map = await loadMap();
-    const result = await fn(map);
-    await saveMap(map);
-    return result;
+    try {
+      return await fn(map);
+    } finally {
+      // Auch nach einem Fehler speichern: Was bis dahin geplant wurde, muss in
+      // der Map stehen — sonst lässt es sich nie mehr abbrechen und meldet
+      // sich für einen längst entmerkten Termin.
+      await saveMap(map);
+    }
   });
   // Kette am Leben halten, auch wenn ein Glied scheitert.
   mapQueue = run.catch(() => undefined);
@@ -103,6 +108,24 @@ function relativeDay(start: Date, now: Date): string {
   return new Intl.DateTimeFormat("de-DE", { timeZone: BERLIN_TZ, weekday: "long" }).format(start);
 }
 
+/**
+ * Höchstzahl gleichzeitig geplanter Termine. iOS hält pro App nur 64 ausstehende
+ * Mitteilungen und verwirft darüber hinaus still — bei „Beides" sind das zwei
+ * pro Termin. 30 Termine (= 60 Mitteilungen) lassen Luft für die sofortigen
+ * Hinweise („entfällt"/„verschoben"); was dahinter liegt, rückt beim Abgleich
+ * nach (reconcileReminders).
+ */
+export const MAX_PLANNED_EVENTS = 30;
+
+/** Die nächsten (künftigen) Termine in Startreihenfolge, gedeckelt. */
+function nextUpcoming(saved: EventFeature[]): EventFeature[] {
+  const now = Date.now();
+  return saved
+    .filter((f) => new Date(f.properties.startUtc).getTime() > now)
+    .sort((a, b) => Date.parse(a.properties.startUtc) - Date.parse(b.properties.startUtc))
+    .slice(0, MAX_PLANNED_EVENTS);
+}
+
 /** Plant die Erinnerung(en) für ein Event gemäß Präferenz. Vergangene Zeiten werden übersprungen. */
 export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Promise<void> {
   if (IS_WEB || pref === "off") return;
@@ -134,6 +157,7 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
       await Notifications.cancelScheduledNotificationAsync(old).catch(() => {});
     }
     const ids: string[] = [];
+    delete map[f.properties.id];
     for (const t of triggers) {
       if (t.date.getTime() <= now) continue; // Vergangenheit überspringen
       const id = await Notifications.scheduleNotificationAsync({
@@ -149,10 +173,40 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: t.date },
       });
       ids.push(id);
+      // Sofort eintragen: Schlägt die nächste Planung fehl, bleibt diese abbrechbar.
+      map[f.properties.id] = ids;
     }
-    if (ids.length) map[f.properties.id] = ids;
-    else delete map[f.properties.id];
   });
+}
+
+/**
+ * Gleicht die geplanten Erinnerungen mit dem Bestand ab, ohne alles neu zu planen:
+ * fehlende (z. B. nach einem früheren Fehlalarm gelöschte) werden nachgeplant,
+ * verwaiste (entmerkt, entfallen, jenseits des Deckels) abgeräumt.
+ * `keep` = gemerkte Termine, die gerade nicht im Feed stehen (Teilausfall) —
+ * deren Planungen bleiben unangetastet.
+ */
+export async function reconcileReminders(
+  saved: EventFeature[],
+  pref: ReminderPref,
+  keep: Iterable<number> = []
+): Promise<void> {
+  if (IS_WEB) return;
+  const target = pref === "off" ? [] : nextUpcoming(saved);
+  const targetIds = new Set(target.map((f) => f.properties.id));
+  const keepIds = pref === "off" ? new Set<number>() : new Set(keep);
+  const missing = await withMap(async (map) => {
+    for (const key of Object.keys(map)) {
+      const id = Number(key);
+      if (targetIds.has(id) || keepIds.has(id)) continue;
+      for (const nid of map[id] ?? []) {
+        await Notifications.cancelScheduledNotificationAsync(nid).catch(() => {});
+      }
+      delete map[id];
+    }
+    return target.filter((f) => !map[f.properties.id]?.length);
+  });
+  for (const f of missing) await scheduleForEvent(f, pref).catch(() => {});
 }
 
 /** Bricht alle geplanten Erinnerungen für ein Event ab. */
@@ -176,7 +230,7 @@ export async function rescheduleAll(saved: EventFeature[], pref: ReminderPref): 
     for (const key of Object.keys(map)) delete map[key as unknown as number];
   });
   if (pref === "off") return;
-  for (const f of saved) await scheduleForEvent(f, pref);
+  for (const f of nextUpcoming(saved)) await scheduleForEvent(f, pref);
 }
 
 export async function setReminderPref(pref: ReminderPref): Promise<void> {

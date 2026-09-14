@@ -1,12 +1,27 @@
 // Gebrandeter Küsten-Kartenstil für den Kirchenkreis Dithmarschen.
 // Eigener, minimaler MapLibre-Style auf OpenFreeMap-Vektor-Tiles (kostenlos, kein Key).
 // Nordsee-Blau Wasser, warmer Sand für Land, reduzierte Straßen, dezente Labels.
-// Web + Native nutzen denselben Style.
+// Web + Native nutzen denselben Style UND dieselben Event-Layer: die Web-Karte
+// nimmt die Layer-Objekte direkt, die native Karte holt sich die Paint-Werte
+// per toNativeStyle() — so gibt es jede Farbe und jeden Radius nur einmal.
 
-import { colors } from "./theme";
+import { alpha, mapColors } from "./theme";
 
 const TILES = "https://tiles.openfreemap.org/planet";
 const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+
+// Dithmarschen-Kartengrenzen + Startansicht. Kartengeometrie, kein Design-Wert.
+export const DITHMARSCHEN = {
+  center: [9.0, 54.13] as [number, number], // [lng, lat]
+  zoom: 9.4,
+  /**
+   * Kartengrenzen als [west, south, east, north] — das flache Format, das
+   * MapLibre auf beiden Plattformen erwartet. (Die frühere verschachtelte
+   * SW/NE-Schreibweise akzeptierten die Typen ab @vis.gl/react-maplibre 8.1.2
+   * nicht mehr, und nativ wurde sie ohnehin von Hand flachgeklopft.)
+   */
+  bounds: [8.3, 53.8, 9.6, 54.5] as [number, number, number, number],
+};
 
 // Vollständiger Style als Objekt (statt URL) → volle Farbkontrolle.
 export const MAP_STYLE: any = {
@@ -23,7 +38,7 @@ export const MAP_STYLE: any = {
     {
       id: "background",
       type: "background",
-      paint: { "background-color": colors.mapLand },
+      paint: { "background-color": mapColors.land },
     },
     // Grünflächen / Wald / Parks — dezentes Salzwiesen-Grün.
     {
@@ -31,14 +46,14 @@ export const MAP_STYLE: any = {
       type: "fill",
       source: "openmaptiles",
       "source-layer": "landcover",
-      paint: { "fill-color": colors.mapGreen, "fill-opacity": 0.7 },
+      paint: { "fill-color": mapColors.green, "fill-opacity": 0.7 },
     },
     {
       id: "park",
       type: "fill",
       source: "openmaptiles",
       "source-layer": "park",
-      paint: { "fill-color": colors.mapGreen, "fill-opacity": 0.5 },
+      paint: { "fill-color": mapColors.green, "fill-opacity": 0.5 },
     },
     // Wasser — Nordsee-Blau.
     {
@@ -46,14 +61,14 @@ export const MAP_STYLE: any = {
       type: "fill",
       source: "openmaptiles",
       "source-layer": "water",
-      paint: { "fill-color": colors.mapWater },
+      paint: { "fill-color": mapColors.water },
     },
     {
       id: "waterway",
       type: "line",
       source: "openmaptiles",
       "source-layer": "waterway",
-      paint: { "line-color": colors.mapWater, "line-width": 1.2 },
+      paint: { "line-color": mapColors.water, "line-width": 1.2 },
     },
     // Gebäude — sehr dezent, erst ab Zoom 14.
     {
@@ -62,7 +77,7 @@ export const MAP_STYLE: any = {
       source: "openmaptiles",
       "source-layer": "building",
       minzoom: 14,
-      paint: { "fill-color": "#EFE6D6", "fill-opacity": 0.6 },
+      paint: { "fill-color": mapColors.building, "fill-opacity": 0.6 },
     },
     // Straßen — reduziert: nur eine ruhige Sand-Linie, Hauptstraßen etwas kräftiger.
     {
@@ -73,7 +88,7 @@ export const MAP_STYLE: any = {
       minzoom: 11,
       filter: ["in", "class", "minor", "service", "track"],
       paint: {
-        "line-color": colors.mapRoad,
+        "line-color": mapColors.road,
         "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.4, 16, 2],
       },
     },
@@ -84,7 +99,7 @@ export const MAP_STYLE: any = {
       "source-layer": "transportation",
       filter: ["in", "class", "primary", "secondary", "tertiary", "trunk", "motorway"],
       paint: {
-        "line-color": colors.mapRoad,
+        "line-color": mapColors.road,
         "line-width": ["interpolate", ["linear"], ["zoom"], 7, 0.6, 12, 2.5, 16, 6],
       },
     },
@@ -96,13 +111,13 @@ export const MAP_STYLE: any = {
       "source-layer": "boundary",
       filter: ["<=", "admin_level", 6],
       paint: {
-        "line-color": colors.borderStrong,
+        "line-color": mapColors.boundary,
         "line-width": 0.8,
         "line-dasharray": [3, 2],
         "line-opacity": 0.6,
       },
     },
-    // Ortsnamen — ruhig, in der Markenfarbe.
+    // Ortsnamen — ruhig, in Tinte mit Sand-Halo.
     {
       id: "place-labels",
       type: "symbol",
@@ -116,12 +131,24 @@ export const MAP_STYLE: any = {
         "text-max-width": 8,
       },
       paint: {
-        "text-color": colors.mapLabel,
-        "text-halo-color": colors.mapLand,
+        "text-color": mapColors.label,
+        "text-halo-color": mapColors.land,
         "text-halo-width": 1.6,
       },
     },
   ],
+};
+
+// --- Fog of War + Umriss des Kirchenkreises (Paint, beide Plattformen) ---
+export const fogPaint = { "fill-color": mapColors.fog, "fill-opacity": alpha.fog };
+export const outlinePaint = { "line-color": mapColors.outline, "line-width": 3, "line-opacity": 0.9 };
+
+// --- Standort-Marker („Du bist hier") ---
+export const userMarker = {
+  color: mapColors.user,
+  ring: mapColors.ring,
+  ringWidth: 3,
+  haloOpacity: alpha.halo,
 };
 
 // --- Event-Layer (Cluster + Pins) ---
@@ -144,11 +171,11 @@ export const clusterLayer = {
   source: SOURCE_ID,
   filter: ["has", "point_count"] as any,
   paint: {
-    "circle-color": colors.primary,
+    "circle-color": mapColors.cluster,
     "circle-opacity": 0.94,
     "circle-radius": ["step", ["get", "point_count"], 16, 5, 20, 15, 26, 40, 34] as any,
     "circle-stroke-width": 3,
-    "circle-stroke-color": "#FFFFFF",
+    "circle-stroke-color": mapColors.ring,
   },
 };
 
@@ -162,7 +189,7 @@ export const clusterCountLayer = {
     "text-font": ["Noto Sans Bold"] as any,
     "text-size": 13,
   },
-  paint: { "text-color": "#FFFFFF" },
+  paint: { "text-color": mapColors.ring },
 };
 
 // Einzel-Pins: Koralle, weißer Ring.
@@ -172,9 +199,24 @@ export const pointLayer = {
   source: SOURCE_ID,
   filter: ["!", ["has", "point_count"]] as any,
   paint: {
-    "circle-color": colors.accent,
+    "circle-color": mapColors.pin,
     "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 6, 14, 9] as any,
     "circle-stroke-width": 2.5,
-    "circle-stroke-color": "#FFFFFF",
+    "circle-stroke-color": mapColors.ring,
   },
 };
+
+/**
+ * MapLibre RN v11 erwartet die Style-Properties in camelCase und Layout + Paint
+ * in EINEM `style`-Objekt (`circle-color` → `circleColor`). Diese Umschreibung
+ * erspart es, jeden Layer für die native Karte ein zweites Mal hinzuschreiben.
+ */
+export function toNativeStyle(...parts: Record<string, unknown>[]): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const part of parts) {
+    for (const [key, value] of Object.entries(part)) {
+      out[key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())] = value;
+    }
+  }
+  return out;
+}

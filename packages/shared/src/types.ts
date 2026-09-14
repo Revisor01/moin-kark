@@ -79,14 +79,51 @@ export interface EventFeatureCollection {
   /** Meta-Infos für QA/Debugging — nicht teil des GeoJSON-Standards, aber harmlos. */
   meta?: {
     generatedAt: string;
+    /** Zeitpunkt, zu dem der Stand angefordert wurde (nicht der Fensterbeginn — s. windowFrom). */
     from: string;
+    /** Zeitpunkt am letzten Tag des Fensters (s. windowTo). */
     to: string;
+    /**
+     * Erster Kalendertag des Abfragefensters in Europe/Berlin (YYYY-MM-DD).
+     * Termine ab 00:00 Berliner Zeit dieses Tages sind enthalten.
+     * Optional, weil ältere zwischengespeicherte Feeds das Feld nicht tragen.
+     */
+    windowFrom?: string;
+    /** Letzter Kalendertag des Abfragefensters in Europe/Berlin (YYYY-MM-DD). */
+    windowTo?: string;
     total: number;
     withEventCoords: number;
     withFallbackCoords: number;
     orgsOk: number;
     orgsFailed: number;
+    /**
+     * ChurchDesk-Organisations-IDs (= `orgId` der Features), die beim letzten
+     * Refresh nicht geantwortet haben. Deren Termine fehlen im Feed, ohne
+     * abgesagt zu sein — die App darf gemerkte Termine dieser Orgs NICHT als
+     * entfallen behandeln. Leer, wenn alle geantwortet haben.
+     * Optional, weil ältere zwischengespeicherte Feeds das Feld nicht tragen.
+     */
+    orgsFailedIds?: number[];
+    /** Organisationen mit gesetztem Token (= abgefragt: orgsOk + orgsFailed). */
+    orgsConfigured?: number;
+    /** Organisationen OHNE Token — werden gar nicht abgefragt, ihre Termine fehlen dauerhaft. */
+    orgsMissing?: number;
   };
+}
+
+/**
+ * Eintrag in `/categories.json`: eine Kategorie über alle Orgs, dedupliziert nach
+ * normalisiertem Titel, mit Häufigkeit fürs Sortieren der Filter-Chips.
+ * Vertrag zwischen API (extractCategories) und App (fetchCategories) — die
+ * Antwort ist ein Array dieser Einträge (s. docs/openapi.yaml, Schema Category).
+ */
+export interface FeedCategory {
+  /** Anzeigetitel — die erste gesehene Schreibweise. */
+  title: string;
+  /** ChurchDesk-Farbindex (0..n). */
+  color: number;
+  /** Anzahl Events mit dieser Kategorie im Feed. */
+  count: number;
 }
 
 /**

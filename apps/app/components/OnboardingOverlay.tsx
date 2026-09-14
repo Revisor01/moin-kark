@@ -1,7 +1,7 @@
 // Einmaliges Onboarding-Overlay beim ersten App-Start.
 // Weist auf das Merken (Herz) + lokale Erinnerungen hin — ohne Server/Login.
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radius, shadow, spacing } from "../lib/theme";
+import { colors, glyph, overlays, radius, shadow, spacing, text } from "../lib/theme";
 
 interface Props {
   visible: boolean;
@@ -60,7 +60,7 @@ export default function OnboardingOverlay({ visible, onDone }: Props) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(28,43,43,0.6)",
+    backgroundColor: overlays.backdrop,
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.xl,
@@ -75,18 +75,11 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
     ...shadow.sheet,
   },
-  kicker: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: colors.primary,
-  },
+  kicker: { ...text.eyebrow, color: colors.primary },
   heading: {
-    fontFamily: fonts.displayBold,
-    fontSize: 26,
-    color: colors.foreground,
-    marginTop: 2,
+    ...text.display,
+    color: colors.ink,
+    marginTop: spacing.xxs,
     marginBottom: spacing.lg,
   },
   steps: { gap: spacing.lg },
@@ -94,26 +87,25 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
-  icon: { fontSize: 20, color: colors.accent },
+  icon: { ...glyph.md, color: colors.accent },
   stepText: { flex: 1 },
   stepTitle: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 16,
-    color: colors.foreground,
-    marginBottom: 2,
+    ...text.bodyStrong,
+    color: colors.ink,
+    marginBottom: spacing.xxs,
   },
-  stepBody: { fontFamily: fonts.body, fontSize: 14, color: colors.muted, lineHeight: 20 },
+  stepBody: { ...text.body, color: colors.muted },
   cta: {
     marginTop: spacing.xl,
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: "center",
   },
-  ctaText: { fontFamily: fonts.bodySemibold, fontSize: 16, color: colors.onPrimary },
+  ctaText: { ...text.bodyStrong, color: colors.onColor },
 });

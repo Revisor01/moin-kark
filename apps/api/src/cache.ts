@@ -28,22 +28,37 @@ export class SwrCache<T> {
   /**
    * Liefert den gecachten Wert. Bei Ablauf wird im Hintergrund neu geladen
    * (stale-while-revalidate), der alte Wert aber sofort zurückgegeben.
-   * Beim ersten Mal (kein Wert) wird synchron auf das Laden gewartet.
+   *
+   * Fehlt der Key, gilt der jüngste Eintrag unter einem anderen Key als
+   * „abgelaufener Wert": Der Key trägt den Berliner Kalendertag, um Mitternacht
+   * wechselt er — der Stand von gestern Abend liegt aber noch hier. Ohne den
+   * Rückfall wartete die erste Anfrage nach Mitternacht auf den vollen Fetch
+   * und bekäme bei einem ChurchDesk-Ausfall einen Fehler, obwohl Daten da sind.
+   *
+   * Der Vortagesstand ist dabei einen Tag „zu weit hinten": sein Fenster beginnt
+   * gestern und endet einen Tag früher. Das ist für Minuten hinnehmbar — die App
+   * blendet beendete Termine ohnehin selbst aus (isPast über die Endzeit), und
+   * ein um einen Tag kürzerer Horizont fällt nicht auf; ein 500 dagegen leert
+   * auf allen Geräten die Karte.
+   *
+   * Nur ganz ohne Eintrag (echter Kaltstart) wird synchron gewartet und ein
+   * Fehler durchgereicht.
    */
   async get(key: string, loader: () => Promise<T>): Promise<T> {
     const now = Date.now();
-    const entry = this.entries.get(key);
-
-    if (entry && entry.freshUntil > now) {
-      return entry.value; // frisch
-    }
+    const entry = this.entries.get(key) ?? this.latestEntry();
 
     if (!entry) {
       // Cold start: warten (aber in-flight dedupen).
       return this.load(key, loader);
     }
 
-    // Stale: alten Wert sofort zurück, im Hintergrund refreshen.
+    if (this.entries.get(key) === entry && entry.freshUntil > now) {
+      return entry.value; // frisch
+    }
+
+    // Stale (oder Rückfall auf einen anderen Key): alten Wert sofort zurück,
+    // im Hintergrund unter dem angefragten Key laden.
     if (!this.inflight.has(key)) {
       void this.load(key, loader).catch((e) =>
         console.error(`[cache] background refresh '${key}' failed:`, e?.message ?? e)
@@ -82,11 +97,16 @@ export class SwrCache<T> {
    * noch nicht, der Datenstand von gestern Abend ist aber der maßgebliche.
    */
   peekLatest(): { value: T; updatedAt: number } | undefined {
+    const latest = this.latestEntry();
+    return latest ? { value: latest.value, updatedAt: latest.updatedAt } : undefined;
+  }
+
+  private latestEntry(): Entry<T> | undefined {
     let latest: Entry<T> | undefined;
     for (const e of this.entries.values()) {
       if (!latest || e.updatedAt > latest.updatedAt) latest = e;
     }
-    return latest ? { value: latest.value, updatedAt: latest.updatedAt } : undefined;
+    return latest;
   }
 
   private load(key: string, loader: () => Promise<T>): Promise<T> {

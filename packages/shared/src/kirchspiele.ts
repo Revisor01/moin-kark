@@ -89,8 +89,8 @@ const ORG_TO_KIRCHSPIEL: Record<number, Kirchspiel> = {
   2940: "Mitte-Süd", // Süderhastedt
 };
 
-/** Org-Anzeigenamen (für orgName im Feature). */
-export const ORG_NAMES: Record<number, string> = {
+/** Org-Anzeigenamen (für orgName im Feature). Nur über orgName() erreichbar. */
+const ORG_NAMES: Record<number, string> = {
   2596: "Kirchenkreis Dithmarschen",
   2619: "Meldorf",
   2715: "Windbergen-Gudendorf",
@@ -115,7 +115,8 @@ export const ORG_NAMES: Record<number, string> = {
 export function resolveKirchspiel(parish: string | undefined, orgId: number): Kirchspiel {
   if (parish) {
     const key = normalize(parish);
-    if (PARISH_TO_KIRCHSPIEL[key]) return PARISH_TO_KIRCHSPIEL[key];
+    // Nur eigene Einträge — „constructor" träfe sonst Object.prototype.
+    if (Object.hasOwn(PARISH_TO_KIRCHSPIEL, key)) return PARISH_TO_KIRCHSPIEL[key];
     // Teilstring-Match (z.B. "Heide St.-Jürgen" → "heide")
     for (const [name, ks] of Object.entries(PARISH_TO_KIRCHSPIEL)) {
       if (key.includes(name)) return ks;

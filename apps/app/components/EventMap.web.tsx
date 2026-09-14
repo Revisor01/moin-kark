@@ -11,16 +11,21 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { EventFeatureCollection } from "@moinkark/shared";
 import {
   CLUSTER_LAYER,
+  DITHMARSCHEN,
   POINT_LAYER,
   MAP_STYLE,
   SOURCE_ID,
   clusterCountLayer,
   clusterLayer,
+  fogPaint,
+  outlinePaint,
   pointLayer,
   sourceConfig,
+  userMarker,
 } from "../lib/mapStyle";
-import { DITHMARSCHEN, colors } from "../lib/theme";
+import { radius, withAlpha } from "../lib/theme";
 import { DITHMARSCHEN_MASK, DITHMARSCHEN_OUTLINE } from "../lib/dithmarschen-boundary";
+import { pickNearestAtSpot } from "../lib/nearestEvent";
 import type { EventMapProps } from "./EventMap";
 
 // MapLibre ab 6.0 bestimmt die URL seines Web-Workers aus `import.meta.url`.
@@ -109,21 +114,14 @@ export default function EventMap({
         return;
       }
       // Mehrere Events am gleichen Ort liegen deckungsgleich übereinander —
-      // feats[0] wäre Zufall. Den zeitlich nächsten Termin wählen (s. native).
-      const [hlng, hlat] = (f.geometry as any).coordinates ?? [];
-      const sameSpot = features.filter((x) => {
-        const [lng, lat] = x.geometry.coordinates;
-        return lng === hlng && lat === hlat;
-      });
-      if (sameSpot.length === 0) {
-        onSelect(Number(f.properties?.id));
-        return;
-      }
-      let best = sameSpot[0];
-      for (const x of sameSpot) {
-        if (new Date(x.properties.startUtc) < new Date(best.properties.startUtc)) best = x;
-      }
-      onSelect(best.properties.id);
+      // feats[0] wäre Zufall. Den zeitlich nächsten Termin wählen (Logik in
+      // lib/nearestEvent.ts, geteilt mit der nativen Karte).
+      const id = pickNearestAtSpot(
+        features,
+        (f.geometry as any).coordinates,
+        feats.map((x: typeof f) => Number(x.properties?.id))
+      );
+      if (id != null) onSelect(id);
     },
     [onSelect, features]
   );
@@ -151,7 +149,7 @@ export default function EventMap({
         <Layer
           id="dith-mask-fill"
           type="fill"
-          paint={{ "fill-color": "#0A1F1F", "fill-opacity": 0.55 }}
+          paint={fogPaint}
         />
       </Source>
       {/* Starker Umriss des Kirchenkreises */}
@@ -160,7 +158,7 @@ export default function EventMap({
           id="dith-outline-line"
           type="line"
           layout={{ "line-join": "round", "line-cap": "round" }}
-          paint={{ "line-color": colors.primary, "line-width": 3, "line-opacity": 0.9 }}
+          paint={outlinePaint}
         />
       </Source>
 
@@ -177,10 +175,10 @@ export default function EventMap({
             style={{
               width: 18,
               height: 18,
-              borderRadius: 9,
-              background: "#2563EB",
-              border: "3px solid #FFFFFF",
-              boxShadow: "0 0 0 6px rgba(37,99,235,0.20)",
+              borderRadius: radius.pill,
+              background: userMarker.color,
+              border: `${userMarker.ringWidth}px solid ${userMarker.ring}`,
+              boxShadow: `0 0 0 6px ${withAlpha(userMarker.color, userMarker.haloOpacity)}`,
             }}
             aria-label="Du bist hier"
           />

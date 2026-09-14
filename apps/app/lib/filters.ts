@@ -1,13 +1,12 @@
 // Reine, testbare Filterlogik. Wirkt clientseitig auf das gecachte GeoJSON — kein Refetch.
 
-import { eventParishes, type EventFeature } from "@moinkark/shared";
+import { eventParishes, type EventFeature, type LatLng } from "@moinkark/shared";
 
 export type DateFilter = "all" | "today" | "week" | "weekend";
 
-export interface LatLng {
-  lat: number;
-  lng: number;
-}
+// LatLng kommt aus dem geteilten Paket (dieselbe Form wie in der API) und wird
+// hier nur weitergereicht, damit bestehende Importe aus ./filters weiter gelten.
+export type { LatLng };
 
 export interface Filters {
   date: DateFilter;
@@ -65,17 +64,46 @@ function inBounds(f: EventFeature, b: Bounds): boolean {
 
 const BERLIN_TZ = "Europe/Berlin";
 
+/**
+ * Intl.DateTimeFormat ist teuer im Bau (Locale-Daten laden) und billig im
+ * Gebrauch. Die Formatter entstehen deshalb einmal je Modul, beim ersten
+ * Zugriff — vorher baute jede Listenkarte bei jedem Render vier neue.
+ */
+function once<T>(make: () => T): () => T {
+  let value: T | undefined;
+  return () => (value ??= make());
+}
+
+const berlinDateFmt = once(
+  () =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: BERLIN_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      weekday: "short",
+    })
+);
+const berlinOffsetFmt = once(
+  () => new Intl.DateTimeFormat("en-US", { timeZone: BERLIN_TZ, timeZoneName: "longOffset" })
+);
+const eventDateFmt = once(
+  () =>
+    new Intl.DateTimeFormat("de-DE", {
+      timeZone: BERLIN_TZ,
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+    })
+);
+const eventTimeFmt = once(
+  () => new Intl.DateTimeFormat("de-DE", { timeZone: BERLIN_TZ, hour: "2-digit", minute: "2-digit" })
+);
+
 /** Berlin-lokales Datum (Jahr/Monat/Tag) eines UTC-ISO-Strings. */
 function berlinParts(utc: string): { y: number; m: number; d: number; dow: number } {
   const date = new Date(utc);
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: BERLIN_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-  });
-  const parts = fmt.formatToParts(date);
+  const parts = berlinDateFmt().formatToParts(date);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   const dowMap: Record<string, number> = {
     Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -105,10 +133,7 @@ function startOfBerlinDay(d: Date): number {
   // Berliner Offset zu diesem Zeitpunkt bestimmen (+1 h Winter, +2 h Sommer):
   // longOffset liefert ihn als "GMT+02:00" — robuster als ein Reparsen von
   // toLocaleString, das sonst in der Zeitzone des Geräts gelesen würde.
-  const tzName = new Intl.DateTimeFormat("en-US", {
-    timeZone: BERLIN_TZ,
-    timeZoneName: "longOffset",
-  })
+  const tzName = berlinOffsetFmt()
     .formatToParts(new Date(asUtc))
     .find((part) => part.type === "timeZoneName")?.value;
   const m = /GMT([+-])(\d{2}):(\d{2})/.exec(tzName ?? "");
@@ -207,17 +232,8 @@ export function sortByStart(features: EventFeature[]): EventFeature[] {
 /** Formatiert Start (+ optional Ende) in Berlin-Zeit, deutsch. */
 export function formatEventTime(startUtc: string, endUtc?: string, allDay?: boolean, showEnd = true): string {
   const start = new Date(startUtc);
-  const dateFmt = new Intl.DateTimeFormat("de-DE", {
-    timeZone: BERLIN_TZ,
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
-  const timeFmt = new Intl.DateTimeFormat("de-DE", {
-    timeZone: BERLIN_TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateFmt = eventDateFmt();
+  const timeFmt = eventTimeFmt();
   const datePart = dateFmt.format(start);
   if (allDay) return `${datePart} · ganztägig`;
   const startTime = timeFmt.format(start);
