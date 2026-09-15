@@ -32,7 +32,11 @@ permissions:
 jobs:
   build-upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45 Minuten waren zu knapp: Ohne Gradle-Zwischenspeicher lud der erste
+    # Lauf 41,6 Minuten, der zweite überschritt das Limit bei 46,3 und wurde
+    # mitten im Bundle-Bau abgebrochen. Mit dem Cache unten liegen die Läufe
+    # deutlich darunter; 75 Minuten lassen Luft für einen kalten Cache.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
 
@@ -41,6 +45,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+          # Gradle-Zwischenspeicher: Ohne ihn lädt und baut jeder Lauf alles neu
+          # (41–46 Min, ein Lauf lief ins Zeitlimit). Der Schlüssel hängt an den
+          # Gradle-Dateien, ein Wechsel der Abhängigkeiten erneuert ihn also.
+          cache: gradle
 
       - name: Node einrichten
         uses: actions/setup-node@v7
