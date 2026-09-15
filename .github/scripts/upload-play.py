@@ -9,6 +9,7 @@
 # bleibt unverbraucht) — fuer Workflow-Tests.
 import base64
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -109,11 +110,23 @@ try:
               aab_bytes, "application/octet-stream")["versionCode"]
     print(f"Bundle hochgeladen: versionCode {vc}")
 
+    # Freigabestatus. "completed" = sofort an alle Tester:innen des Tracks.
+    #
+    # Solange die App in der Play Console ein ENTWURF ist (nie veroeffentlicht),
+    # lehnt Google jeden anderen Status ab: "Only releases with status draft may
+    # be created on draft app." Der Upload und die Track-Zuweisung laufen dabei
+    # durch, erst :validate/:commit scheitert — der Fehler kommt also spaet und
+    # sieht nach einem Problem mit dem Bundle aus. Deshalb per Umgebung
+    # steuerbar, mit "draft" als Vorgabe: Das funktioniert in BEIDEN Zustaenden;
+    # bei einer Entwurfs-App ist es der einzige erlaubte Wert, danach landet der
+    # Release als Entwurf im Track und wird in der Konsole freigegeben.
+    status = os.environ.get("PLAY_RELEASE_STATUS", "draft").strip() or "draft"
     release = {"releases": [{
-        "status": "completed",
+        "status": status,
         "versionCodes": [str(vc)],
         "releaseNotes": [{"language": "de-DE", "text": notes}],
     }]}
+    print(f"Freigabestatus: {status}")
     for track in TRACKS.split(","):
         call("PUT", f"{API}/edits/{edit}/tracks/{track}", json.dumps(release).encode())
         print(f"Track {track}: gesetzt")
