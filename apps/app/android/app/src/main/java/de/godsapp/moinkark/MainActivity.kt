@@ -1,4 +1,4 @@
-package de.godsapp.kkdithkarte
+package de.godsapp.moinkark
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

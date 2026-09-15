@@ -18,7 +18,12 @@ import urllib.request
 
 SA_JSON, AAB, NOTES_FILE, TRACKS = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 MODE = sys.argv[5] if len(sys.argv) > 5 else "commit"
-PKG = "de.godsapp.kkdithkarte"
+# Android-Paketname — NICHT identisch mit der iOS-Bundle-ID
+# (`de.godsapp.kkdithkarte`, historisch am EAS-Projekt und an TestFlight-Builds
+# haengend). In der Play Console heisst die App `de.godsapp.moinkark`; mit dem
+# iOS-Namen antwortet die API „Package not found", was nach einem Rechteproblem
+# aussieht und keines ist.
+PKG = "de.godsapp.moinkark"
 API = f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PKG}"
 UP = f"https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/{PKG}"
 

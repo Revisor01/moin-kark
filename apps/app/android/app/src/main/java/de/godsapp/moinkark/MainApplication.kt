@@ -1,4 +1,4 @@
-package de.godsapp.kkdithkarte
+package de.godsapp.moinkark
 
 import android.app.Application
 import android.content.res.Configuration

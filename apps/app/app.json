@@ -26,7 +26,7 @@
       }
     },
     "android": {
-      "package": "de.godsapp.kkdithkarte",
+      "package": "de.godsapp.moinkark",
       "versionCode": 6,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
