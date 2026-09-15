@@ -16,6 +16,11 @@ on:
         # Erste Einreichung, geschlossener Test — Produktion erst bewusst per Input.
         default: "internal"
         required: true
+      release_status:
+        description: "Freigabestatus im Track. draft = landet als Entwurf in der Konsole (nötig, solange die App unveröffentlicht ist). completed = sofort an die Tester:innen."
+        type: choice
+        options: [draft, completed]
+        default: draft
       dry_run:
         description: "Dry-Run: kompletter Durchlauf, aber Play-Edit wird verworfen (kein Release)"
         type: boolean
@@ -138,6 +143,13 @@ jobs:
       - name: Zu Google Play hochladen
         env:
           GPLAY_SA_JSON_BASE64: ${{ secrets.GPLAY_SA_JSON_BASE64 }}
+          # Freigabestatus des Releases im Track. Vorgabe "draft", weil Google
+          # bei einer noch nicht veroeffentlichten App jeden anderen Status
+          # ablehnt ("Only releases with status draft may be created on draft
+          # app.") — und weil ein Entwurf in der Konsole bewusst freigegeben
+          # wird, statt sofort an alle Tester:innen zu gehen. Fuer den
+          # Normalbetrieb auf "completed" setzen.
+          PLAY_RELEASE_STATUS: ${{ inputs.release_status }}
         run: |
           echo "$GPLAY_SA_JSON_BASE64" | base64 --decode > /tmp/gplay-sa.json
           python3 .github/scripts/upload-play.py /tmp/gplay-sa.json \
