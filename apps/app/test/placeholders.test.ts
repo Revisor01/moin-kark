@@ -28,6 +28,11 @@ const MOTIVE = [
   "eddelak",
   "pahlen",
   "weddingstedt",
+  "woehrden",
+  "koege",
+  "neuenkirchen",
+  "wesseln",
+  "hemmingstedt",
 ];
 
 /** Breite/Höhe eines Bildes über `sips` (macOS) — auf anderen Systemen übersprungen. */
@@ -98,6 +103,11 @@ describe("Zuordnung Gemeinde → Motiv", () => {
     "eddelak",
     "pahlen und delve",
     "weddingstedt",
+    "wöhrden",
+    "vereinigte süderdithmarscher köge",
+    "neuenkirchen",
+    "kirche wesseln",
+    "kg hemmingstedt",
   ];
 
   // `placeholders.ts` lässt sich hier nicht importieren: `require()` auf ein

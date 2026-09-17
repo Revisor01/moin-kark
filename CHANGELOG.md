@@ -24,13 +24,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   Kirchen-Koordinaten als Fallback.
 - **Landingpage** (`apps/web`) auf `moin-kark.de`, Web-App auf
   `karte.moin-kark.de` — mit eigens erstellten Dithmarschen-Illustrationen
-  (Deich mit Schafen, Kohlfelder) und den Kirchen der Gemeinden: Meldorfer Dom,
-  St. Bartholomäus Wesselburen, St. Secundus Hennstedt, St. Clemens Büsum,
-  Jakobuskirche Brunsbüttel, St.-Michaelis St. Michaelisdonn,
-  Maria-Magdalenen Marne, St. Remigius Albersdorf, Petri-Kirche Burg,
-  St.-Jürgen Heide, dazu Eddelak, Pahlen und Weddingstedt.
+  (Deich mit Schafen, Kohlfelder) und den Kirchen aller Gemeinden, jede mit
+  ihrem Namen und alle gleich groß nebeneinander.
 - Veranstaltungen ohne eigenes Foto zeigen die Kirche ihrer Gemeinde statt eines
-  allgemeinen Landschaftsbildes — für neun von zehn Terminen passt das Bild jetzt
+  allgemeinen Landschaftsbildes — für 98 von 100 Terminen passt das Bild jetzt
   zum Ort.
 - Standort & Umkreis: Live-Standort, der Marker folgt der Bewegung; „Zu meinem
   Standort“ fällt bei fernem Standort auf die Dithmarschen-Übersicht zurück.
