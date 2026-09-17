@@ -144,17 +144,24 @@
   .places{padding:var(--space-4xl) 0 var(--space-sm)}
   .places h2{margin-bottom:var(--space-sm)}
   .places .sub{color:var(--muted);margin:0 0 var(--space-xxl);max-width:52ch}
-  .place-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-xl)}
+  /* Alle Gemeinden gleich groß, zu dritt: keine bekommt eine größere Kachel als
+     die andere — die Kirchen stehen nebeneinander, nicht in einer Rangfolge. */
+  .place-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-lg)}
   .place{margin:0;border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);border:1px solid var(--border)}
-  .place img{display:block;width:100%;height:clamp(130px,17vw,190px);object-fit:cover;object-position:center 62%}
+  /* `center 45%`: in der flachen Kachel schnitte ein tieferer Ausschnitt die
+     Turmspitzen ab — und der Turm ist das, woran man die Kirche erkennt. */
+  .place img{display:block;width:100%;height:clamp(110px,12vw,150px);object-fit:cover;object-position:center 45%}
   .place figcaption{
-    padding:var(--space-md) var(--space-lg);font-weight:600;font-size:var(--text-body);color:var(--ink);
+    padding:var(--space-sm) var(--space-md);font-weight:600;font-size:var(--text-label);color:var(--ink);
     border-top:1px solid var(--border);
   }
+  /* Das Landschaftsmotiv steht für keine Gemeinde und schließt die Reihe ab —
+     als einziges über die volle Breite, ohne Bildunterschrift-Betonung. */
   .place-wide{grid-column:1 / -1}
-  .place-wide img{height:clamp(150px,19vw,220px);object-position:center 70%}
+  .place-wide img{height:clamp(140px,16vw,190px);object-position:center 70%}
   .place-wide figcaption{color:var(--muted);font-weight:500}
-  @media (max-width:640px){ .place-grid{grid-template-columns:1fr} }
+  @media (max-width:900px){ .place-grid{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:520px){ .place-grid{grid-template-columns:1fr} }
 
   /* Info */
   .info{padding:var(--space-4xl) 0}
@@ -310,6 +317,76 @@
           <img src="/hennstedt.jpg" alt="St. Secundus in Hennstedt"
                width="1600" height="679" loading="lazy">
           <figcaption>Hennstedt</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/brunsbuettel.jpg" alt="Die Jakobuskirche in Brunsbüttel"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Brunsbüttel</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/michaelisdonn.jpg" alt="Die St.-Michaelis-Kirche in St. Michaelisdonn"
+               width="1600" height="678" loading="lazy">
+          <figcaption>St. Michaelisdonn</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/marne.jpg" alt="Die Maria-Magdalenen-Kirche in Marne"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Marne</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/albersdorf.jpg" alt="Die St.-Remigius-Kirche in Albersdorf"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Albersdorf</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/burg.jpg" alt="Die Petri-Kirche in Burg"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Burg</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/heide.jpg" alt="Die St.-Jürgen-Kirche in Heide"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Heide</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/woehrden.jpg" alt="Die St.-Nicolai-Kirche in Wöhrden"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Wöhrden</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/eddelak.jpg" alt="Die Kirche in Eddelak mit ihrem hölzernen Glockenturm"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Eddelak</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/pahlen.jpg" alt="Die Kirche in Pahlen"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Pahlen und Delve</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/weddingstedt.jpg" alt="Die Kirche in Weddingstedt"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Weddingstedt</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/neuenkirchen.jpg" alt="Die Kirche in Neuenkirchen"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Neuenkirchen</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/wesseln.jpg" alt="Die Kirche in Wesseln"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Wesseln</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/hemmingstedt.jpg" alt="Die Kirche in Hemmingstedt"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Hemmingstedt</figcaption>
+        </figure>
+        <figure class="place">
+          <img src="/koege.jpg" alt="Die Kirche der Vereinigten Süderdithmarscher Köge"
+               width="1600" height="678" loading="lazy">
+          <figcaption>Süderdithmarscher Köge</figcaption>
         </figure>
         <figure class="place place-wide">
           <img src="/kohl.jpg" alt="Kohlfelder in der Dithmarscher Marsch"

@@ -38,10 +38,14 @@ const NEUTRAL_WIDE = [PH_DEICH_WIDE, PH_KOHL_WIDE] as const;
  * Gemeinde/Ort → eigenes Motiv, quadratischer Zuschnitt (Liste).
  *
  * Schlüssel ist `parish` bzw. `city` in Kleinschreibung, so wie sie aus
- * ChurchDesk kommen — deshalb steht hier „kg heide" mit Präfix und
- * „st. michaelisdonn" in der Schreibweise des Kirchspiels. Der Ort schwankt
- * dort zwischen „Sankt" und „St."; weil `parish` zuerst greift, genügt ein
- * Eintrag.
+ * ChurchDesk kommen — deshalb tragen manche ein Präfix („kg heide",
+ * „kg hemmingstedt", „kirche wesseln") und „st. michaelisdonn" steht in der
+ * Schreibweise des Kirchspiels. Der Ort schwankt dort zwischen „Sankt" und
+ * „St."; weil `parish` zuerst greift, genügt ein Eintrag.
+ *
+ * Dass `parish` vor `city` kommt, entscheidet auch die Grenzfälle richtig:
+ * Ein Termin des Kirchspiels Neuenkirchen in der Stadt Wesselburen bekommt
+ * die Neuenkirchener Kirche, nicht die Wesselburener — und umgekehrt.
  */
 const ORT_PLACEHOLDERS: Record<string, number> = {
   büsum: require("../assets/ph-buesum.jpg"),
@@ -57,6 +61,11 @@ const ORT_PLACEHOLDERS: Record<string, number> = {
   eddelak: require("../assets/ph-eddelak.jpg"),
   "pahlen und delve": require("../assets/ph-pahlen.jpg"),
   weddingstedt: require("../assets/ph-weddingstedt.jpg"),
+  wöhrden: require("../assets/ph-woehrden.jpg"),
+  "vereinigte süderdithmarscher köge": require("../assets/ph-koege.jpg"),
+  neuenkirchen: require("../assets/ph-neuenkirchen.jpg"),
+  "kirche wesseln": require("../assets/ph-wesseln.jpg"),
+  "kg hemmingstedt": require("../assets/ph-hemmingstedt.jpg"),
 };
 
 /** Dieselben Motive im Panorama-Zuschnitt (Detailansicht). */
@@ -74,6 +83,11 @@ const ORT_PLACEHOLDERS_WIDE: Record<string, number> = {
   eddelak: require("../assets/ph-eddelak-wide.jpg"),
   "pahlen und delve": require("../assets/ph-pahlen-wide.jpg"),
   weddingstedt: require("../assets/ph-weddingstedt-wide.jpg"),
+  wöhrden: require("../assets/ph-woehrden-wide.jpg"),
+  "vereinigte süderdithmarscher köge": require("../assets/ph-koege-wide.jpg"),
+  neuenkirchen: require("../assets/ph-neuenkirchen-wide.jpg"),
+  "kirche wesseln": require("../assets/ph-wesseln-wide.jpg"),
+  "kg hemmingstedt": require("../assets/ph-hemmingstedt-wide.jpg"),
 };
 
 /**
