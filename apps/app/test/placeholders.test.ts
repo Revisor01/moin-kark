@@ -12,7 +12,23 @@ import { join } from "node:path";
  * das Kirchenschiff lag außerhalb.
  */
 const ASSETS = join(__dirname, "..", "assets");
-const MOTIVE = ["deich", "kohl", "buesum", "meldorf", "wesselburen", "hennstedt"];
+const MOTIVE = [
+  "deich",
+  "kohl",
+  "buesum",
+  "meldorf",
+  "wesselburen",
+  "hennstedt",
+  "brunsbuettel",
+  "michaelisdonn",
+  "marne",
+  "albersdorf",
+  "burg",
+  "heide",
+  "eddelak",
+  "pahlen",
+  "weddingstedt",
+];
 
 /** Breite/Höhe eines Bildes über `sips` (macOS) — auf anderen Systemen übersprungen. */
 function seitenverhaeltnis(datei: string): number {
@@ -56,6 +72,62 @@ describe("Platzhalter-Motive", () => {
     for (const m of MOTIVE) {
       const v = seitenverhaeltnis(join(ASSETS, `ph-${m}-wide.jpg`));
       expect(v, `ph-${m}-wide.jpg ist ${v.toFixed(2)}:1 statt ~2,36:1`).toBeGreaterThan(1.8);
+    }
+  });
+});
+
+describe("Zuordnung Gemeinde → Motiv", () => {
+  // Die Schlüssel müssen exakt den Werten entsprechen, die aus ChurchDesk
+  // kommen (kleingeschrieben). Zwei Fälle greifen sonst still daneben und
+  // niemand merkt es, weil dann einfach ein Landschaftsmotiv erscheint:
+  //   - „KG Heide" trägt das Präfix; ein Schlüssel „heide" träfe nie zu.
+  //   - Bei St. Michaelisdonn schwankt die STADT zwischen „Sankt" und „St.",
+  //     der Kirchspiel-Name nicht. Weil `parish` zuerst geprüft wird, genügt
+  //     der eine Eintrag — solange er exakt so geschrieben ist.
+  const schluessel = [
+    "büsum",
+    "meldorf",
+    "wesselburen",
+    "hennstedt",
+    "brunsbüttel",
+    "st. michaelisdonn",
+    "marne",
+    "albersdorf",
+    "burg",
+    "kg heide",
+    "eddelak",
+    "pahlen und delve",
+    "weddingstedt",
+  ];
+
+  // `placeholders.ts` lässt sich hier nicht importieren: `require()` auf ein
+  // JPG kann nur der Metro-Bundler, nicht Vitest. Deshalb wie beim Bildrahmen
+  // unten gegen den Quelltext prüfen.
+  const quelle = readFileSync(join(__dirname, "..", "lib", "placeholders.ts"), "utf8");
+
+  it("kennt jede Gemeinde in beiden Zuschnitten", () => {
+    for (const k of schluessel) {
+      // In der Objektliteral-Schreibweise steht der Schlüssel mit Punkt oder
+      // Leerzeichen in Anführungszeichen, ein einfacher ohne.
+      const muster = new RegExp(`(^|[{,\\s])"?${k.replace(".", "\\.")}"?:`, "gu");
+      const treffer = quelle.match(muster)?.length ?? 0;
+      expect(treffer, `„${k}" steht ${treffer}× statt 2× (Liste + Detail)`).toBe(2);
+    }
+  });
+
+  it("verweist für jede Gemeinde auf beide Bilddateien", () => {
+    // Datei fehlt → der Bundler bricht erst auf dem Gerät ab.
+    for (const m of MOTIVE) {
+      expect(quelle, `ph-${m}.jpg wird nirgends eingebunden`).toContain(`ph-${m}.jpg`);
+      expect(quelle, `ph-${m}-wide.jpg wird nirgends eingebunden`).toContain(`ph-${m}-wide.jpg`);
+    }
+  });
+
+  it("schreibt Schlüssel klein — sonst greift der Abgleich nie", () => {
+    // placeholderFor() vergleicht gegen name.trim().toLowerCase(); ein Schlüssel
+    // mit Großbuchstaben träfe niemals zu und fiele still auf Deich/Kohl zurück.
+    for (const k of schluessel) {
+      expect(k, `„${k}" ist nicht kleingeschrieben`).toBe(k.toLowerCase());
     }
   });
 });

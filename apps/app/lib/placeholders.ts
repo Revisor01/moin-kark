@@ -4,6 +4,11 @@
 // einem Büsumer Termin wäre irreführend. Für alle anderen Gemeinden bleiben die
 // neutralen Landschaftsmotive (Deich, Kohlfeld) — die passen überall in Dithmarschen.
 //
+// Die Kirchen sind gezeichnet, nicht fotografiert, und zeigen das jeweils
+// namengebende Haus: Jakobuskirche Brunsbüttel, St.-Michaelis St. Michaelisdonn,
+// Maria-Magdalenen Marne, St. Remigius Albersdorf, Petri-Kirche Burg,
+// St.-Jürgen Heide, St. Clemens Büsum.
+//
 // Jedes Motiv liegt in ZWEI Zuschnitten vor, weil die beiden Anzeigeorte
 // gegensätzliche Formate haben:
 //
@@ -29,12 +34,29 @@ const PH_KOHL_WIDE = require("../assets/ph-kohl-wide.jpg");
 const NEUTRAL = [PH_DEICH, PH_KOHL] as const;
 const NEUTRAL_WIDE = [PH_DEICH_WIDE, PH_KOHL_WIDE] as const;
 
-/** Gemeinde/Ort → eigenes Motiv, quadratischer Zuschnitt (Liste). */
+/**
+ * Gemeinde/Ort → eigenes Motiv, quadratischer Zuschnitt (Liste).
+ *
+ * Schlüssel ist `parish` bzw. `city` in Kleinschreibung, so wie sie aus
+ * ChurchDesk kommen — deshalb steht hier „kg heide" mit Präfix und
+ * „st. michaelisdonn" in der Schreibweise des Kirchspiels. Der Ort schwankt
+ * dort zwischen „Sankt" und „St."; weil `parish` zuerst greift, genügt ein
+ * Eintrag.
+ */
 const ORT_PLACEHOLDERS: Record<string, number> = {
   büsum: require("../assets/ph-buesum.jpg"),
   meldorf: require("../assets/ph-meldorf.jpg"),
   wesselburen: require("../assets/ph-wesselburen.jpg"),
   hennstedt: require("../assets/ph-hennstedt.jpg"),
+  brunsbüttel: require("../assets/ph-brunsbuettel.jpg"),
+  "st. michaelisdonn": require("../assets/ph-michaelisdonn.jpg"),
+  marne: require("../assets/ph-marne.jpg"),
+  albersdorf: require("../assets/ph-albersdorf.jpg"),
+  burg: require("../assets/ph-burg.jpg"),
+  "kg heide": require("../assets/ph-heide.jpg"),
+  eddelak: require("../assets/ph-eddelak.jpg"),
+  "pahlen und delve": require("../assets/ph-pahlen.jpg"),
+  weddingstedt: require("../assets/ph-weddingstedt.jpg"),
 };
 
 /** Dieselben Motive im Panorama-Zuschnitt (Detailansicht). */
@@ -43,6 +65,15 @@ const ORT_PLACEHOLDERS_WIDE: Record<string, number> = {
   meldorf: require("../assets/ph-meldorf-wide.jpg"),
   wesselburen: require("../assets/ph-wesselburen-wide.jpg"),
   hennstedt: require("../assets/ph-hennstedt-wide.jpg"),
+  brunsbüttel: require("../assets/ph-brunsbuettel-wide.jpg"),
+  "st. michaelisdonn": require("../assets/ph-michaelisdonn-wide.jpg"),
+  marne: require("../assets/ph-marne-wide.jpg"),
+  albersdorf: require("../assets/ph-albersdorf-wide.jpg"),
+  burg: require("../assets/ph-burg-wide.jpg"),
+  "kg heide": require("../assets/ph-heide-wide.jpg"),
+  eddelak: require("../assets/ph-eddelak-wide.jpg"),
+  "pahlen und delve": require("../assets/ph-pahlen-wide.jpg"),
+  weddingstedt: require("../assets/ph-weddingstedt-wide.jpg"),
 };
 
 /**
