@@ -1,0 +1,6 @@
+# Apple verlangt die Zuordnungsdatei als application/json. Sie hat bewusst
+# keine Dateiendung, deshalb erkennt Apache den Typ nicht von selbst und
+# liefert sie ohne Content-Type aus — Universal Links greifen dann nicht.
+<Files "apple-app-site-association">
+  ForceType application/json
+</Files>

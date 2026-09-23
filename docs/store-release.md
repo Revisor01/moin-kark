@@ -132,6 +132,34 @@ weil der lokale MapLibre-Mirror (README „iOS-Build: MapLibre-Workaround“) do
 eine Revision pinnt, die es auf GitHub nicht gibt. Der Runner löst das Paket
 direkt von GitHub auf (exakte Version im Podspec).
 
+## Geteilte Links öffnen die App
+
+Geteilte Termine sind Links auf `https://karte.moin-kark.de/?event=<id>`. Ist die
+App installiert, fängt sie den Link ab (iOS: Universal Link, Android: App Link);
+sonst zeigt die Web-Karte denselben Termin. Dafür nötig:
+
+- `apps/app/app.json`: `ios.associatedDomains` (`applinks:karte.moin-kark.de`)
+  und `android.intentFilters` mit `autoVerify`.
+- `apps/app/public/.well-known/apple-app-site-association` und
+  `assetlinks.json` — Expo kopiert `public/` beim Web-Export mit, sie liegen
+  also automatisch unter `karte.moin-kark.de/.well-known/`.
+
+**Der Fingerprint in `assetlinks.json` muss nach dem ersten Play-Upload
+ausgetauscht werden.** Dort steht bislang der Upload-Schlüssel. Google signiert
+die App im Store mit einem eigenen Schlüssel neu; maßgeblich ist dann der
+SHA-256 unter *Play Console → Setup → App-Signatur → Zertifikat für die
+App-Signatur*. Solange der falsche Wert dort steht, öffnet Android den Link im
+Browser statt in der App — iOS ist davon nicht betroffen.
+
+Prüfen lässt sich das nach dem Deploy mit:
+
+```
+curl -s https://karte.moin-kark.de/.well-known/assetlinks.json
+curl -s https://karte.moin-kark.de/.well-known/apple-app-site-association
+```
+
+Beide müssen als `application/json` ohne Weiterleitung ausgeliefert werden.
+
 ## Kosten
 
 Ein Release (Android ~40 Min Linux, iOS ~25 Min macOS) kostet rund 1,80 $;

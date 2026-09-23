@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useURL } from "expo-linking";
 import { KIRCHSPIELE, eventParishes } from "@moinkark/shared";
 import EventMap from "../components/EventMap";
 import EventList from "../components/EventList";
@@ -24,6 +25,7 @@ import { useCategories, useEvents } from "../lib/hooks/useEvents";
 import { useLocation } from "../lib/hooks/useLocation";
 import { useSavedSync } from "../lib/hooks/useSavedSync";
 import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
+import { eventIdFromUrl } from "../lib/share";
 import {
   cancelForEvent,
   clearLastNotificationTap,
@@ -180,6 +182,26 @@ export default function Home() {
     // unverändert.
     clearLastNotificationTap();
   }, [lastNotificationResponse]);
+
+  // Geteilter Link (`…/?event=<id>`). useURL liefert auch die Start-URL beim
+  // Kaltstart, nicht nur spätere Aufrufe — dieselbe Falle wie oben bei den
+  // Mitteilungen. Die ID wird erst gesetzt, wenn der Feed da ist und den Termin
+  // kennt; sonst zeigte das Sheet auf ein Event, das es nicht gibt.
+  const incomingUrl = useURL();
+  const [pendingEventId, setPendingEventId] = useState<number | null>(null);
+  useEffect(() => {
+    if (!incomingUrl) return;
+    const id = eventIdFromUrl(incomingUrl);
+    if (id !== null) setPendingEventId(id);
+  }, [incomingUrl]);
+  useEffect(() => {
+    if (pendingEventId === null || allFeatures.length === 0) return;
+    const known = allFeatures.some((f) => f.properties.id === pendingEventId);
+    // Unbekannte ID (abgesagt, vorbei, Tippfehler): still verwerfen, die Karte
+    // bleibt stehen. Ein Fehlerdialog hülfe hier niemandem weiter.
+    if (known) setSelectedId(pendingEventId);
+    setPendingEventId(null);
+  }, [pendingEventId, allFeatures]);
 
   // Android-Zurücktaste: offene Sheets schließen statt die App in den
   // Hintergrund zu schicken. Reihenfolge s. lib/backNavigation.
