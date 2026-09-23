@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { eventParishes, parishesLabel, type EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
+import { shareEvent } from "../lib/share";
 import { placeholderFor } from "../lib/placeholders";
 import type { MapsApp } from "../lib/store";
 import { colorForCategory, colors, glyph, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
@@ -289,6 +290,26 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             </Text>
           </TouchableOpacity>
 
+          {/* Teilen: links neben dem Herz. Auf Web gibt es den System-Dialog
+              nicht zuverlässig (react-native-web kennt Share.share nicht), dort
+              bleibt der Button deshalb weg. */}
+          {IS_WEB ? null : (
+            <TouchableOpacity
+              style={styles.share}
+              onPress={() =>
+                shareEvent(
+                  { id: p.id, title: p.title, parish: p.parish, locationName: p.locationName },
+                  time
+                )
+              }
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Termin teilen"
+            >
+              <Text style={styles.shareIcon}>↗</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.close}
             onPress={onClose}
@@ -532,4 +553,19 @@ const styles = StyleSheet.create({
   },
   heartIcon: { ...glyph.md, color: colors.muted },
   heartActive: { color: colors.accent },
+  share: {
+    position: "absolute",
+    zIndex: 6, // über der Inhalts-ScrollView
+    top: spacing.md,
+    // eine Button-Breite weiter links als das Herz
+    right: spacing.md + (sizes.sheetButton + spacing.sm) * 2,
+    width: sizes.sheetButton,
+    height: sizes.sheetButton,
+    borderRadius: radius.pill,
+    backgroundColor: overlays.onImage,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
+  },
+  shareIcon: { ...glyph.md, color: colors.muted },
 });

@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EventFeature } from "@moinkark/shared";
 import type { MapsApp } from "../lib/store";
 import type { ReminderPref } from "../lib/reminders";
+import { rateApp, shareApp } from "../lib/share";
 import { colors, glyph, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
 import Constants from "expo-constants";
 import EventCard from "./EventCard";
@@ -171,6 +172,35 @@ export default function ProfileSheet({
             </View>
           )}
 
+          {/* App weitersagen und bewerten. Auf Web fehlt beides: der
+              System-Teilen-Dialog ist dort nicht verlässlich, und eine
+              Store-Bewertung ergibt ohne installierte App keinen Sinn. */}
+          {IS_WEB ? null : (
+            <>
+              <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Moin Kark</Text>
+              <TouchableOpacity
+                style={styles.actionRow}
+                onPress={shareApp}
+                accessibilityRole="button"
+                accessibilityLabel="App weiterempfehlen"
+                activeOpacity={0.7}
+              >
+                <Text style={styles.actionText}>App weiterempfehlen</Text>
+                <Text style={styles.actionChevron}>↗</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionRow}
+                onPress={rateApp}
+                accessibilityRole="button"
+                accessibilityLabel="App bewerten"
+                activeOpacity={0.7}
+              >
+                <Text style={styles.actionText}>App bewerten</Text>
+                <Text style={styles.actionChevron}>›</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
           {/* Footer — drei klar getrennte Blöcke: Träger · Karte/Daten · Autor */}
           <View style={styles.footer}>
             {/* 1) Träger: Kirchenkreis */}
@@ -294,6 +324,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   segmentBtnActive: { backgroundColor: colors.surface, ...shadow.card },
+  // Tippzeilen für App-Aktionen: 48 pt hoch, damit das Ziel groß genug ist.
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: sizes.sheetButton + spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    marginTop: spacing.xs,
+  },
+  actionText: { ...text.bodyMedium, color: colors.ink },
+  actionChevron: { ...text.bodyMedium, color: colors.faint },
   segmentText: { ...text.bodyMedium, color: colors.muted },
   segmentSmall: { ...text.captionMedium, color: colors.muted },
   segmentTextActive: { color: colors.ink },

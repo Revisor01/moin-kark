@@ -1,0 +1,131 @@
+import { Linking, Platform, Share } from "react-native";
+import * as StoreReview from "expo-store-review";
+
+/**
+ * Teilen von Terminen und der App selbst.
+ *
+ * Geteilt wird immer die Web-Karte mit `?event=<id>`. Ist die App installiert,
+ * fängt sie den Link als Universal Link (iOS) bzw. App Link (Android) ab und
+ * öffnet den Termin direkt; sonst öffnet er im Browser dieselbe Ansicht. Damit
+ * funktioniert ein geteilter Link für alle — mit App wie ohne.
+ *
+ * Voraussetzung dafür sind die Zuordnungsdateien auf dem Server
+ * (`apple-app-site-association` und `assetlinks.json` unter
+ * `karte.moin-kark.de/.well-known/`). Fehlen sie, landet der Link im Browser —
+ * die Web-Karte zeigt den Termin dann trotzdem.
+ */
+
+const WEB_BASE = "https://karte.moin-kark.de";
+
+/** Öffentlicher Link auf einen einzelnen Termin. */
+export function eventShareUrl(id: number): string {
+  return `${WEB_BASE}/?event=${id}`;
+}
+
+/** Link auf die App-Seite, zum Weiterempfehlen. */
+export function appShareUrl(): string {
+  return "https://moin-kark.de";
+}
+
+interface ShareableEvent {
+  id: number;
+  title: string;
+  parish?: string;
+  locationName?: string;
+}
+
+/**
+ * Baut den Text, der im Teilen-Dialog landet: Titel, Zeit, Ort, Leerzeile, Link.
+ * Die Zeitangabe kommt von außen, damit hier keine zweite Formatierung
+ * entsteht — im Sheet steht dieselbe Zeile.
+ */
+export function eventShareMessage(event: ShareableEvent, timeLabel: string): string {
+  const place = placeLine(event.locationName, event.parish);
+  const head = [event.title, timeLabel, place].filter(Boolean).join("\n");
+  return `${head}\n\n${eventShareUrl(event.id)}`;
+}
+
+/**
+ * „St. Bartholomäus, Wesselburen" — aber ohne Dopplung, wenn der Ortsname die
+ * Gemeinde schon enthält („St. Bartholomäus Wesselburen").
+ */
+function placeLine(locationName?: string, parish?: string): string {
+  if (!locationName) return parish ?? "";
+  if (!parish) return locationName;
+  if (locationName.toLowerCase().includes(parish.toLowerCase())) return locationName;
+  return `${locationName}, ${parish}`;
+}
+
+/**
+ * Liest die Event-ID aus einem eingehenden Link — egal ob Universal Link
+ * (`https://karte.moin-kark.de/?event=42`) oder eigenes Schema
+ * (`kkdith://?event=42`). Alles Unplausible ergibt null, damit ein kaputter
+ * Link still ins Leere läuft statt die App zu stören.
+ */
+export function eventIdFromUrl(url: string): number | null {
+  const match = /[?&]event=([^&#]*)/.exec(url);
+  if (!match) return null;
+  const raw = decodeURIComponent(match[1]);
+  // Nur positive Ganzzahlen: ChurchDesk-IDs sehen so aus. `Number()` allein
+  // würde "12.5" und " 4 " durchlassen.
+  if (!/^\d+$/.test(raw)) return null;
+  const id = Number(raw);
+  return id > 0 ? id : null;
+}
+
+/** Teilt einen Termin über den System-Dialog. */
+export async function shareEvent(event: ShareableEvent, timeLabel: string): Promise<void> {
+  const message = eventShareMessage(event, timeLabel);
+  try {
+    // iOS trennt Text und URL; Android hängt `url` NICHT an, dort muss der
+    // Link im Text stehen — er steht in beiden Fällen schon in `message`.
+    await Share.share({ message, title: event.title });
+  } catch {
+    // Abbruch durch die Nutzerin ist kein Fehler.
+  }
+}
+
+/** Teilt die App selbst (Weiterempfehlung). */
+export async function shareApp(): Promise<void> {
+  try {
+    await Share.share({
+      message: `Moin Kark — was in den Kirchengemeinden in Dithmarschen los ist.\n\n${appShareUrl()}`,
+    });
+  } catch {
+    // Abbruch durch die Nutzerin ist kein Fehler.
+  }
+}
+
+/** Store-Seiten für den Rückfallweg, wenn der In-App-Dialog nicht geht. */
+const STORE_URLS = {
+  ios: "https://apps.apple.com/app/id6781438884?action=write-review",
+  android: "market://details?id=de.godsapp.moinkark",
+} as const;
+
+const PLAY_WEB = "https://play.google.com/store/apps/details?id=de.godsapp.moinkark";
+
+/**
+ * Bewerten. Bevorzugt den systemeigenen Dialog (bleibt in der App), sonst die
+ * Store-Seite.
+ *
+ * Achtung: Apple blendet den In-App-Dialog nur ein paarmal im Jahr wirklich ein
+ * und meldet trotzdem Erfolg — deshalb hängt hier bewusst kein „Danke“-Zustand
+ * dran. Wer nichts sieht, tippt eben nochmal und landet dann im Store.
+ */
+export async function rateApp(): Promise<void> {
+  try {
+    if ((await StoreReview.hasAction()) && (await StoreReview.isAvailableAsync())) {
+      await StoreReview.requestReview();
+      return;
+    }
+  } catch {
+    // Fällt unten auf die Store-Seite zurück.
+  }
+  const url = Platform.OS === "ios" ? STORE_URLS.ios : STORE_URLS.android;
+  try {
+    const ok = await Linking.canOpenURL(url);
+    await Linking.openURL(ok ? url : PLAY_WEB);
+  } catch {
+    // Ohne Store-App und ohne Browser ist nichts zu machen.
+  }
+}

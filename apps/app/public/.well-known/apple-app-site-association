@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["J459G9CJT5.de.godsapp.kkdithkarte"],
+        "components": [
+          {
+            "/": "/",
+            "?": { "event": "?*" },
+            "comment": "Geteilte Termin-Links oeffnen die App."
+          }
+        ]
+      }
+    ]
+  }
+}

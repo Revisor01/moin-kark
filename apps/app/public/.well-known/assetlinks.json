@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "de.godsapp.moinkark",
+      "sha256_cert_fingerprints": [
+        "18:D5:77:27:01:51:EC:2D:51:23:9F:48:EE:56:77:21:53:30:F1:24:6B:87:2E:33:3C:C5:24:D8:1E:D4:97:BC"
+      ]
+    }
+  }
+]
