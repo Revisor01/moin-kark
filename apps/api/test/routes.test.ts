@@ -701,7 +701,12 @@ describe("Zuordnungsdateien fuer App-Links", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as any[];
     expect(body[0].target.package_name).toBe("de.godsapp.moinkark");
-    expect(body[0].target.sha256_cert_fingerprints).toHaveLength(1);
+    // Zwei Schluessel: Play signiert im Store neu, lokale Testbuilds tragen den
+    // Upload-Schluessel. Fehlt einer, oeffnet Android den Link im Browser.
+    expect(body[0].target.sha256_cert_fingerprints).toHaveLength(2);
+    for (const fp of body[0].target.sha256_cert_fingerprints) {
+      expect(fp).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+    }
     expect(body[0].relation).toEqual(["delegate_permission/common.handle_all_urls"]);
   });
 });
