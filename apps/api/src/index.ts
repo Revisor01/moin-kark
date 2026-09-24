@@ -24,7 +24,13 @@ import {
   overridesLoadError,
   setOverrides,
 } from "./locations.js";
-import { adminPage, statusPage, type FallbackGroup, type StatusData } from "./pages.js";
+import {
+  adminPage,
+  eventPreviewPage,
+  statusPage,
+  type FallbackGroup,
+  type StatusData,
+} from "./pages.js";
 
 // Laufzeit-Korrekturen beim Import lesen, nicht erst im serve()-Callback: Sonst
 // bleibt der Ladezustand "unloaded", solange kein Server läuft (Tests, künftige
@@ -312,6 +318,109 @@ app.get("/version.json", (c) =>
 );
 
 app.get("/categories.json", (c) => feedResponse(c, (fc) => extractCategories(fc)));
+
+/**
+ * Zuordnungsdateien für Universal Links (iOS) und App Links (Android).
+ *
+ * Geteilt wird `api.moin-kark.de/event/<id>` (wegen der Link-Vorschau) — damit
+ * eine installierte App diesen Link abfängt statt ihn an den Browser zu geben,
+ * müssen die Dateien auf DIESER Domain liegen, nicht nur auf der Karte. Der
+ * vHost reicht alles an die API durch, deshalb liefert sie sie selbst aus.
+ *
+ * `apple-app-site-association` braucht `application/json` und darf keine
+ * Endung tragen; eine Weiterleitung würde Apple ebenfalls ablehnen.
+ */
+const APPLE_APP_SITE_ASSOCIATION = {
+  applinks: {
+    details: [
+      {
+        appIDs: ["J459G9CJT5.de.godsapp.kkdithkarte"],
+        components: [{ "/": "/event/*", comment: "Geteilte Termin-Links oeffnen die App." }],
+      },
+    ],
+  },
+};
+
+/**
+ * Der Fingerprint ist der Play-App-Signaturschlüssel. Google signiert im Store
+ * neu, der lokale Upload-Schlüssel gilt dort nicht — steht der falsche Wert
+ * hier, öffnet Android den Link im Browser statt in der App (iOS ist davon
+ * nicht betroffen). Quelle: Play Console → Setup → App-Signatur.
+ */
+const ANDROID_CERT_SHA256 =
+  process.env.ANDROID_CERT_SHA256 ??
+  "18:D5:77:27:01:51:EC:2D:51:23:9F:48:EE:56:77:21:53:30:F1:24:6B:87:2E:33:3C:C5:24:D8:1E:D4:97:BC";
+
+app.get("/.well-known/apple-app-site-association", (c) => {
+  c.header("Content-Type", "application/json");
+  return c.body(JSON.stringify(APPLE_APP_SITE_ASSOCIATION));
+});
+
+app.get("/.well-known/assetlinks.json", (c) =>
+  c.json([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "de.godsapp.moinkark",
+        sha256_cert_fingerprints: [ANDROID_CERT_SHA256],
+      },
+    },
+  ])
+);
+
+/** Datum und Uhrzeit eines Termins, deutsch, in Berliner Zeit. */
+function previewTime(startUtc: string, allDay?: boolean): string {
+  const d = new Date(startUtc);
+  const datum = new Intl.DateTimeFormat("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+    timeZone: "Europe/Berlin",
+  }).format(d);
+  if (allDay) return `${datum} · ganztägig`;
+  const zeit = new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Berlin",
+  }).format(d);
+  return `${datum}, ${zeit} Uhr`;
+}
+
+/**
+ * Link-Vorschau für geteilte Termine. Die Web-Karte ist eine Single-Page-App;
+ * Crawler sehen dort nur ein leeres Grundgerüst, ein geteilter Link erschien
+ * deshalb ohne Bild und Text. Diese Seite liefert die Metadaten und leitet
+ * Menschen sofort auf die Karte weiter.
+ */
+app.get("/event/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id) || id <= 0) return c.notFound();
+
+  let fc: EventFeatureCollection;
+  try {
+    fc = await getCollection();
+  } catch (e: any) {
+    console.error(`[${c.req.path}]`, e?.message ?? e);
+    return c.json({ error: FEED_UNAVAILABLE }, 500);
+  }
+
+  const f = fc.features.find((x) => x.properties.id === id);
+  // Abgesagt, vorbei oder nie dagewesen — alles dasselbe aus Sicht des Links.
+  if (!f) return c.notFound();
+
+  const p = f.properties;
+  const place = [p.locationName, p.parish].filter(Boolean).join(", ");
+  return c.html(
+    eventPreviewPage({
+      id: p.id,
+      title: p.title,
+      time: previewTime(p.startUtc, p.allDay),
+      place,
+      imageUrl: p.image?.url,
+    })
+  );
+});
 
 // --- Admin: Orts-Korrekturen pflegen (Token in ADMIN_TOKEN, sonst deaktiviert) ---
 

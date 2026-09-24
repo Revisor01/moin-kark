@@ -612,3 +612,96 @@ describe("CORS", () => {
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
   });
 });
+
+describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
+  it("liefert OpenGraph-Angaben des Termins", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, title: "Orgelkonzert", locationName: "St. Bartholomäus" })])
+    );
+    const res = await app.request("/event/42");
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/html/);
+
+    const html = await res.text();
+    expect(html).toContain('property="og:title" content="Orgelkonzert"');
+    // Ort und Zeit gehoeren in die Beschreibung, sonst steht in WhatsApp nur ein Titel.
+    expect(html).toMatch(/property="og:description" content="[^"]*St. Bartholomäus[^"]*"/);
+    expect(html).toContain('property="og:type" content="article"');
+  });
+
+  it("verweist auf die Karte mit dem Termin", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain("https://karte.moin-kark.de/?event=42");
+  });
+
+  it("schickt Menschen per Weiterleitung auf die Karte", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    const html = await (await app.request("/event/42")).text();
+    // Crawler lesen die Metadaten, Menschen sollen nicht auf der Zwischenseite landen.
+    expect(html).toContain('http-equiv="refresh"');
+  });
+
+  it("nimmt das Bild des Termins, wenn eines da ist", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, image: { url: "https://bilder.example/kirche.jpg" } as any })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain('property="og:image" content="https://bilder.example/kirche.jpg"');
+  });
+
+  it("faellt ohne Bild auf das Standardmotiv zurueck", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42, image: undefined })]));
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain('property="og:image" content="https://moin-kark.de/og.jpg"');
+  });
+
+  it("antwortet 404 fuer einen unbekannten Termin", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    const res = await app.request("/event/999");
+    expect(res.status).toBe(404);
+  });
+
+  it("antwortet 404 bei nicht-numerischer ID", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    expect((await app.request("/event/abc")).status).toBe(404);
+  });
+
+  it("maskiert HTML in Titel und Ort", async () => {
+    // Ein Titel aus ChurchDesk landet ungeprueft im Attribut — ohne Maskierung
+    // liesse sich das Dokument von aussen veraendern.
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, title: 'Konzert" onload="boese()', locationName: "<b>Kirche</b>" })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).not.toContain('onload="boese()');
+    expect(html).not.toContain("<b>Kirche</b>");
+    expect(html).toContain("&quot;");
+  });
+});
+
+describe("Zuordnungsdateien fuer App-Links", () => {
+  it("liefert apple-app-site-association als JSON", async () => {
+    const res = await app.request("/.well-known/apple-app-site-association");
+    expect(res.status).toBe(200);
+    // Apple verlangt application/json; ohne den Typ greift der Universal Link nicht.
+    expect(res.headers.get("content-type")).toMatch(/application\/json/);
+    const body = (await res.json()) as any;
+    expect(body.applinks.details[0].appIDs).toEqual(["J459G9CJT5.de.godsapp.kkdithkarte"]);
+  });
+
+  it("beschraenkt die Zuordnung auf /event/*", async () => {
+    const body = (await (await app.request("/.well-known/apple-app-site-association")).json()) as any;
+    expect(body.applinks.details[0].components[0]["/"]).toBe("/event/*");
+  });
+
+  it("liefert assetlinks.json mit Paketname und Fingerprint", async () => {
+    const res = await app.request("/.well-known/assetlinks.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any[];
+    expect(body[0].target.package_name).toBe("de.godsapp.moinkark");
+    expect(body[0].target.sha256_cert_fingerprints).toHaveLength(1);
+    expect(body[0].relation).toEqual(["delegate_permission/common.handle_all_urls"]);
+  });
+});

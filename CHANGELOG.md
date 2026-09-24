@@ -15,7 +15,8 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 - **Termine teilen**: Jede Veranstaltung lässt sich über den Teilen-Knopf
   weitergeben — mit Titel, Zeit, Ort und einem Link, der bei den Empfängern
   genau diesen Termin öffnet. Wer die App hat, landet direkt darin, alle
-  anderen sehen ihn auf der Karte im Browser.
+  anderen sehen ihn auf der Karte im Browser. In WhatsApp und Signal zeigt der
+  Link eine Vorschau mit Titel, Zeit, Ort und dem Bild der Veranstaltung.
 - **App weiterempfehlen und bewerten** im Profil.
 - **Read-Only-API** (`apps/api`, Node + Hono): aggregiert die ChurchDesk-REST-API v3
   über 14 Kirchengemeinde-Organisationen, dedupliziert und liefert ein GeoJSON.

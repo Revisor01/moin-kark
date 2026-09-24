@@ -16,10 +16,18 @@ import * as StoreReview from "expo-store-review";
  */
 
 const WEB_BASE = "https://karte.moin-kark.de";
+const API_BASE = "https://api.moin-kark.de";
 
-/** Öffentlicher Link auf einen einzelnen Termin. */
+/**
+ * Öffentlicher Link auf einen einzelnen Termin.
+ *
+ * Zeigt auf die API, nicht direkt auf die Karte: Die Karte ist eine
+ * Single-Page-App, Crawler sehen dort nur ein leeres Grundgerüst — ein
+ * geteilter Link erschien in WhatsApp ohne Bild und Text. `/event/<id>`
+ * liefert die Vorschau-Angaben und leitet sofort auf die Karte weiter.
+ */
 export function eventShareUrl(id: number): string {
-  return `${WEB_BASE}/?event=${id}`;
+  return `${API_BASE}/event/${id}`;
 }
 
 /** Link auf die App-Seite, zum Weiterempfehlen. */
@@ -63,7 +71,9 @@ function placeLine(locationName?: string, parish?: string): string {
  * Link still ins Leere läuft statt die App zu stören.
  */
 export function eventIdFromUrl(url: string): number | null {
-  const match = /[?&]event=([^&#]*)/.exec(url);
+  // Zwei Formen: der Vorschau-Link der API (`/event/<id>`, so wird geteilt) und
+  // die Karten-URL (`?event=<id>`, so kommt der Web-Aufruf und das eigene Schema).
+  const match = /[?&]event=([^&#]*)/.exec(url) ?? /\/event\/([^/?#]*)/.exec(url);
   if (!match) return null;
   const raw = decodeURIComponent(match[1]);
   // Nur positive Ganzzahlen: ChurchDesk-IDs sehen so aus. `Number()` allein

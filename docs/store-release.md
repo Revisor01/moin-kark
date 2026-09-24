@@ -134,31 +134,48 @@ direkt von GitHub auf (exakte Version im Podspec).
 
 ## Geteilte Links öffnen die App
 
-Geteilte Termine sind Links auf `https://karte.moin-kark.de/?event=<id>`. Ist die
-App installiert, fängt sie den Link ab (iOS: Universal Link, Android: App Link);
-sonst zeigt die Web-Karte denselben Termin. Dafür nötig:
+Geteilt wird `https://api.moin-kark.de/event/<id>` — nicht die Karte direkt.
+Grund: Die Web-Karte ist eine Single-Page-App und liefert Crawlern nur ein
+leeres Grundgerüst; ein geteilter Link erschien in WhatsApp ohne Bild und Text.
+Die API-Route trägt die OpenGraph-Angaben des Termins und leitet Menschen per
+`meta refresh` auf die Karte weiter.
 
-- `apps/app/app.json`: `ios.associatedDomains` (`applinks:karte.moin-kark.de`)
-  und `android.intentFilters` mit `autoVerify`.
-- `apps/app/public/.well-known/apple-app-site-association` und
-  `assetlinks.json` — Expo kopiert `public/` beim Web-Export mit, sie liegen
-  also automatisch unter `karte.moin-kark.de/.well-known/`.
+Ist die App installiert, fängt sie den Link ab (iOS: Universal Link, Android:
+App Link) und öffnet den Termin, ohne dass der Browser auch nur aufblitzt.
 
-**Der Fingerprint in `assetlinks.json` muss nach dem ersten Play-Upload
-ausgetauscht werden.** Dort steht bislang der Upload-Schlüssel. Google signiert
-die App im Store mit einem eigenen Schlüssel neu; maßgeblich ist dann der
-SHA-256 unter *Play Console → Setup → App-Signatur → Zertifikat für die
-App-Signatur*. Solange der falsche Wert dort steht, öffnet Android den Link im
-Browser statt in der App — iOS ist davon nicht betroffen.
+Dafür nötig:
 
-Prüfen lässt sich das nach dem Deploy mit:
+- `apps/app/app.json`: `ios.associatedDomains` für **beide** Hosts und
+  `android.intentFilters` mit `autoVerify` (api-Host auf `/event/` begrenzt).
+- Auf `karte.moin-kark.de`: `apps/app/public/.well-known/…` — Expo kopiert
+  `public/` beim Web-Export mit.
+- Auf `api.moin-kark.de`: die Routen `/.well-known/apple-app-site-association`
+  und `/.well-known/assetlinks.json` in `apps/api/src/index.ts`. Der vHost
+  reicht alles an die API durch, statische Dateien gäbe es dort sonst nicht.
+
+**Der Android-Fingerprint muss nach dem ersten Play-Upload ausgetauscht
+werden.** Bislang steht dort der Upload-Schlüssel. Google signiert die App im
+Store mit einem eigenen Schlüssel neu; maßgeblich ist der SHA-256 unter
+*Play Console → Setup → App-Signatur → Zertifikat für die App-Signatur*.
+Solange der falsche Wert steht, öffnet Android den Link im Browser statt in der
+App — iOS ist davon nicht betroffen.
+
+Zu ändern sind dann **zwei** Stellen:
+
+- `apps/api`: Umgebungsvariable `ANDROID_CERT_SHA256` im Stack setzen (kein
+  Code-Deploy nötig).
+- `apps/app/public/.well-known/assetlinks.json` für die Karten-Domain.
+
+Prüfen nach dem Deploy:
 
 ```
+curl -s https://api.moin-kark.de/.well-known/assetlinks.json
+curl -sI https://api.moin-kark.de/.well-known/apple-app-site-association | grep -i content-type
 curl -s https://karte.moin-kark.de/.well-known/assetlinks.json
-curl -s https://karte.moin-kark.de/.well-known/apple-app-site-association
 ```
 
-Beide müssen als `application/json` ohne Weiterleitung ausgeliefert werden.
+`apple-app-site-association` muss `application/json` sein und ohne Weiterleitung
+kommen, sonst ignoriert Apple sie.
 
 ## Kosten
 
