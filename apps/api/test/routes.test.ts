@@ -746,3 +746,19 @@ describe("Logo in der Link-Vorschau", () => {
     expect(html).toMatch(/schema\.org/);
   });
 });
+
+describe("Vorschau-Beschreibung", () => {
+  it("nennt Zeit, Ort und Gemeinde", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, locationName: "St. Clemens", parish: "Büsum" })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toMatch(/property="og:description" content="[^"]*St. Clemens[^"]*Büsum[^"]*"/);
+  });
+
+  it("traegt den Claim als Site-Beschreibung", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain("die App für Kirche in Dithmarschen in deiner Nähe");
+  });
+});

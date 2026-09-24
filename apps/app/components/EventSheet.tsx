@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { eventParishes, parishesLabel, type EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
-import { shareEvent } from "../lib/share";
+import { canShare, shareEvent } from "../lib/share";
 import { placeholderFor } from "../lib/placeholders";
 import type { MapsApp } from "../lib/store";
 import { colorForCategory, colors, glyph, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
@@ -290,10 +290,12 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             </Text>
           </TouchableOpacity>
 
-          {/* Teilen: links neben dem Herz. Auf Web gibt es den System-Dialog
-              nicht zuverlässig (react-native-web kennt Share.share nicht), dort
-              bleibt der Button deshalb weg. */}
-          {IS_WEB ? null : (
+          {/* Teilen: links neben dem Herz. Auch im Browser — dort nutzt
+              react-native-web `navigator.share` (alle mobilen Browser und
+              Safari können das) und fällt sonst auf die Zwischenablage zurück.
+              Der Knopf war hier anfangs pauschal ausgeblendet; das war falsch,
+              denn gerade auf dem Handy im Browser will man teilen. */}
+          {!canShare() ? null : (
             <TouchableOpacity
               style={styles.share}
               onPress={() =>
