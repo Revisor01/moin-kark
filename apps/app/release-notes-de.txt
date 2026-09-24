@@ -2,8 +2,8 @@ Moin Kark zeigt, was in den Kirchengemeinden Dithmarschens los ist: Gottesdienst
 
 Erste Fassung mit:
 – Karte und Liste, Filter nach Gemeinde, Kategorie und Woche
-– Termine merken und sich erinnern lassen – auf dem Gerät, ohne Konto
+– Termine merken und sich erinnern lassen – ohne Konto
+– Termine teilen, mit Link direkt zur Veranstaltung
 – Standort: Was ist gerade in meiner Nähe?
-– Route direkt in der Karten-App öffnen
+– Route in der Karten-App öffnen
 – Termine bleiben auch ohne Netz sichtbar
-– Zu jedem Termin die Kirche seiner Gemeinde
