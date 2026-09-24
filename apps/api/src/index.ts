@@ -342,14 +342,25 @@ const APPLE_APP_SITE_ASSOCIATION = {
 };
 
 /**
- * Der Fingerprint ist der Play-App-Signaturschlüssel. Google signiert im Store
- * neu, der lokale Upload-Schlüssel gilt dort nicht — steht der falsche Wert
- * hier, öffnet Android den Link im Browser statt in der App (iOS ist davon
- * nicht betroffen). Quelle: Play Console → Setup → App-Signatur.
+ * Fingerprints der Android-Signaturschlüssel.
+ *
+ * Zwei, mit Absicht: Google signiert die App im Store mit einem eigenen
+ * Schlüssel neu (erster Wert, aus Play Console → Setup → App-Signatur), lokal
+ * gebaute Testbuilds tragen dagegen den Upload-Schlüssel (zweiter Wert). Fehlt
+ * der passende, öffnet Android den geteilten Link im Browser statt in der App;
+ * iOS ist davon nicht betroffen.
+ *
+ * `ANDROID_CERT_SHA256` überschreibt die Liste (kommagetrennt), falls sich ein
+ * Schlüssel ändert, ohne dass dafür ein Deploy nötig wird.
  */
-const ANDROID_CERT_SHA256 =
+const ANDROID_CERT_FINGERPRINTS = (
   process.env.ANDROID_CERT_SHA256 ??
-  "18:D5:77:27:01:51:EC:2D:51:23:9F:48:EE:56:77:21:53:30:F1:24:6B:87:2E:33:3C:C5:24:D8:1E:D4:97:BC";
+  "0D:5A:FF:7D:B9:86:BD:14:F5:0E:A7:D9:0D:EB:05:28:A9:B0:52:63:A9:D0:0B:0D:0E:BC:A3:10:C2:E2:6C:32," +
+    "18:D5:77:27:01:51:EC:2D:51:23:9F:48:EE:56:77:21:53:30:F1:24:6B:87:2E:33:3C:C5:24:D8:1E:D4:97:BC"
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 app.get("/.well-known/apple-app-site-association", (c) => {
   c.header("Content-Type", "application/json");
@@ -363,7 +374,7 @@ app.get("/.well-known/assetlinks.json", (c) =>
       target: {
         namespace: "android_app",
         package_name: "de.godsapp.moinkark",
-        sha256_cert_fingerprints: [ANDROID_CERT_SHA256],
+        sha256_cert_fingerprints: ANDROID_CERT_FINGERPRINTS,
       },
     },
   ])
