@@ -462,6 +462,12 @@ export function eventPreviewPage(p: EventPreview): string {
 <!-- Das App-Logo als eigene Angabe: og:image bleibt der Flyer des Termins —
      der ist attraktiver als ein Logo —, aber Dienste, die ein Absender-Symbol
      zeigen, greifen auf og:logo bzw. die strukturierten Daten unten zu. -->
+<!-- Masse dazu: Dienste zeigen die grosse Vorschau oft erst, wenn sie die
+     Groesse kennen, ohne das Bild vorher laden zu muessen. 1200x676 ist die
+     span12-Variante von ChurchDesk; beim Standardmotiv stimmt es ebenfalls. -->
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(p.title)}">
 <meta property="og:logo" content="${LOGO_URL}">
 <meta name="application-name" content="Moin Kark">
 <meta name="theme-color" content="${THEME_COLOR}">

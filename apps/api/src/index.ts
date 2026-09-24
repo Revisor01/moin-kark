@@ -380,6 +380,20 @@ app.get("/.well-known/assetlinks.json", (c) =>
   ])
 );
 
+/**
+ * Hebt ChurchDesk-Bilder auf die Größe an, die Linkvorschauen brauchen.
+ *
+ * Die Feed-URLs zeigen auf `span4_16-9` — 400×225 Pixel. WhatsApp und Facebook
+ * zeigen bei so kleinen Bildern gar keine große Vorschau; `span12_16-9`
+ * liefert 1200×676 und damit die übliche Größe. Fremde URLs (falls je welche
+ * kommen) bleiben unangetastet.
+ */
+function vorschauBild(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (!url.includes("edge.churchdesk.com")) return url;
+  return url.replace(/\/span\d+_16-9\//, "/span12_16-9/");
+}
+
 /** Datum und Uhrzeit eines Termins, deutsch, in Berliner Zeit. */
 function previewTime(startUtc: string, allDay?: boolean): string {
   const d = new Date(startUtc);
@@ -428,7 +442,7 @@ app.get("/event/:id", async (c) => {
       title: p.title,
       time: previewTime(p.startUtc, p.allDay),
       place,
-      imageUrl: p.image?.url,
+      imageUrl: vorschauBild(p.image?.url),
       startIso: p.startUtc,
     })
   );
