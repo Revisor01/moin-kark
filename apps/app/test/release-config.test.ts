@@ -88,11 +88,44 @@ describe("Android-Release-Signing in build.gradle", () => {
 });
 
 describe("iOS-Signing in der pbxproj", () => {
-  it("nutzt automatisches Signing mit dem Apple-Team der App", () => {
-    expect(pbxproj).toContain("CODE_SIGN_STYLE = Automatic;");
-    expect(pbxproj).toContain("DEVELOPMENT_TEAM = J459G9CJT5;");
+  // Der Release-Block der App muss MANUELL signieren. Mit `Automatic` nimmt
+  // Xcode nicht das Distribution-Zertifikat aus dem Keychain, sondern legt
+  // sich ueber die ASC-API ein Development-Zertifikat an — gemessen an den
+  // Builds 69, 70 und 71, die alle mit "Apple Development: Created via API"
+  // signiert wurden. Das fuellt das kontoweite Zertifikatslimit, an dem
+  // saemtliche Apps des Kontos haengen.
+  const appRelease = blockFor("Release", "de.godsapp.kkdithkarte");
+
+  it("signiert das Release manuell mit der Distribution-Identitaet", () => {
+    expect(appRelease).toContain("CODE_SIGN_STYLE = Manual;");
+    expect(appRelease).toContain('CODE_SIGN_IDENTITY = "Apple Distribution";');
+    expect(appRelease).toContain('PROVISIONING_PROFILE_SPECIFIER = "Moin Kark AppStore CI";');
+    expect(appRelease).toContain("DEVELOPMENT_TEAM = J459G9CJT5;");
+  });
+
+  it("laesst Debug auf automatischem Signing", () => {
+    // Lokale Entwicklung soll weiter ohne Profil-Gefummel laufen.
+    expect(blockFor("Debug", "de.godsapp.kkdithkarte")).toContain("CODE_SIGN_STYLE = Automatic;");
   });
 });
+
+/**
+ * Schneidet den Konfigurationsblock (Debug/Release) des App-Ziels aus der
+ * pbxproj. Die Datei enthaelt mehrere gleichnamige Bloecke — auch fuer das
+ * Projekt selbst —, deshalb wird am Bundle-Bezeichner unterschieden.
+ */
+function blockFor(name: "Debug" | "Release", bundleId: string): string {
+  const section = pbxproj.split("/* Begin XCBuildConfiguration section */")[1] ?? pbxproj;
+  // Bloecke beginnen mit „<id> /* Debug|Release */ = {" — daran trennen, nicht
+  // am Ende: Die schliessende Klammer sieht innen wie aussen gleich aus.
+  const treffer = section
+    .split(/^\t\t[0-9A-F]{24} \/\* (?:Debug|Release) \*\/ = \{$/m)
+    .filter((b) => b.includes(`name = ${name};`) && b.includes(`PRODUCT_BUNDLE_IDENTIFIER = ${bundleId};`));
+  if (treffer.length !== 1) {
+    throw new Error(`Erwartet genau einen ${name}-Block fuer ${bundleId}, gefunden: ${treffer.length}`);
+  }
+  return treffer[0];
+}
 
 describe("Release-Notes für Google Play", () => {
   it("bleiben unter der 500-Zeichen-Grenze", () => {
