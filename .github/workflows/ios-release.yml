@@ -114,13 +114,82 @@ jobs:
           echo "$ASC_KEY_P8_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
           chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
 
+      - name: Provisioning-Profil laden und installieren
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        # Das App-Store-Profil muss als DATEI auf dem Runner liegen — ein Profil
+        # in App Store Connect allein genuegt nicht, Xcode findet es sonst nicht.
+        #
+        # Geholt wird es ueber die ASC-API mit dem Schluessel, der ohnehin fuer
+        # den Upload da ist. Bewusst KEIN GitHub-Secret mit dem Profil als
+        # base64: Ein Profil laeuft nach einem Jahr ab und muesste dann von Hand
+        # erneuert werden — ein Geheimnis, das lautlos verfaellt, ist eine Falle.
+        # Die API liefert immer den gueltigen Stand.
+        #
+        # Der Schritt bricht ab, wenn das Profil fehlt oder nicht ACTIVE ist.
+        # Das ist Absicht: lieber ein klarer Fehler als ein Build, der sich
+        # still mit selbst angelegten Anmeldedaten behilft.
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check cryptography 2>/dev/null || \
+            python3 -m pip install --quiet --break-system-packages cryptography
+          python3 - <<'PYEOF'
+          import base64, json, os, time, urllib.request, pathlib
+          kid = os.environ['ASC_KEY_ID']; iss = os.environ['ASC_ISSUER_ID']
+          p8 = pathlib.Path.home() / '.appstoreconnect/private_keys' / f'AuthKey_{kid}.p8'
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import ec, utils as asym
+          def b64(d): return base64.urlsafe_b64encode(d).rstrip(b'=')
+          now = int(time.time())
+          hdr = b64(json.dumps({"alg":"ES256","kid":kid,"typ":"JWT"}).encode())
+          clm = b64(json.dumps({"iss":iss,"iat":now,"exp":now+600,"aud":"appstoreconnect-v1"}).encode())
+          si = hdr + b'.' + clm
+          key = serialization.load_pem_private_key(p8.read_bytes(), password=None)
+          der = key.sign(si, ec.ECDSA(hashes.SHA256()))
+          r, sv = asym.decode_dss_signature(der)
+          jwt = (si + b'.' + b64(r.to_bytes(32,'big') + sv.to_bytes(32,'big'))).decode()
+
+          req = urllib.request.Request(
+              'https://api.appstoreconnect.apple.com/v1/profiles?limit=200'
+              '&fields[profiles]=name,profileType,profileState,profileContent',
+              headers={'Authorization': f'Bearer {jwt}'})
+          data = json.load(urllib.request.urlopen(req, timeout=30))
+
+          ZIEL = 'Moin Kark AppStore CI'
+          treffer = [x for x in data.get('data', [])
+                     if x['attributes'].get('name') == ZIEL]
+          if not treffer:
+              raise SystemExit(f'FEHLER: Profil "{ZIEL}" nicht in App Store Connect gefunden.')
+          a = treffer[0]['attributes']
+          if a.get('profileState') != 'ACTIVE':
+              raise SystemExit(f'FEHLER: Profil "{ZIEL}" ist {a.get("profileState")}, nicht ACTIVE.')
+
+          ziel_dir = pathlib.Path.home() / 'Library/MobileDevice/Provisioning Profiles'
+          ziel_dir.mkdir(parents=True, exist_ok=True)
+          out = ziel_dir / f'{ZIEL}.mobileprovision'
+          out.write_bytes(base64.b64decode(a['profileContent']))
+          print(f'Profil installiert: {out} ({out.stat().st_size} Bytes)')
+          PYEOF
+
       - name: Archiv bauen
         working-directory: apps/app/ios
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        # -allowProvisioningUpdates + ASC-Key: Xcode zieht Profile selbst, kein
-        # Profil-Gefrickel. Der MapLibre-Rahmen kommt per Swift Package direkt
+        # KEIN -allowProvisioningUpdates — weder hier noch beim Export
+        # (24.09.2026). Mit der Option wich Xcode auf ein selbst angelegtes
+        # Development-Zertifikat aus, statt das Distribution-Zertifikat aus dem
+        # Keychain zu nehmen; gemessen an den Builds 69, 70 und 71, die alle mit
+        # „Apple Development: Created via API" signiert wurden. Das füllt das
+        # kontoweite Zertifikatslimit, an dem alle Apps des Kontos hängen.
+        #
+        # Ohne die Option gilt, was in der pbxproj steht (Release: Manual,
+        # Apple Distribution, festes Profil). Fehlt etwas, bricht der Build ab
+        # — das ist erwünscht, siehe Schritt „Provisioning-Profil laden".
+        #
+        # Der ASC-Key bleibt: xcodebuild braucht ihn weiterhin für den Zugriff
+        # auf Apple-Dienste. Der MapLibre-Rahmen kommt per Swift Package direkt
         # von GitHub (exakte Version im Podspec) — der lokale Mirror aus dem
         # README ist hier nicht nötig.
         run: |
@@ -128,7 +197,6 @@ jobs:
           xcodebuild -workspace MoinKark.xcworkspace -scheme MoinKark -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath build/MoinKark.xcarchive archive \
-            -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -40
@@ -149,7 +217,17 @@ jobs:
           <dict>
             <key>destination</key><string>export</string>
             <key>method</key><string>app-store-connect</string>
-            <key>signingStyle</key><string>automatic</string>
+            <!-- manual + festes Profil. Mit `automatic` legt Xcode auch beim
+                 EXPORT noch Profile und Zertifikate an, selbst wenn das Archiv
+                 sauber signiert ist (Xcode-Doku) — das war das zweite
+                 Schlupfloch. Anders als auf der xcodebuild-Zeile gilt die
+                 Angabe hier nur fuer das App-Ziel, nicht fuer die Pods. -->
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>de.godsapp.kkdithkarte</key>
+              <string>Moin Kark AppStore CI</string>
+            </dict>
             <key>stripSwiftSymbols</key><true/>
             <key>teamID</key><string>J459G9CJT5</string>
             <key>uploadSymbols</key><true/>
@@ -159,7 +237,6 @@ jobs:
           EOF
           xcodebuild -exportArchive -archivePath build/MoinKark.xcarchive \
             -exportPath build/export -exportOptionsPlist ExportOptions-ci.plist \
-            -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -10
