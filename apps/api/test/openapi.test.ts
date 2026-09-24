@@ -24,6 +24,7 @@ describe("docs/openapi.yaml", () => {
     expect(Object.keys(doc.paths).sort()).toEqual([
       "/",
       "/categories.json",
+      "/event/{id}",
       "/events.geojson",
       "/healthz",
       "/status.json",

@@ -18,7 +18,8 @@
         "tinted": "./assets/icon-ios-tinted.png"
       },
       "associatedDomains": [
-        "applinks:karte.moin-kark.de"
+        "applinks:karte.moin-kark.de",
+        "applinks:api.moin-kark.de"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -50,6 +51,11 @@
             {
               "scheme": "https",
               "host": "karte.moin-kark.de"
+            },
+            {
+              "scheme": "https",
+              "host": "api.moin-kark.de",
+              "pathPrefix": "/event/"
             }
           ],
           "category": [

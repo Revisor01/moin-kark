@@ -26,17 +26,23 @@ const base = {
 
 describe("eventShareUrl", () => {
   it("baut eine Web-Karten-URL mit der Event-ID", () => {
-    expect(eventShareUrl(4711)).toBe("https://karte.moin-kark.de/?event=4711");
+    expect(eventShareUrl(4711)).toBe("https://api.moin-kark.de/event/4711");
   });
 
   it("nutzt dieselbe Form für jede ID", () => {
-    expect(eventShareUrl(1)).toBe("https://karte.moin-kark.de/?event=1");
+    expect(eventShareUrl(1)).toBe("https://api.moin-kark.de/event/1");
   });
 });
 
 describe("eventIdFromUrl", () => {
   it("liest die ID aus einer geteilten Web-URL", () => {
     expect(eventIdFromUrl("https://karte.moin-kark.de/?event=4711")).toBe(4711);
+  });
+
+  it("liest die ID aus dem Vorschau-Link der API", () => {
+    // Geteilt wird api.moin-kark.de/event/<id>; faengt die App den Link direkt
+    // ab, kommt genau diese Form an — ohne Query-Parameter.
+    expect(eventIdFromUrl("https://api.moin-kark.de/event/4711")).toBe(4711);
   });
 
   it("liest die ID aus dem eigenen Schema (kkdith://)", () => {
@@ -55,10 +61,12 @@ describe("eventIdFromUrl", () => {
 
   it("gibt null bei nicht-numerischer ID", () => {
     expect(eventIdFromUrl("https://karte.moin-kark.de/?event=abc")).toBeNull();
+    expect(eventIdFromUrl("https://api.moin-kark.de/event/abc")).toBeNull();
   });
 
   it("gibt null bei leerem event-Parameter", () => {
     expect(eventIdFromUrl("https://karte.moin-kark.de/?event=")).toBeNull();
+    expect(eventIdFromUrl("https://api.moin-kark.de/event/")).toBeNull();
   });
 
   it("gibt null bei Müll statt URL", () => {
@@ -68,11 +76,13 @@ describe("eventIdFromUrl", () => {
   it("gibt null bei negativer oder Null-ID", () => {
     // ChurchDesk-IDs sind positiv; 0 oder negativ heißt: kaputter Link.
     expect(eventIdFromUrl("https://karte.moin-kark.de/?event=0")).toBeNull();
+    expect(eventIdFromUrl("https://api.moin-kark.de/event/0")).toBeNull();
     expect(eventIdFromUrl("https://karte.moin-kark.de/?event=-5")).toBeNull();
   });
 
   it("gibt null bei Kommazahlen", () => {
     expect(eventIdFromUrl("https://karte.moin-kark.de/?event=12.5")).toBeNull();
+    expect(eventIdFromUrl("https://api.moin-kark.de/event/12.5")).toBeNull();
   });
 });
 
@@ -80,14 +90,14 @@ describe("eventShareMessage", () => {
   it("nennt Titel, Zeit, Ort und Link", () => {
     const msg = eventShareMessage({ ...base }, "Sa., 11. Okt., 18:00");
     expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus, Wesselburen\n\nhttps://karte.moin-kark.de/?event=4711"
+      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus, Wesselburen\n\nhttps://api.moin-kark.de/event/4711"
     );
   });
 
   it("lässt den Ort weg, wenn keiner da ist", () => {
     const msg = eventShareMessage({ ...base, locationName: undefined }, "Sa., 11. Okt., 18:00");
     expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nWesselburen\n\nhttps://karte.moin-kark.de/?event=4711"
+      "Orgelkonzert\nSa., 11. Okt., 18:00\nWesselburen\n\nhttps://api.moin-kark.de/event/4711"
     );
   });
 
@@ -96,7 +106,7 @@ describe("eventShareMessage", () => {
       { ...base, locationName: undefined, parish: undefined },
       "Sa., 11. Okt., 18:00"
     );
-    expect(msg).toBe("Orgelkonzert\nSa., 11. Okt., 18:00\n\nhttps://karte.moin-kark.de/?event=4711");
+    expect(msg).toBe("Orgelkonzert\nSa., 11. Okt., 18:00\n\nhttps://api.moin-kark.de/event/4711");
   });
 
   it("doppelt den Ort nicht, wenn er die Gemeinde schon enthält", () => {
@@ -106,7 +116,7 @@ describe("eventShareMessage", () => {
       "Sa., 11. Okt., 18:00"
     );
     expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus Wesselburen\n\nhttps://karte.moin-kark.de/?event=4711"
+      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus Wesselburen\n\nhttps://api.moin-kark.de/event/4711"
     );
   });
 });

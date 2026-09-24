@@ -184,6 +184,45 @@ paths:
         "500":
           $ref: "#/components/responses/FeedUnavailable"
 
+  /event/{id}:
+    get:
+      tags: [Feed]
+      summary: Link-Vorschau für einen geteilten Termin
+      description: |
+        Liefert eine kleine HTML-Seite mit den OpenGraph-Angaben eines Termins
+        (Titel, Zeit und Ort, Bild) und leitet Aufrufende per `meta refresh`
+        weiter auf `https://karte.moin-kark.de/?event={id}`.
+
+        Hintergrund: Die Web-Karte ist eine Single-Page-App und liefert Crawlern
+        nur ein leeres Grundgerüst — ein in WhatsApp oder Signal geteilter Link
+        erschien deshalb ohne Bild und Text. Diese Route wird von der
+        Teilen-Funktion der App verlinkt; Menschen sehen die Zwischenseite nicht.
+
+        Antwort ist **HTML**, nicht JSON.
+      operationId: getEventPreview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID des Termins (positive Ganzzahl).
+          schema:
+            type: integer
+            minimum: 1
+          example: 4711
+      responses:
+        "200":
+          description: Vorschauseite des Termins.
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: |
+            Kein Termin mit dieser ID im aktuellen Feed — abgesagt, vorbei oder
+            nie vorhanden. Gilt auch für eine nicht-numerische ID.
+        "500":
+          $ref: "#/components/responses/FeedUnavailable"
+
   /healthz:
     get:
       tags: [Betrieb]

@@ -413,3 +413,43 @@ if (TOKEN) { $("token").value = TOKEN; login(); }
 </script>
 </body></html>`;
 }
+
+/**
+ * Link-Vorschau für einen einzelnen Termin (`/event/:id`).
+ *
+ * Geteilte Links zeigen auf die Web-Karte; die ist eine Single-Page-App und
+ * liefert Crawlern nur ein leeres Grundgerüst — WhatsApp & Co. zeigten deshalb
+ * nur die nackte URL. Diese Seite trägt die Metadaten des Termins und schickt
+ * Menschen per Weiterleitung weiter auf die Karte.
+ */
+export function eventPreviewPage(p: EventPreview): string {
+  const url = `https://karte.moin-kark.de/?event=${p.id}`;
+  const bild = p.imageUrl ?? "https://moin-kark.de/og.jpg";
+  const beschreibung = [p.time, p.place].filter(Boolean).join(" · ");
+  return `<!doctype html><html lang="de"><head>
+<meta charset="utf-8">
+<title>${esc(p.title)} — Moin Kark</title>
+<meta name="description" content="${esc(beschreibung)}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Moin Kark">
+<meta property="og:title" content="${esc(p.title)}">
+<meta property="og:description" content="${esc(beschreibung)}">
+<meta property="og:image" content="${esc(bild)}">
+<meta property="og:url" content="${esc(url)}">
+<meta name="twitter:card" content="summary_large_image">
+<!-- Crawler lesen die Metadaten oben; Menschen sollen die Zwischenseite gar
+     nicht erst sehen. 0 Sekunden, zusätzlich der Link als Rückfallweg. -->
+<meta http-equiv="refresh" content="0; url=${esc(url)}">
+<link rel="canonical" href="${esc(url)}">
+</head><body>
+<p><a href="${esc(url)}">${esc(p.title)} auf der Karte ansehen</a></p>
+</body></html>`;
+}
+
+export interface EventPreview {
+  id: number;
+  title: string;
+  time: string;
+  place: string;
+  imageUrl?: string;
+}
