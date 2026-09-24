@@ -186,6 +186,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- Ein geteilter Termin-Link zeigte im Browser die Begrüßung statt des Termins:
+  Wer ihn zum ersten Mal öffnete, landete hinter „Kirche. In deiner Nähe." und
+  musste sie erst wegtippen. Jetzt öffnet sich der Termin sofort; die Begrüßung
+  kommt beim nächsten Besuch ohne Link.
 - In der Terminliste war von den Ortsbildern nur ein schmaler Ausschnitt zu
   sehen — bei Hennstedt etwa nur die Turmspitze statt der Kirche. Die Motive
   gibt es jetzt in einem eigenen Zuschnitt für die Liste; das Gebäude ist
