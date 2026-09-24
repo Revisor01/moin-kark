@@ -437,6 +437,7 @@ function jsonLd(obj: unknown): string {
     .replace(/&/g, "\\u0026");
 }
 
+const CLAIM = "Moin Kark — die App für Kirche in Dithmarschen in deiner Nähe";
 const LOGO_URL = "https://moin-kark.de/icon.png";
 /** Sandfarbe des App-Hintergrunds — färbt die Kopfzeile in manchen Browsern. */
 const THEME_COLOR = "#FCF3E4";
@@ -444,7 +445,9 @@ const THEME_COLOR = "#FCF3E4";
 export function eventPreviewPage(p: EventPreview): string {
   const url = `https://karte.moin-kark.de/?event=${p.id}`;
   const bild = p.imageUrl ?? "https://moin-kark.de/og.jpg";
-  const beschreibung = [p.time, p.place].filter(Boolean).join(" · ");
+  // Claim am Ende: In der Linkvorschau steht sonst nur der Termin, und niemand
+  // sieht, woher er kommt.
+  const beschreibung = [p.time, p.place].filter(Boolean).join(" · ") + `\n${CLAIM}`;
   return `<!doctype html><html lang="de"><head>
 <meta charset="utf-8">
 <title>${esc(p.title)} — Moin Kark</title>

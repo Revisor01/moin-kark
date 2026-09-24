@@ -60,7 +60,7 @@ export function eventShareMessage(event: ShareableEvent, timeLabel: string): str
 }
 
 /** Steht unter jedem geteilten Termin. */
-const SIGNATUR = "Moin Kark — Kirche in Dithmarschen in deiner Nähe";
+const SIGNATUR = "Moin Kark — die App für Kirche in Dithmarschen in deiner Nähe";
 
 /**
  * „St. Bartholomäus, Wesselburen" — aber ohne Dopplung, wenn der Ortsname die
@@ -92,6 +92,23 @@ export function eventIdFromUrl(url: string): number | null {
   return id > 0 ? id : null;
 }
 
+/**
+ * Kann diese Umgebung teilen?
+ *
+ * Nativ immer. Im Browser hängt es an `navigator.share` — das können alle
+ * mobilen Browser und Safari, ältere Desktop-Browser nicht. Früher war der
+ * Knopf auf Web pauschal ausgeblendet; das war zu grob, denn genau auf dem
+ * Handy im Browser will man teilen.
+ *
+ * Wo es fehlt, springt `shareEvent` auf die Zwischenablage um — deshalb gibt
+ * diese Prüfung dort ebenfalls `true`.
+ */
+export function canShare(): boolean {
+  if (Platform.OS !== "web") return true;
+  if (typeof navigator === "undefined") return false;
+  return typeof (navigator as any).share === "function" || !!navigator.clipboard;
+}
+
 /** Teilt einen Termin über den System-Dialog. */
 export async function shareEvent(event: ShareableEvent, timeLabel: string): Promise<void> {
   const message = eventShareMessage(event, timeLabel);
@@ -100,7 +117,12 @@ export async function shareEvent(event: ShareableEvent, timeLabel: string): Prom
     // Link im Text stehen — er steht in beiden Fällen schon in `message`.
     await Share.share({ message, title: event.title });
   } catch {
-    // Abbruch durch die Nutzerin ist kein Fehler.
+    // Browser ohne navigator.share werfen hier. Dann in die Zwischenablage,
+    // damit der Knopf trotzdem etwas tut — Abbruch durch die Nutzerin fällt
+    // ebenfalls hierher, aber ein zweites Mal Kopieren schadet nicht.
+    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(message).catch(() => {});
+    }
   }
 }
 
