@@ -133,6 +133,8 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Geändert
 
+- Das App-Symbol auf Android hat mehr Luft: Der Kartenzeiger saß zu dicht am
+  Rand und wirkte gedrängt, jetzt steht er frei auf seinem Hintergrund.
 - Auf der Karte hebt ein Tipp auf die freie Fläche die Auswahl jetzt auch in der
   iOS- und Android-Fassung wieder auf — wie in der Web-Fassung.
 - Termindaten werden komprimiert übertragen: rund 90 % weniger Datenverbrauch
