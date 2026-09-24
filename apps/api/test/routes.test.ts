@@ -636,11 +636,32 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
     expect(html).toContain("https://karte.moin-kark.de/?event=42");
   });
 
-  it("schickt Menschen per Weiterleitung auf die Karte", async () => {
+  it("schickt Menschen per Skript auf die Karte", async () => {
     buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
     const html = await (await app.request("/event/42")).text();
     // Crawler lesen die Metadaten, Menschen sollen nicht auf der Zwischenseite landen.
-    expect(html).toContain('http-equiv="refresh"');
+    expect(html).toContain("location.replace");
+    expect(html).toContain("https://karte.moin-kark.de/?event=42");
+  });
+
+  it("leitet NICHT per meta-refresh weiter", async () => {
+    // Apples Vorschau-Dienst (iMessage) folgt einem http-equiv="refresh" wie ein
+    // Browser und landet dann auf der Karte — einer Single-Page-App ohne jede
+    // og-Angabe. Die Vorschau blieb deshalb leer und in Nachrichten stand nur
+    // die nackte URL. WhatsApp und Facebook folgen dem Refresh nicht, dort fiel
+    // es nicht auf.
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    const html = await (await app.request("/event/42")).text();
+    expect(html).not.toContain("http-equiv=\"refresh\"");
+  });
+
+  it("gibt die echte Hoehe des Vorschaubildes an", async () => {
+    // Die span12-Variante von ChurchDesk ist 1200x676. Stand hier 630, wich das
+    // gemeldete Seitenverhaeltnis vom Bild ab.
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain('property="og:image:width" content="1200"');
+    expect(html).toContain('property="og:image:height" content="676"');
   });
 
   it("nimmt das Bild des Termins, wenn eines da ist", async () => {
@@ -692,8 +713,13 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
     // sichtbar.
     expect(html).not.toContain("</script><img");
     expect(html).not.toContain("<img src=x");
-    // Genau ein Skript-Ende — das der strukturierten Daten.
-    expect(html.match(/<\/script>/g) ?? []).toHaveLength(1);
+    // Zwei Skriptbloecke, zwei Enden: die strukturierten Daten und die
+    // Weiterleitung. Mehr hiesse, der Titel haette einen davon aufgebrochen.
+    expect(html.match(/<\/script>/g) ?? []).toHaveLength(2);
+    // Der Titel steckt im Datenblock, und der endet erst nach ihm — ein aus dem
+    // Titel gebrochenes Ende laege davor.
+    const datenEnde = html.indexOf("</script>");
+    expect(html.slice(0, datenEnde)).toContain("Konzert\\u003c/script\\u003e");
   });
 });
 

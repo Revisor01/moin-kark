@@ -190,13 +190,19 @@ paths:
       summary: Link-Vorschau für einen geteilten Termin
       description: |
         Liefert eine kleine HTML-Seite mit den OpenGraph-Angaben eines Termins
-        (Titel, Zeit und Ort, Bild) und leitet Aufrufende per `meta refresh`
-        weiter auf `https://karte.moin-kark.de/?event={id}`.
+        (Titel, Zeit und Ort, Bild) und leitet Aufrufende per JavaScript
+        (`location.replace`) weiter auf `https://karte.moin-kark.de/?event={id}`.
 
         Hintergrund: Die Web-Karte ist eine Single-Page-App und liefert Crawlern
         nur ein leeres Grundgerüst — ein in WhatsApp oder Signal geteilter Link
         erschien deshalb ohne Bild und Text. Diese Route wird von der
         Teilen-Funktion der App verlinkt; Menschen sehen die Zwischenseite nicht.
+
+        Die Weiterleitung läuft bewusst über ein Skript statt über
+        `meta refresh`: Apples Vorschau-Dienst folgt einem Refresh wie ein
+        Browser und landet auf der Karte ohne OpenGraph-Angaben — in iMessage
+        blieb die Vorschau dadurch leer (behoben 24.09.2026). Vorschau-Dienste
+        führen kein JavaScript aus, Browser schon.
 
         Antwort ist **HTML**, nicht JSON.
       operationId: getEventPreview
