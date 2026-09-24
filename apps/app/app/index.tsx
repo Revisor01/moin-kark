@@ -27,6 +27,7 @@ import { useLocation } from "../lib/hooks/useLocation";
 import { useSavedSync } from "../lib/hooks/useSavedSync";
 import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
 import { eventIdFromUrl } from "../lib/share";
+import { shouldShowOnboarding } from "../lib/onboardingGate";
 import {
   cancelForEvent,
   clearLastNotificationTap,
@@ -83,16 +84,26 @@ export default function Home() {
   const [didInitialZoom, setDidInitialZoom] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Onboarding nur beim allerersten Start zeigen.
+  // Kam die App über einen geteilten Termin-Link? Die Prüfung steht bewusst VOR
+  // dem Onboarding-Effekt: Die Begrüßung liegt als Overlay über allem, auch über
+  // dem geöffneten Termin (s. shouldShowOnboarding). Beide Quellen wie unten bei
+  // `pendingEventId` — Karten-URL und der aus app/event/[id].tsx gereichte Pfad.
+  const incomingUrl = useURL();
+  const { event: eventParam } = useLocalSearchParams<{ event?: string }>();
+  const hasDeepLink =
+    (incomingUrl != null && eventIdFromUrl(incomingUrl) !== null) ||
+    (typeof eventParam === "string" && /^\d+$/.test(eventParam));
+
+  // Onboarding nur beim allerersten Start zeigen — und nie über einem Termin.
   const ONBOARDING_KEY = "kkd:onboardingSeen";
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
       .then((v) => {
-        if (!v) setShowOnboarding(true);
+        if (shouldShowOnboarding({ seen: !!v, hasDeepLink })) setShowOnboarding(true);
         else requestLocation(); // Kein Onboarding → direkt fragen wie bisher.
       })
       .catch(() => {});
-  }, [requestLocation]);
+  }, [requestLocation, hasDeepLink]);
 
   const dismissOnboarding = () => {
     setShowOnboarding(false);
@@ -184,12 +195,11 @@ export default function Home() {
     clearLastNotificationTap();
   }, [lastNotificationResponse]);
 
-  // Geteilter Link (`…/?event=<id>`). useURL liefert auch die Start-URL beim
-  // Kaltstart, nicht nur spätere Aufrufe — dieselbe Falle wie oben bei den
-  // Mitteilungen. Die ID wird erst gesetzt, wenn der Feed da ist und den Termin
-  // kennt; sonst zeigte das Sheet auf ein Event, das es nicht gibt.
-  const incomingUrl = useURL();
-  const { event: eventParam } = useLocalSearchParams<{ event?: string }>();
+  // Geteilter Link (`…/?event=<id>`). `incomingUrl` und `eventParam` stehen
+  // oben beim Onboarding — useURL liefert auch die Start-URL beim Kaltstart,
+  // nicht nur spätere Aufrufe (dieselbe Falle wie oben bei den Mitteilungen).
+  // Die ID wird erst gesetzt, wenn der Feed da ist und den Termin kennt; sonst
+  // zeigte das Sheet auf ein Event, das es nicht gibt.
   const [pendingEventId, setPendingEventId] = useState<number | null>(null);
   useEffect(() => {
     if (!incomingUrl) return;
