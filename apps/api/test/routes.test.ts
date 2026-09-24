@@ -762,3 +762,24 @@ describe("Vorschau-Beschreibung", () => {
     expect(html).toContain("die App für Kirche in Dithmarschen in deiner Nähe");
   });
 });
+
+describe("Vorschaubild in Vorschau-Groesse", () => {
+  it("hebt ChurchDesk-Bilder auf die grosse Variante an", async () => {
+    // span4 liefert 400x225 — zu klein, WhatsApp zeigt dann gar kein Bild.
+    // span12 liefert 1200x676, die uebliche Groesse fuer Linkvorschauen.
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, image: { url: "https://edge.churchdesk.com/event-1/span4_16-9/public/o/2596/f.jpg?org=2596" } as any })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain("span12_16-9");
+    expect(html).not.toContain("span4_16-9");
+  });
+
+  it("laesst fremde Bild-URLs unveraendert", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, image: { url: "https://andere.example/bild.jpg" } as any })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain('content="https://andere.example/bild.jpg"');
+  });
+});
