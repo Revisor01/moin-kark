@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useURL } from "expo-linking";
+import { useLocalSearchParams } from "expo-router";
 import { KIRCHSPIELE, eventParishes } from "@moinkark/shared";
 import EventMap from "../components/EventMap";
 import EventList from "../components/EventList";
@@ -188,12 +189,20 @@ export default function Home() {
   // Mitteilungen. Die ID wird erst gesetzt, wenn der Feed da ist und den Termin
   // kennt; sonst zeigte das Sheet auf ein Event, das es nicht gibt.
   const incomingUrl = useURL();
+  const { event: eventParam } = useLocalSearchParams<{ event?: string }>();
   const [pendingEventId, setPendingEventId] = useState<number | null>(null);
   useEffect(() => {
     if (!incomingUrl) return;
     const id = eventIdFromUrl(incomingUrl);
     if (id !== null) setPendingEventId(id);
   }, [incomingUrl]);
+  // Zweiter Weg: aus app/event/[id].tsx weitergereicht. Faengt die App den
+  // Universal Link ab, sieht sie den Pfad /event/<id> statt einer Karten-URL —
+  // useURL allein greift dort nicht.
+  useEffect(() => {
+    if (typeof eventParam !== "string" || !/^\d+$/.test(eventParam)) return;
+    setPendingEventId(Number(eventParam));
+  }, [eventParam]);
   useEffect(() => {
     if (pendingEventId === null || allFeatures.length === 0) return;
     const known = allFeatures.some((f) => f.properties.id === pendingEventId);

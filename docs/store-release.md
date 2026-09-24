@@ -134,11 +134,30 @@ direkt von GitHub auf (exakte Version im Podspec).
 
 ## Geteilte Links öffnen die App
 
-Geteilt wird `https://api.moin-kark.de/event/<id>` — nicht die Karte direkt.
-Grund: Die Web-Karte ist eine Single-Page-App und liefert Crawlern nur ein
-leeres Grundgerüst; ein geteilter Link erschien in WhatsApp ohne Bild und Text.
-Die API-Route trägt die OpenGraph-Angaben des Termins und leitet Menschen per
-`meta refresh` auf die Karte weiter.
+Geteilt wird `https://moin-kark.de/event/<id>` — die Hauptdomain, nicht die
+Karte und nicht die API. Zwei Gründe:
+
+- Die Web-Karte ist eine Single-Page-App und liefert Crawlern nur ein leeres
+  Grundgerüst; ein geteilter Link erschien in WhatsApp ohne Bild und Text.
+- `api.moin-kark.de` las sich für Empfänger:innen technisch und wirkte wie ein
+  Fehler.
+
+Die Vorschauseite selbst liefert weiterhin die API; sie trägt die
+OpenGraph-Angaben des Termins und leitet Menschen per `meta refresh` auf die
+Karte weiter. Der Weg dorthin führt über zwei Stellen:
+
+1. **KeyHelp-vHost** von `moin-kark.de` (`apache.https_directives`, gesetzt per
+   KeyHelp-API): `ProxyPass` für `/event/` und die beiden `.well-known`-Dateien
+   auf `127.0.0.1:8888`, mit `ProxyPreserveHost On`.
+2. **Traefik-Router** `moinkark-share` am `moinkark-api`-Container:
+   `Host(\`moin-kark.de\`) && (PathPrefix(\`/event/\`) || PathPrefix(\`/.well-known/\`))`,
+   zeigt auf denselben Service. Ohne ihn antwortet Traefik mit 404, weil es nach
+   Host-Header routet.
+
+**Nicht per `.htaccess` lösbar** — nachgewiesen: `ProxyPass` ist dort nicht
+erlaubt (Apache antwortet mit **500 auf jeden Pfad der Domain**, Landingpage
+eingeschlossen), `SSLProxyEngine` ebenso wenig, und `RewriteRule [P]` auf den
+internen Port scheitert am Host-Header.
 
 Ist die App installiert, fängt sie den Link ab (iOS: Universal Link, Android:
 App Link) und öffnet den Termin, ohne dass der Browser auch nur aufblitzt.

@@ -16,18 +16,21 @@ import * as StoreReview from "expo-store-review";
  */
 
 const WEB_BASE = "https://karte.moin-kark.de";
-const API_BASE = "https://api.moin-kark.de";
+const SHARE_BASE = "https://moin-kark.de";
 
 /**
  * Öffentlicher Link auf einen einzelnen Termin.
  *
- * Zeigt auf die API, nicht direkt auf die Karte: Die Karte ist eine
+ * Die Hauptdomain, nicht die Karte und nicht die API: Die Karte ist eine
  * Single-Page-App, Crawler sehen dort nur ein leeres Grundgerüst — ein
- * geteilter Link erschien in WhatsApp ohne Bild und Text. `/event/<id>`
- * liefert die Vorschau-Angaben und leitet sofort auf die Karte weiter.
+ * geteilter Link erschien in WhatsApp ohne Bild und Text. Die API könnte die
+ * Vorschau liefern, aber „api.moin-kark.de" liest sich für Empfänger:innen
+ * technisch und wirkt wie ein Fehler. Deshalb `moin-kark.de/event/<id>`:
+ * Apache reicht den Pfad intern an die API weiter (s. apps/web/.htaccess),
+ * die Vorschau kommt von dort, und die Adresse bleibt wiedererkennbar.
  */
 export function eventShareUrl(id: number): string {
-  return `${API_BASE}/event/${id}`;
+  return `${SHARE_BASE}/event/${id}`;
 }
 
 /** Link auf die App-Seite, zum Weiterempfehlen. */

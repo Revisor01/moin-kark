@@ -11,13 +11,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "de.godsapp.kkdithkarte",
-      "buildNumber": "70",
+      "buildNumber": "71",
       "icon": {
         "light": "./assets/icon-ios-light.png",
         "dark": "./assets/icon-ios-dark.png",
         "tinted": "./assets/icon-ios-tinted.png"
       },
       "associatedDomains": [
+        "applinks:moin-kark.de",
         "applinks:karte.moin-kark.de",
         "applinks:api.moin-kark.de"
       ],
@@ -31,7 +32,7 @@
     },
     "android": {
       "package": "de.godsapp.moinkark",
-      "versionCode": 9,
+      "versionCode": 10,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -48,6 +49,11 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
+            {
+              "scheme": "https",
+              "host": "moin-kark.de",
+              "pathPrefix": "/event/"
+            },
             {
               "scheme": "https",
               "host": "karte.moin-kark.de"
