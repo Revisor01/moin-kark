@@ -178,26 +178,32 @@ export default function ProfileSheet({
           {IS_WEB ? null : (
             <>
               <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Moin Kark</Text>
-              <TouchableOpacity
-                style={styles.actionRow}
-                onPress={shareApp}
-                accessibilityRole="button"
-                accessibilityLabel="App weiterempfehlen"
-                activeOpacity={0.7}
-              >
-                <Text style={styles.actionText}>App weiterempfehlen</Text>
-                <Text style={styles.actionChevron}>↗</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionRow}
-                onPress={rateApp}
-                accessibilityRole="button"
-                accessibilityLabel="App bewerten"
-                activeOpacity={0.7}
-              >
-                <Text style={styles.actionText}>App bewerten</Text>
-                <Text style={styles.actionChevron}>›</Text>
-              </TouchableOpacity>
+              {/* Zwei gleich breite Knöpfe nebeneinander. Als Listenzeilen
+                  gingen die beiden Aktionen zwischen Einstellungen und Footer
+                  unter — als Knöpfe sind sie das, was sie sind: etwas zum
+                  Antippen. */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={shareApp}
+                  accessibilityRole="button"
+                  accessibilityLabel="App weiterempfehlen"
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.actionButtonText}>App empfehlen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.actionButtonGhost]}
+                  onPress={rateApp}
+                  accessibilityRole="button"
+                  accessibilityLabel="App bewerten"
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.actionButtonText, styles.actionButtonGhostText]}>
+                    App bewerten
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
 
@@ -327,16 +333,28 @@ const styles = StyleSheet.create({
   // Tippzeilen für App-Aktionen: 48 pt hoch, damit das Ziel groß genug ist.
   actionRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    minHeight: sizes.sheetButton + spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    marginTop: spacing.xs,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  actionText: { ...text.bodyMedium, color: colors.ink },
-  actionChevron: { ...text.bodyMedium, color: colors.faint },
+  actionButton: {
+    // flex:1 auf beiden — gleiche Breite, egal wie lang die Beschriftung ist.
+    flex: 1,
+    minHeight: sizes.sheetButton + spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+  },
+  actionButtonText: { ...text.bodyStrong, color: colors.onColor, textAlign: "center" },
+  // Der zweite Knopf tritt zurück: Empfehlen ist der Hauptweg, Bewerten der
+  // seltenere — zwei gleich laute Knöpfe nebeneinander konkurrieren sonst.
+  actionButtonGhost: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionButtonGhostText: { color: colors.primary },
   segmentText: { ...text.bodyMedium, color: colors.muted },
   segmentSmall: { ...text.captionMedium, color: colors.muted },
   segmentTextActive: { color: colors.ink },
