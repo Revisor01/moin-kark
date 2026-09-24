@@ -447,7 +447,7 @@ export function eventPreviewPage(p: EventPreview): string {
   const bild = p.imageUrl ?? "https://moin-kark.de/og.jpg";
   // Claim am Ende: In der Linkvorschau steht sonst nur der Termin, und niemand
   // sieht, woher er kommt.
-  const beschreibung = [p.time, p.place].filter(Boolean).join(" · ") + `\n${CLAIM}`;
+  const beschreibung = [p.time, p.place].filter(Boolean).join(" · ") + ` · ${CLAIM}`;
   return `<!doctype html><html lang="de"><head>
 <meta charset="utf-8">
 <title>${esc(p.title)} — Moin Kark</title>
