@@ -90,14 +90,14 @@ describe("eventShareMessage", () => {
   it("nennt Titel, Zeit, Ort und Link", () => {
     const msg = eventShareMessage({ ...base }, "Sa., 11. Okt., 18:00");
     expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus, Wesselburen\n\nhttps://moin-kark.de/event/4711"
+      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus, Wesselburen\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — Kirche in Dithmarschen in deiner Nähe"
     );
   });
 
   it("lässt den Ort weg, wenn keiner da ist", () => {
     const msg = eventShareMessage({ ...base, locationName: undefined }, "Sa., 11. Okt., 18:00");
     expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nWesselburen\n\nhttps://moin-kark.de/event/4711"
+      "Orgelkonzert\nSa., 11. Okt., 18:00\nWesselburen\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — Kirche in Dithmarschen in deiner Nähe"
     );
   });
 
@@ -106,7 +106,7 @@ describe("eventShareMessage", () => {
       { ...base, locationName: undefined, parish: undefined },
       "Sa., 11. Okt., 18:00"
     );
-    expect(msg).toBe("Orgelkonzert\nSa., 11. Okt., 18:00\n\nhttps://moin-kark.de/event/4711");
+    expect(msg).toBe("Orgelkonzert\nSa., 11. Okt., 18:00\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — Kirche in Dithmarschen in deiner Nähe");
   });
 
   it("doppelt den Ort nicht, wenn er die Gemeinde schon enthält", () => {
@@ -116,7 +116,7 @@ describe("eventShareMessage", () => {
       "Sa., 11. Okt., 18:00"
     );
     expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus Wesselburen\n\nhttps://moin-kark.de/event/4711"
+      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus Wesselburen\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — Kirche in Dithmarschen in deiner Nähe"
     );
   });
 });

@@ -429,6 +429,7 @@ app.get("/event/:id", async (c) => {
       time: previewTime(p.startUtc, p.allDay),
       place,
       imageUrl: p.image?.url,
+      startIso: p.startUtc,
     })
   );
 });

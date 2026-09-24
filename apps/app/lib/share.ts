@@ -53,8 +53,14 @@ interface ShareableEvent {
 export function eventShareMessage(event: ShareableEvent, timeLabel: string): string {
   const place = placeLine(event.locationName, event.parish);
   const head = [event.title, timeLabel, place].filter(Boolean).join("\n");
-  return `${head}\n\n${eventShareUrl(event.id)}`;
+  // Signatur ans Ende: Wo gar keine Linkvorschau geladen wird (SMS, manche
+  // Messenger), steht sonst nur eine nackte URL und niemand sieht, woher der
+  // Termin kommt.
+  return `${head}\n\n${eventShareUrl(event.id)}\n\n${SIGNATUR}`;
 }
+
+/** Steht unter jedem geteilten Termin. */
+const SIGNATUR = "Moin Kark — Kirche in Dithmarschen in deiner Nähe";
 
 /**
  * „St. Bartholomäus, Wesselburen" — aber ohne Dopplung, wenn der Ortsname die
@@ -102,7 +108,7 @@ export async function shareEvent(event: ShareableEvent, timeLabel: string): Prom
 export async function shareApp(): Promise<void> {
   try {
     await Share.share({
-      message: `Moin Kark — was in den Kirchengemeinden in Dithmarschen los ist.\n\n${appShareUrl()}`,
+      message: `${SIGNATUR}\n\n${appShareUrl()}`,
     });
   } catch {
     // Abbruch durch die Nutzerin ist kein Fehler.

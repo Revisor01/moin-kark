@@ -422,6 +422,25 @@ if (TOKEN) { $("token").value = TOKEN; login(); }
  * nur die nackte URL. Diese Seite trägt die Metadaten des Termins und schickt
  * Menschen per Weiterleitung weiter auf die Karte.
  */
+/**
+ * Strukturierte Daten sicher einbetten.
+ *
+ * JSON.stringify allein genuegt NICHT: Titel und Ortsnamen kommen aus
+ * ChurchDesk, und ein `</script>` darin bricht den Block auf — der Rest des
+ * Titels landet dann als Markup im Dokument. Die drei Zeichen unten sind die,
+ * die der HTML-Parser in einem Skriptblock beachtet.
+ */
+function jsonLd(obj: unknown): string {
+  return JSON.stringify(obj)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+
+const LOGO_URL = "https://moin-kark.de/icon.png";
+/** Sandfarbe des App-Hintergrunds — färbt die Kopfzeile in manchen Browsern. */
+const THEME_COLOR = "#FCF3E4";
+
 export function eventPreviewPage(p: EventPreview): string {
   const url = `https://karte.moin-kark.de/?event=${p.id}`;
   const bild = p.imageUrl ?? "https://moin-kark.de/og.jpg";
@@ -437,6 +456,27 @@ export function eventPreviewPage(p: EventPreview): string {
 <meta property="og:image" content="${esc(bild)}">
 <meta property="og:url" content="${esc(url)}">
 <meta name="twitter:card" content="summary_large_image">
+<!-- Das App-Logo als eigene Angabe: og:image bleibt der Flyer des Termins —
+     der ist attraktiver als ein Logo —, aber Dienste, die ein Absender-Symbol
+     zeigen, greifen auf og:logo bzw. die strukturierten Daten unten zu. -->
+<meta property="og:logo" content="${LOGO_URL}">
+<meta name="application-name" content="Moin Kark">
+<meta name="theme-color" content="${THEME_COLOR}">
+<script type="application/ld+json">${jsonLd({
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: p.title,
+    startDate: p.startIso,
+    location: p.place || undefined,
+    image: bild,
+    url,
+    organizer: {
+      "@type": "Organization",
+      name: "Moin Kark",
+      url: "https://moin-kark.de",
+      logo: LOGO_URL,
+    },
+  })}</script>
 <!-- Crawler lesen die Metadaten oben; Menschen sollen die Zwischenseite gar
      nicht erst sehen. 0 Sekunden, zusätzlich der Link als Rückfallweg. -->
 <meta http-equiv="refresh" content="0; url=${esc(url)}">
@@ -452,4 +492,6 @@ export interface EventPreview {
   time: string;
   place: string;
   imageUrl?: string;
+  /** Startzeit als ISO-Zeichenkette — nur für die strukturierten Daten. */
+  startIso?: string;
 }

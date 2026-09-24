@@ -679,6 +679,22 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
     expect(html).not.toContain("<b>Kirche</b>");
     expect(html).toContain("&quot;");
   });
+
+  it("bricht den Skriptblock der strukturierten Daten nicht auf", async () => {
+    // JSON.stringify allein maskiert kein </script> — der Rest des Titels
+    // landete dann als Markup im Dokument.
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, title: "Konzert</script><img src=x onerror=boese()>" })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    // Entscheidend ist, dass nichts davon als MARKUP ankommt — als Text im
+    // Titel-Attribut ist der Angriffsversuch harmlos und sogar erwuenscht
+    // sichtbar.
+    expect(html).not.toContain("</script><img");
+    expect(html).not.toContain("<img src=x");
+    // Genau ein Skript-Ende — das der strukturierten Daten.
+    expect(html.match(/<\/script>/g) ?? []).toHaveLength(1);
+  });
 });
 
 describe("Zuordnungsdateien fuer App-Links", () => {
@@ -708,5 +724,25 @@ describe("Zuordnungsdateien fuer App-Links", () => {
       expect(fp).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
     }
     expect(body[0].relation).toEqual(["delegate_permission/common.handle_all_urls"]);
+  });
+});
+
+describe("Logo in der Link-Vorschau", () => {
+  it("nennt das App-Logo neben dem Termin-Bild", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, image: { url: "https://bilder.example/flyer.jpg" } as any })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    // og:image bleibt der Flyer — der ist attraktiver als ein Logo. Das Logo
+    // kommt als eigene Angabe dazu, die manche Dienste neben dem Bild zeigen.
+    expect(html).toContain('property="og:image" content="https://bilder.example/flyer.jpg"');
+    expect(html).toContain('property="og:logo" content="https://moin-kark.de/icon.png"');
+  });
+
+  it("traegt den Claim als Seitenbeschreibung", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain('name="application-name" content="Moin Kark"');
+    expect(html).toMatch(/schema\.org/);
   });
 });
