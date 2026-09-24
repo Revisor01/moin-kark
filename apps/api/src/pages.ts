@@ -464,9 +464,11 @@ export function eventPreviewPage(p: EventPreview): string {
      zeigen, greifen auf og:logo bzw. die strukturierten Daten unten zu. -->
 <!-- Masse dazu: Dienste zeigen die grosse Vorschau oft erst, wenn sie die
      Groesse kennen, ohne das Bild vorher laden zu muessen. 1200x676 ist die
-     span12-Variante von ChurchDesk; beim Standardmotiv stimmt es ebenfalls. -->
+     span12-Variante von ChurchDesk; beim Standardmotiv stimmt es ebenfalls.
+     Die Hoehe muss zum echten Bild passen — mit 630 wich das gemeldete
+     Seitenverhaeltnis von dem ab, was danach geladen wird. -->
 <meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:height" content="676">
 <meta property="og:image:alt" content="${esc(p.title)}">
 <meta property="og:logo" content="${LOGO_URL}">
 <meta name="application-name" content="Moin Kark">
@@ -486,12 +488,18 @@ export function eventPreviewPage(p: EventPreview): string {
       logo: LOGO_URL,
     },
   })}</script>
-<!-- Crawler lesen die Metadaten oben; Menschen sollen die Zwischenseite gar
-     nicht erst sehen. 0 Sekunden, zusätzlich der Link als Rückfallweg. -->
-<meta http-equiv="refresh" content="0; url=${esc(url)}">
 <link rel="canonical" href="${esc(url)}">
 </head><body>
 <p><a href="${esc(url)}">${esc(p.title)} auf der Karte ansehen</a></p>
+<!-- Weiterleitung per Skript, bewusst nicht per meta-refresh.
+     Apples Vorschau-Dienst (iMessage) folgt einem meta-refresh wie ein Browser
+     und landet auf der Karte — einer Single-Page-App ohne jede og-Angabe. Die
+     Vorschau blieb dadurch leer, in Nachrichten stand nur die nackte URL.
+     WhatsApp und Facebook folgen dem Refresh nicht; dort fiel es nie auf.
+     Skript führt keiner der Vorschau-Dienste aus, jeder Browser schon.
+     replace statt href, damit der Zurück-Knopf nicht auf diese Zwischenseite
+     führt und von dort sofort wieder vorwärts springt. -->
+<script>location.replace(${JSON.stringify(url)})</script>
 </body></html>`;
 }
 
