@@ -108,6 +108,29 @@ export function canShare(): boolean {
 export async function shareEvent(event: ShareableEvent, timeLabel: string): Promise<void> {
   const link = eventShareUrl(event.id);
   const message = eventShareMessage(event, timeLabel);
+
+  // Im Browser direkt und synchron teilen: `navigator.share` verlangt eine
+  // „transient user activation" und muss im Klick-Ereignis selbst laufen. Der
+  // Umweg über Share.share von react-native-web kostet sie — Safari auf dem
+  // iPhone lehnte dann mit NotAllowedError ab, und der Knopf tat scheinbar
+  // nichts. Kein `await` vor diesem Aufruf, sonst ist die Aktivierung
+  // ebenfalls verbraucht.
+  if (Platform.OS === "web" && typeof navigator !== "undefined") {
+    const nav = navigator as Navigator & {
+      share?: (d: { title?: string; text?: string; url?: string }) => Promise<void>;
+    };
+    if (typeof nav.share === "function") {
+      try {
+        await nav.share({ title: event.title, text: SIGNATUR, url: link });
+        return;
+      } catch {
+        // Abbruch durch die Nutzerin oder abgelehnt: unten die Zwischenablage.
+      }
+    }
+    if (nav.clipboard) await nav.clipboard.writeText(`${link}\n\n${SIGNATUR}`).catch(() => {});
+    return;
+  }
+
   try {
     // iOS und Web kennen ein eigenes Feld `url` und behandeln `message` als
     // reinen Text. Stand der Link nur im Text, erkannte iMessage ihn NICHT als
@@ -127,12 +150,8 @@ export async function shareEvent(event: ShareableEvent, timeLabel: string): Prom
         : { url: link, message: SIGNATUR, title: event.title }
     );
   } catch {
-    // Browser ohne navigator.share werfen hier. Dann in die Zwischenablage,
-    // damit der Knopf trotzdem etwas tut — Abbruch durch die Nutzerin fällt
-    // ebenfalls hierher, aber ein zweites Mal Kopieren schadet nicht.
-    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
-      await navigator.clipboard.writeText(message).catch(() => {});
-    }
+    // Abbruch durch die Nutzerin ist kein Fehler. Der Browser ist oben schon
+    // abgehandelt und kommt hier nicht mehr an.
   }
 }
 

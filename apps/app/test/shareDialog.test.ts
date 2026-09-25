@@ -7,7 +7,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // nichts. Android kennt kein `url`; dort MUSS der Link im Text stehen.
 interface ShareArg {
   url?: string;
+  /** Share.share von react-native. */
   message?: string;
+  /** navigator.share im Browser — heisst dort `text`, nicht `message`. */
+  text?: string;
   title?: string;
 }
 
@@ -72,21 +75,63 @@ describe("shareEvent — was beim System-Dialog ankommt", () => {
 });
 
 describe("shareEvent im Browser", () => {
-  // react-native-web reicht `url` an navigator.share({url}) weiter — der
-  // Browser kann also dasselbe wie iOS. Vorher lief Web im selben Zweig wie
-  // Android und bekam den Link im Text: In iMessage kam dann der ganze
-  // Infoblock als Text statt einer Vorschaukarte.
-  it("uebergibt den Link im Feld url statt im Text", async () => {
+  // Der Browser ruft navigator.share DIREKT auf, nicht ueber Share.share von
+  // react-native-web. Grund: navigator.share verlangt eine "transient user
+  // activation" und muss im Klick-Ereignis selbst laufen; der Umweg kostet sie,
+  // und Safari auf dem iPhone lehnte mit NotAllowedError ab -- der Knopf tat
+  // scheinbar nichts.
+  function browserMit(share?: (d: ShareArg) => Promise<void>) {
+    const kopiert: string[] = [];
+    // `navigator` hat in dieser Umgebung nur einen Getter — direkte Zuweisung
+    // wirft. defineProperty ersetzt ihn fuer den Test.
+    Object.defineProperty(globalThis, "navigator", {
+      value: { share, clipboard: { writeText: async (t: string) => void kopiert.push(t) } },
+      configurable: true,
+      writable: true,
+    });
+    return kopiert;
+  }
+
+  it("ruft navigator.share mit dem Link im Feld url", async () => {
     platform.OS = "web";
+    const gesehen: ShareArg[] = [];
+    browserMit(async (d) => void gesehen.push(d));
+
     await shareEvent(event, "Sa., 11. Okt., 18:00");
-    const arg = shareSpy.mock.calls[0][0];
-    expect(arg.url).toBe(LINK);
-    expect(arg.message ?? "").not.toContain("https://");
+
+    expect(gesehen).toHaveLength(1);
+    expect(gesehen[0].url).toBe(LINK);
+    // Der Link darf NICHT zusaetzlich im Text stehen, sonst erscheint er
+    // doppelt; Titel und Zeit stehen in der Vorschau.
+    expect(gesehen[0].text ?? "").not.toContain("https://");
+    expect(gesehen[0].text).toContain("Moin Kark");
   });
 
-  it("nennt die App auch im Browser", async () => {
+  it("geht NICHT ueber Share.share von react-native-web", async () => {
     platform.OS = "web";
+    browserMit(async () => {});
     await shareEvent(event, "Sa., 11. Okt., 18:00");
-    expect(shareSpy.mock.calls[0][0].message).toContain("Moin Kark");
+    expect(shareSpy).not.toHaveBeenCalled();
+  });
+
+  it("kopiert Link und Signatur, wenn der Dialog nicht geht", async () => {
+    platform.OS = "web";
+    const kopiert = browserMit(async () => {
+      throw new Error("NotAllowedError");
+    });
+
+    await shareEvent(event, "Sa., 11. Okt., 18:00");
+
+    expect(kopiert).toEqual([`${LINK}\n\nMoin Kark — Kirche. In deiner Nähe.`]);
+    // Nicht der alte lange Infoblock.
+    expect(kopiert[0]).not.toContain("Orgelkonzert");
+  });
+
+  it("kopiert auch ohne navigator.share", async () => {
+    platform.OS = "web";
+    const kopiert = browserMit(undefined);
+    await shareEvent(event, "Sa., 11. Okt., 18:00");
+    expect(kopiert).toHaveLength(1);
+    expect(kopiert[0]).toContain(LINK);
   });
 });
