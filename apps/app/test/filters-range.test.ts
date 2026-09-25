@@ -87,7 +87,25 @@ describe("Eigener Zeitraum", () => {
     expect(imZeitraum(e, "2026-11-02", "2026-11-05", jetzt)).toEqual([1]);
   });
 
-  it("faellt ohne gesetzte Grenzen auf alles zurueck", () => {
+  it("zeigt bei nur EINEM Datum genau diesen Tag", () => {
+    // Wer nur von setzt, meint diesen einen Tag — nicht „ab dann alles".
+    // Sonst muesste man dasselbe Datum zweimal eintragen.
+    const e = [
+      feature("2026-10-07T08:00:00.000Z", 1), // 7.10., im Tag
+      feature("2026-10-08T08:00:00.000Z", 2), // 8.10., Tag danach
+      feature("2026-10-06T08:00:00.000Z", 3), // 6.10., Tag davor
+    ];
+    const nurVon = applyFilters(e, { ...DEFAULT_FILTERS, date: "range", rangeFrom: "2026-10-07" }, { now });
+    expect(nurVon.map((f) => f.properties.id)).toEqual([1]);
+  });
+
+  it("zeigt auch bei nur bis genau diesen Tag", () => {
+    const e = [feature("2026-10-07T08:00:00.000Z", 1), feature("2026-10-08T08:00:00.000Z", 2)];
+    const nurBis = applyFilters(e, { ...DEFAULT_FILTERS, date: "range", rangeTo: "2026-10-07" }, { now });
+    expect(nurBis.map((f) => f.properties.id)).toEqual([1]);
+  });
+
+  it("filtert nicht, solange gar kein Datum gewaehlt ist", () => {
     // Halbfertige Eingabe darf die Liste nicht leeren.
     const e = [feature("2026-12-24T16:00:00.000Z", 1)];
     const res = applyFilters(e, { ...DEFAULT_FILTERS, date: "range" }, { now });
