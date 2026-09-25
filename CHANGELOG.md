@@ -131,6 +131,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Geändert
 
+- Der Filter zeigt weniger, dafür sinnvollere Kategorien: Was in den
+  Gemeinden unterschiedlich geschrieben war — „Kinder/Jugendliche",
+  „Kinder u. Jugend", „Kinder- und Jugendarbeit" —, steht jetzt unter einem
+  Namen. Aus vierzig Kategorien werden vierundzwanzig.
 - Das App-Symbol auf Android hat mehr Luft: Der Kartenzeiger saß zu dicht am
   Rand und wirkte gedrängt, jetzt steht er frei auf seinem Hintergrund.
 - Auf der Karte hebt ein Tipp auf die freie Fläche die Auswahl jetzt auch in der

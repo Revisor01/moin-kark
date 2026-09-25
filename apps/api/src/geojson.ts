@@ -6,6 +6,7 @@ import {
   coordFixForTitle,
   coordOverrideForTitle,
   fallbackCoords,
+  kanonischeKategorie,
   orgName,
   resolveKirchspiel,
   type EventFeature,
@@ -131,9 +132,13 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       summary: event.summary || undefined,
       descriptionHtml: event.description || undefined,
       image: pickImage(event.image),
+      // Kanonischer Name statt der Schreibweise der Gemeinde: Die App
+      // vergleicht Filter-Chip und Event-Kategorie über diesen String — würde
+      // nur die Kategorienliste zusammengelegt, fände der Filter die Termine
+      // der abweichenden Schreibweisen nicht.
       categories: (event.categories ?? []).map((c) => ({
         id: c.id,
-        title: c.title,
+        title: kanonischeKategorie(c.title),
         color: c.color,
       })),
       contributor: event.contributor || undefined,

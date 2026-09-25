@@ -211,7 +211,9 @@ describe("toFeature — Eigenschaften", () => {
     expect(p.descriptionHtml).toBe("<p>Lang</p>");
     expect(p.price).toBe("5 €");
     expect(p.contributor).toBe("Kantorei");
-    expect(p.categories).toEqual([{ id: 7, title: "Konzert", color: 3 }]);
+    // "Konzert" und "Konzerte" sind dieselbe Kategorie in zwei Gemeinden —
+    // der Feed traegt den kanonischen Namen (s. kanonischeKategorie).
+    expect(p.categories).toEqual([{ id: 7, title: "Konzerte", color: 3 }]);
     expect(p.parish).toBe("Büsum");
     expect(p.kirchspiel).toBe("West");
     expect(p.orgId).toBe(2729);
@@ -318,5 +320,38 @@ describe("hasHighlightTag", () => {
   it("erkennt kein Highlight ohne Text", () => {
     expect(hasHighlightTag(undefined, undefined)).toBe(false);
     expect(hasHighlightTag("", "")).toBe(false);
+  });
+});
+
+describe("Kategorien im Event", () => {
+  it("traegt den kanonischen Namen, nicht die Schreibweise der Gemeinde", () => {
+    // Entscheidend: Die App vergleicht Filter-Chip und Event-Kategorie ueber
+    // den Titel-String. Wuerde nur die Kategorienliste zusammengelegt, fande
+    // der Filter "Kinder & Jugend" keine Termine mit "Kinder / Jugendliche".
+    const f = toFeature(
+      {
+        id: 1,
+        title: "Jugendtreff",
+        startDate: "2026-06-15T10:00:00+02:00",
+        endDate: "2026-06-15T12:00:00+02:00",
+        categories: [{ id: 9, title: "Kinder / Jugendliche", color: 3 }],
+      } as never,
+      2729
+    );
+    expect(f?.properties.categories[0].title).toBe("Kinder & Jugend");
+  });
+
+  it("laesst unbekannte Kategorien unveraendert", () => {
+    const f = toFeature(
+      {
+        id: 2,
+        title: "Yoga",
+        startDate: "2026-06-15T10:00:00+02:00",
+        endDate: "2026-06-15T12:00:00+02:00",
+        categories: [{ id: 4, title: "Sela-Yoga", color: 1 }],
+      } as never,
+      2729
+    );
+    expect(f?.properties.categories[0].title).toBe("Sela-Yoga");
   });
 });
