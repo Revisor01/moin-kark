@@ -28,6 +28,7 @@ import { useSavedSync } from "../lib/hooks/useSavedSync";
 import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
 import { eventIdFromUrl } from "../lib/share";
 import { shouldShowOnboarding } from "../lib/onboardingGate";
+import { track, trackScreen } from "../lib/analytics";
 import {
   cancelForEvent,
   clearLastNotificationTap,
@@ -50,6 +51,18 @@ import {
 import { colors, glyph, mapColors, radius, sizes, spacing, text } from "../lib/theme";
 
 const WIDE_BREAKPOINT = 900;
+
+/**
+ * Erinnerungs-Stufe → Messwert. Als vollständige Tabelle, nicht als
+ * Bedingungskette: Kommt eine Stufe dazu, meldet der Typecheck die Lücke,
+ * statt sie still dem letzten Zweig zuzuschlagen.
+ */
+const VORLAUF: Record<ReminderPref, string> = {
+  off: "aus",
+  evening: "vorabend",
+  "2h": "zwei-stunden",
+  both: "beides",
+};
 
 export default function Home() {
   const { width } = useWindowDimensions();
@@ -105,6 +118,13 @@ export default function Home() {
       .catch(() => {});
   }, [requestLocation, hasDeepLink]);
 
+  // Ein Seitenaufruf beim Start: Umami zaehlt Besucher und Sitzungen NUR
+  // darueber — mit ausschliesslich benannten Ereignissen staende im Dashboard
+  // „0 Besucher".
+  useEffect(() => {
+    trackScreen("start");
+  }, []);
+
   const dismissOnboarding = () => {
     setShowOnboarding(false);
     AsyncStorage.setItem(ONBOARDING_KEY, "1").catch(() => {});
@@ -122,6 +142,7 @@ export default function Home() {
     async (id: number) => {
       const wasSaved = isSaved(id);
       rawToggleSave(id);
+      track("termin-gemerkt", { aktion: wasSaved ? "entfernt" : "gemerkt" });
       if (wasSaved) {
         cancelForEvent(id).catch(() => {});
       } else if (reminderPref !== "off") {
@@ -135,6 +156,7 @@ export default function Home() {
   // Erinnerungs-Präferenz ändern → alle gemerkten Events neu planen.
   const onReminderPref = async (p: ReminderPref) => {
     setReminderPref(p);
+    track("erinnerung-gesetzt", { vorlauf: VORLAUF[p] });
     if (p !== "off") await ensurePermission();
     rescheduleAll(savedFeatures, p).catch(() => {});
   };
@@ -188,7 +210,10 @@ export default function Home() {
   useEffect(() => {
     if (!lastNotificationResponse) return;
     const id = lastNotificationResponse.notification.request.content.data?.eventId;
-    if (typeof id === "number") setSelectedId(id);
+    if (typeof id === "number") {
+      setSelectedId(id);
+      track("termin-geoeffnet", { quelle: "mitteilung" });
+    }
     // Verbraucht: sonst öffnete dieselbe Antwort das Event bei einem späteren
     // Neu-Mount erneut, und ein zweiter Tipp auf dieselbe Mitteilung gälte als
     // unverändert.
@@ -218,7 +243,10 @@ export default function Home() {
     const known = allFeatures.some((f) => f.properties.id === pendingEventId);
     // Unbekannte ID (abgesagt, vorbei, Tippfehler): still verwerfen, die Karte
     // bleibt stehen. Ein Fehlerdialog hülfe hier niemandem weiter.
-    if (known) setSelectedId(pendingEventId);
+    if (known) {
+      setSelectedId(pendingEventId);
+      track("termin-geoeffnet", { quelle: "link" });
+    }
     setPendingEventId(null);
   }, [pendingEventId, allFeatures]);
 
@@ -335,7 +363,7 @@ export default function Home() {
       </View>
       <TouchableOpacity
         style={styles.profileBtn}
-        onPress={() => setProfileOpen(true)}
+        onPress={() => { setProfileOpen(true); track("bereich-geoeffnet", { bereich: "profil" }); }}
         accessibilityRole="button"
         accessibilityLabel="Profil"
       >
@@ -358,7 +386,7 @@ export default function Home() {
       reminderPref={reminderPref}
       onReminderPref={onReminderPref}
       savedFeatures={savedFeatures}
-      onSelectEvent={setSelectedId}
+      onSelectEvent={(id) => { setSelectedId(id); if (id !== null) track("termin-geoeffnet", { quelle: "karte" }); }}
       onToggleSave={toggleSave}
     />
   );
@@ -393,7 +421,7 @@ export default function Home() {
 
   const filterBar = (
     <FilterBar
-      onOpenFilters={() => setFiltersOpen(true)}
+      onOpenFilters={() => { setFiltersOpen(true); track("bereich-geoeffnet", { bereich: "filter" }); }}
       activeCount={activeCount}
       onJumpToLocation={locStatus !== "denied" ? onJumpToLocation : undefined}
       highlightsOnly={filters.highlightsOnly}
@@ -426,7 +454,7 @@ export default function Home() {
   const map = (
     <EventMap
       features={mapFeatures}
-      onSelect={setSelectedId}
+      onSelect={(id) => { setSelectedId(id); track("termin-geoeffnet", { quelle: "liste" }); }}
       userLocation={location}
       onBoundsChange={setBounds}
       flyToUserToken={flyToken}
@@ -443,7 +471,7 @@ export default function Home() {
         <View style={styles.wideRow}>
           <View style={styles.listPane}>
             {filterBar}
-            <EventList features={filtered} selectedId={selectedId} onSelect={setSelectedId} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} />
+            <EventList features={filtered} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); track("termin-geoeffnet", { quelle: "liste" }); }} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} />
           </View>
           <View style={styles.mapPane}>{map}</View>
         </View>
