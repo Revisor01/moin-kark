@@ -109,20 +109,22 @@ export async function shareEvent(event: ShareableEvent, timeLabel: string): Prom
   const link = eventShareUrl(event.id);
   const message = eventShareMessage(event, timeLabel);
   try {
-    // iOS kennt ein eigenes Feld `url` und behandelt `message` als reinen Text.
-    // Stand der Link nur im Text, erkannte iMessage ihn NICHT als Link: keine
-    // Vorschau mit Bild, und ein Tipp darauf öffnete weder Seite noch App.
-    // Deshalb auf iOS den Link in `url` und nur die Signatur als Text — sonst
-    // erschiene er doppelt.
+    // iOS und Web kennen ein eigenes Feld `url` und behandeln `message` als
+    // reinen Text. Stand der Link nur im Text, erkannte iMessage ihn NICHT als
+    // Link: keine Vorschau mit Bild, und ein Tipp darauf öffnete weder Seite
+    // noch App. Im Browser kam stattdessen der ganze Infoblock als Text an.
+    // Deshalb dort den Link in `url` und nur die Signatur als Text — sonst
+    // erschiene er doppelt. (react-native-web reicht `url` an
+    // `navigator.share({url})` weiter.)
     //
     // Android verwirft `url`: Share.js baut dort ein neues Objekt aus nur
     // `title` und `message` (die Doku listet `url` fuer beide Plattformen —
     // im Quelltext kommt es auf Android nie an). Dort muss der Link im Text
     // stehen.
     await Share.share(
-      Platform.OS === "ios"
-        ? { url: link, message: SIGNATUR, title: event.title }
-        : { message, title: event.title }
+      Platform.OS === "android"
+        ? { message, title: event.title }
+        : { url: link, message: SIGNATUR, title: event.title }
     );
   } catch {
     // Browser ohne navigator.share werfen hier. Dann in die Zwischenablage,

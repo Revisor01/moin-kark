@@ -873,3 +873,37 @@ describe("GET /app (QR-Weiche in den passenden Store)", () => {
     expect(await ziel("Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 Chrome/120")).toBe(PLAY);
   });
 });
+
+describe("Ortsangabe in der Vorschau", () => {
+  it("doppelt die Gemeinde nicht, wenn der Ortsname sie schon enthaelt", async () => {
+    // "Hennstedt, Gemeindehaus, Hennstedt" las sich falsch. Dieselbe Regel
+    // galt frueher schon fuer den Teilen-Text der App.
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, locationName: "Hennstedt, Gemeindehaus", parish: "Hennstedt" })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toMatch(/og:description" content="[^"]*Hennstedt, Gemeindehaus ·/);
+    expect(html).not.toContain("Gemeindehaus, Hennstedt");
+  });
+
+  it("nennt beides, wenn der Ortsname die Gemeinde nicht enthaelt", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, locationName: "St. Clemens", parish: "Büsum" })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain("St. Clemens, Büsum");
+  });
+
+  it("kommt mit nur einer der beiden Angaben klar", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, locationName: undefined, parish: "Büsum" })])
+    );
+    expect(await (await app.request("/event/42")).text()).toContain("Büsum");
+
+    await frischeApp();
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 43, locationName: "St. Clemens", parish: undefined })])
+    );
+    expect(await (await app.request("/event/43")).text()).toContain("St. Clemens");
+  });
+});
