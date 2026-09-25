@@ -6,15 +6,50 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import type { DateFilter } from "../lib/filters";
 import { colorForCategory, colors, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
+
+/** `YYYY-MM-DD` in Berliner Zeit — dieselbe Form, die der Filter erwartet. */
+function alsTag(d: Date): string {
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+  return p; // en-CA liefert genau YYYY-MM-DD
+}
+
+/** „Mo., 5. Okt." — kurz genug für den Knopf. */
+function alsLabel(tag?: string): string {
+  if (!tag) return "wählen";
+  const [y, m, d] = tag.split("-").map(Number);
+  return new Intl.DateTimeFormat("de-DE", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "Europe/Berlin",
+  }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+}
+
+function tagAlsDate(tag?: string): Date {
+  if (!tag) return new Date();
+  const [y, m, d] = tag.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12));
+}
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   date: DateFilter;
   onDate: (d: DateFilter) => void;
+  /** Eigener Zeitraum als `YYYY-MM-DD`; leer, solange nichts gewählt ist. */
+  rangeFrom?: string;
+  rangeTo?: string;
+  onRange: (von?: string, bis?: string) => void;
   // readonly, weil KIRCHSPIELE in @moinkark/shared ein `as const`-Tupel ist —
   // sonst braucht die Aufrufseite einen Cast, nur um Literale zu übergeben.
   kirchspiele: readonly string[];
@@ -35,6 +70,7 @@ const DATE_LABELS: { key: DateFilter; label: string }[] = [
   { key: "today", label: "Heute" },
   { key: "week", label: "Diese Woche" },
   { key: "weekend", label: "Wochenende" },
+  { key: "range", label: "Zeitraum" },
 ];
 
 function Chip({
@@ -82,6 +118,9 @@ export default function FilterSheet({
   onClose,
   date,
   onDate,
+  rangeFrom,
+  rangeTo,
+  onRange,
   kirchspiele,
   activeKirchspiel,
   onKirchspiel,
@@ -96,6 +135,9 @@ export default function FilterSheet({
 }: Props) {
   // Vor dem frühen Return: Hooks müssen in jedem Render laufen.
   const insets = useSafeAreaInsets();
+  // Welcher Picker ist offen? Auf iOS bleibt er stehen, auf Android schliesst
+  // ihn das System selbst — deshalb in beiden Faellen nach der Wahl zumachen.
+  const [pickerFuer, setPickerFuer] = useState<"von" | "bis" | null>(null);
   if (!visible) return null;
 
   return (
@@ -124,6 +166,47 @@ export default function FilterSheet({
               <Chip key={d.key} label={d.label} active={date === d.key} onPress={() => onDate(d.key)} />
             ))}
           </Group>
+
+          {date === "range" ? (
+            <View style={styles.rangeRow}>
+              <TouchableOpacity
+                style={styles.rangeField}
+                onPress={() => setPickerFuer("von")}
+                accessibilityRole="button"
+                accessibilityLabel={`Zeitraum von, aktuell ${alsLabel(rangeFrom)}`}
+              >
+                <Text style={styles.rangeCaption}>von</Text>
+                <Text style={styles.rangeValue}>{alsLabel(rangeFrom)}</Text>
+              </TouchableOpacity>
+              <Text style={styles.rangeDash}>–</Text>
+              <TouchableOpacity
+                style={styles.rangeField}
+                onPress={() => setPickerFuer("bis")}
+                accessibilityRole="button"
+                accessibilityLabel={`Zeitraum bis, aktuell ${alsLabel(rangeTo)}`}
+              >
+                <Text style={styles.rangeCaption}>bis</Text>
+                <Text style={styles.rangeValue}>{alsLabel(rangeTo)}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {pickerFuer ? (
+            <DateTimePicker
+              value={tagAlsDate(pickerFuer === "von" ? rangeFrom : rangeTo)}
+              mode="date"
+              display="inline"
+              locale="de-DE"
+              onChange={(ev, gewaehlt) => {
+                setPickerFuer(null);
+                // Android meldet auch den Abbruch — dann nichts aendern.
+                if (ev.type !== "set" || !gewaehlt) return;
+                const tag = alsTag(gewaehlt);
+                if (pickerFuer === "von") onRange(tag, rangeTo);
+                else onRange(rangeFrom, tag);
+              }}
+            />
+          ) : null}
 
           <Group label="Kirchspiel">
             <Chip label="Alle" active={activeKirchspiel === null} onPress={() => onKirchspiel(null)} />
@@ -168,6 +251,22 @@ export default function FilterSheet({
 }
 
 const styles = StyleSheet.create({
+  rangeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  rangeField: {
+    flex: 1,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  rangeCaption: { ...text.caption, color: colors.muted },
+  rangeValue: { ...text.bodyStrong, color: colors.ink },
+  rangeDash: { ...text.body, color: colors.muted },
   backdrop: {
     position: "absolute",
     top: 0,

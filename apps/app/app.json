@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "de.godsapp.kkdithkarte",
-      "buildNumber": "79",
+      "buildNumber": "80",
       "icon": {
         "light": "./assets/icon-ios-light.png",
         "dark": "./assets/icon-ios-dark.png",
@@ -32,7 +32,7 @@
     },
     "android": {
       "package": "de.godsapp.moinkark",
-      "versionCode": 17,
+      "versionCode": 18,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -97,7 +97,8 @@
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

@@ -436,7 +436,13 @@ export default function Home() {
       visible={filtersOpen}
       onClose={() => setFiltersOpen(false)}
       date={filters.date}
-      onDate={(d) => setFilters((f) => ({ ...f, date: d }))}
+      onDate={(d) => {
+        setFilters((f) => ({ ...f, date: d }));
+        track("filter-genutzt", { filter: "zeit" });
+      }}
+      rangeFrom={filters.rangeFrom}
+      rangeTo={filters.rangeTo}
+      onRange={(von, bis) => setFilters((f) => ({ ...f, rangeFrom: von, rangeTo: bis }))}
       kirchspiele={kirchspielOptions}
       activeKirchspiel={filters.kirchspiel}
       onKirchspiel={(k) => setFilters((f) => ({ ...f, kirchspiel: k, parish: null }))}
