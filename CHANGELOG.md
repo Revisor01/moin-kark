@@ -184,6 +184,9 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- Beim Teilen aus der App kam auf dem iPhone nur eine graue Textblase an: kein
+  Vorschaubild, und ein Tipp darauf öffnete weder die Seite noch die App. Jetzt
+  erscheint die Vorschau mit Bild, und der Link führt zum Termin.
 - Ein geteilter Termin-Link zeigte im Browser die Begrüßung statt des Termins:
   Wer ihn zum ersten Mal öffnete, landete hinter „Kirche. In deiner Nähe." und
   musste sie erst wegtippen. Jetzt öffnet sich der Termin sofort; die Begrüßung
