@@ -184,6 +184,33 @@ paths:
         "500":
           $ref: "#/components/responses/FeedUnavailable"
 
+  /app:
+    get:
+      tags: [Feed]
+      summary: Weiche in den passenden App-Store
+      description: |
+        Ziel des QR-Codes auf Plakaten und Flyern. Ein QR-Code ist statischer
+        Text und kann nichts entscheiden — die Weiche sitzt deshalb hier:
+        Android-Geräte werden zu Google Play geleitet, iPhone/iPad in den App
+        Store, alles andere auf `https://moin-kark.de/` (dort stehen beide
+        Knöpfe).
+
+        Die Erkennung liest den `User-Agent`. Reihenfolge der Prüfung ist
+        wichtig: Android-Kennungen tragen ebenfalls „AppleWebKit", und „Mac OS
+        X" steht auch im User-Agent eines iPhones („like Mac OS X").
+
+        Antwortet mit `302`, nicht `301`: Die Zuordnung darf sich ändern, ein
+        dauerhaft gecachter Redirect ließe sich nicht zurückholen.
+      responses:
+        "302":
+          description: Weiterleitung zum passenden Store bzw. zur Startseite.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: Store-URL oder `https://moin-kark.de/`.
+
   /event/{id}:
     get:
       tags: [Feed]

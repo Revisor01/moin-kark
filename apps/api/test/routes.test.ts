@@ -821,3 +821,55 @@ describe("Vorschaubild in Vorschau-Groesse", () => {
     expect(html).toContain('content="https://andere.example/bild.jpg"');
   });
 });
+
+describe("GET /app (QR-Weiche in den passenden Store)", () => {
+  // Ein QR-Code ist statischer Text und kann nichts entscheiden. Die Weiche
+  // sitzt deshalb hier: ein Link fuers Plakat, der Scanner landen je nach
+  // Geraet im richtigen Store.
+  const IOS = "https://apps.apple.com/de/app/id6781438884";
+  const PLAY = "https://play.google.com/store/apps/details?id=de.godsapp.moinkark";
+
+  async function ziel(ua: string): Promise<string | null> {
+    const res = await app.request("/app", { headers: { "User-Agent": ua } });
+    expect(res.status).toBe(302);
+    return res.headers.get("location");
+  }
+
+  it("schickt iPhones in den App Store", async () => {
+    expect(await ziel("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15")).toBe(IOS);
+  });
+
+  it("schickt iPads in den App Store", async () => {
+    expect(await ziel("Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15")).toBe(IOS);
+  });
+
+  it("schickt Android-Geraete zu Google Play", async () => {
+    expect(await ziel("Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36")).toBe(PLAY);
+  });
+
+  it("schickt alles andere auf die Startseite", async () => {
+    // Desktop, Kommandozeile, unbekannte Scanner: Dort stehen beide Knoepfe.
+    expect(await ziel("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")).toBe("https://moin-kark.de/");
+    expect(await ziel("curl/8.4.0")).toBe("https://moin-kark.de/");
+  });
+
+  it("kommt ohne User-Agent klar", async () => {
+    // Manche Scanner senden gar keinen — das darf nicht in einen Fehler laufen.
+    const res = await app.request("/app");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("https://moin-kark.de/");
+  });
+
+  it("verwechselt macOS nicht mit iOS", async () => {
+    // "Mac OS X" steht auch im iPhone-UA — eine Suche nach "mac" allein
+    // schickte Desktop-Nutzer in den App Store.
+    expect(await ziel("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15"))
+      .toBe("https://moin-kark.de/");
+  });
+
+  it("haelt Android von iOS auseinander", async () => {
+    // Android-UAs tragen "Linux" und "AppleWebKit" — Letzteres darf nicht
+    // nach Apple fuehren.
+    expect(await ziel("Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 Chrome/120")).toBe(PLAY);
+  });
+});

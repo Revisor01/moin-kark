@@ -319,6 +319,39 @@ app.get("/version.json", (c) =>
 
 app.get("/categories.json", (c) => feedResponse(c, (fc) => extractCategories(fc)));
 
+// --- QR-Weiche: ein Link fuers Plakat, zwei Stores ---
+
+const STORE_IOS = "https://apps.apple.com/de/app/id6781438884";
+const STORE_ANDROID = "https://play.google.com/store/apps/details?id=de.godsapp.moinkark";
+const STARTSEITE = "https://moin-kark.de/";
+
+/**
+ * Waehlt den Store zum Geraet.
+ *
+ * Reihenfolge ist wichtig: Android-Kennungen tragen ebenfalls "AppleWebKit",
+ * und "Mac OS X" steht auch im UA eines iPhones ("like Mac OS X"). Deshalb
+ * erst Android pruefen, dann die konkreten Apple-Geraete — nie nach "mac"
+ * oder "applewebkit" allein.
+ *
+ * Alles Unbekannte geht auf die Startseite: Dort stehen beide Knoepfe, und ein
+ * Scanner mit eigenem User-Agent landet nicht im falschen Store.
+ */
+export function storeFuerGeraet(userAgent: string | undefined): string {
+  const ua = (userAgent ?? "").toLowerCase();
+  if (ua.includes("android")) return STORE_ANDROID;
+  if (/(iphone|ipad|ipod)/.test(ua)) return STORE_IOS;
+  return STARTSEITE;
+}
+
+/**
+ * `/app` — das Ziel des QR-Codes auf Plakaten und Flyern.
+ *
+ * Ein QR-Code ist statischer Text; entscheiden kann nur, was hinter dem Link
+ * liegt. 302 statt 301: Die Zuordnung darf sich aendern (neuer Store, andere
+ * Startseite), ein dauerhaft gecachter Redirect liesse sich nicht zurueckholen.
+ */
+app.get("/app", (c) => c.redirect(storeFuerGeraet(c.req.header("User-Agent")), 302));
+
 /**
  * Zuordnungsdateien für Universal Links (iOS) und App Links (Android).
  *

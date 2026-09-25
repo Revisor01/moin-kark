@@ -23,6 +23,7 @@ describe("docs/openapi.yaml", () => {
   it("dokumentiert alle öffentlichen Routen", () => {
     expect(Object.keys(doc.paths).sort()).toEqual([
       "/",
+      "/app",
       "/categories.json",
       "/event/{id}",
       "/events.geojson",
