@@ -70,3 +70,23 @@ describe("shareEvent — was beim System-Dialog ankommt", () => {
     expect(android.message).toContain("Moin Kark");
   });
 });
+
+describe("shareEvent im Browser", () => {
+  // react-native-web reicht `url` an navigator.share({url}) weiter — der
+  // Browser kann also dasselbe wie iOS. Vorher lief Web im selben Zweig wie
+  // Android und bekam den Link im Text: In iMessage kam dann der ganze
+  // Infoblock als Text statt einer Vorschaukarte.
+  it("uebergibt den Link im Feld url statt im Text", async () => {
+    platform.OS = "web";
+    await shareEvent(event, "Sa., 11. Okt., 18:00");
+    const arg = shareSpy.mock.calls[0][0];
+    expect(arg.url).toBe(LINK);
+    expect(arg.message ?? "").not.toContain("https://");
+  });
+
+  it("nennt die App auch im Browser", async () => {
+    platform.OS = "web";
+    await shareEvent(event, "Sa., 11. Okt., 18:00");
+    expect(shareSpy.mock.calls[0][0].message).toContain("Moin Kark");
+  });
+});

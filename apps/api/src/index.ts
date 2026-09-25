@@ -344,6 +344,17 @@ export function storeFuerGeraet(userAgent: string | undefined): string {
 }
 
 /**
+ * „St. Clemens, Büsum" — aber ohne Dopplung, wenn der Ortsname die Gemeinde
+ * schon enthält („Hennstedt, Gemeindehaus, Hennstedt" las sich falsch).
+ */
+function ortsangabe(locationName?: string, parish?: string): string {
+  if (!locationName) return parish ?? "";
+  if (!parish) return locationName;
+  if (locationName.toLowerCase().includes(parish.toLowerCase())) return locationName;
+  return `${locationName}, ${parish}`;
+}
+
+/**
  * `/app` — das Ziel des QR-Codes auf Plakaten und Flyern.
  *
  * Ein QR-Code ist statischer Text; entscheiden kann nur, was hinter dem Link
@@ -468,7 +479,7 @@ app.get("/event/:id", async (c) => {
   if (!f) return c.notFound();
 
   const p = f.properties;
-  const place = [p.locationName, p.parish].filter(Boolean).join(", ");
+  const place = ortsangabe(p.locationName, p.parish);
   return c.html(
     eventPreviewPage({
       id: p.id,
