@@ -172,9 +172,13 @@ function berlinDayStart(tag: string): number | null {
  * Eingabe darf die Liste nicht leeren).
  */
 function matchesRange(startUtc: string, von?: string, bis?: string): boolean {
-  if (!von || !bis) return true;
-  const a = berlinDayStart(von);
-  const b = berlinDayStart(bis);
+  // Ein einzelnes Datum meint genau diesen Tag, nicht „ab dann alles" — sonst
+  // müsste man denselben Tag zweimal eintragen, um ihn allein zu sehen.
+  const vonTag = von ?? bis;
+  const bisTag = bis ?? von;
+  if (!vonTag || !bisTag) return true;
+  const a = berlinDayStart(vonTag);
+  const b = berlinDayStart(bisTag);
   if (a === null || b === null) return true;
   const start = Math.min(a, b);
   const ende = Math.max(a, b) + 86400_000; // Ende = Beginn des Folgetags

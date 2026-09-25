@@ -13,8 +13,9 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 ### Hinzugefügt
 
 - **Eigener Zeitraum im Filter**: Neben Heute, Diese Woche und Wochenende
-  lässt sich jetzt ein beliebiger Zeitraum wählen — von Tag bis Tag, beide
-  Tage zählen ganz.
+  lässt sich jetzt ein eigenes Datum wählen. Ein Tag genügt — wer nur einen
+  auswählt, sieht genau diesen Tag; ein zweites Datum macht daraus einen
+  Zeitraum.
 - **Termine teilen**: Jede Veranstaltung lässt sich über den Teilen-Knopf
   weitergeben. Beim Empfänger erscheint eine Vorschau mit Bild, Titel, Zeit und
   Ort; ein Tipp darauf öffnet genau diesen Termin — wer die App hat, landet

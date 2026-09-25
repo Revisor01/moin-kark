@@ -1,4 +1,6 @@
 import {
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -173,40 +175,91 @@ export default function FilterSheet({
                 style={styles.rangeField}
                 onPress={() => setPickerFuer("von")}
                 accessibilityRole="button"
-                accessibilityLabel={`Zeitraum von, aktuell ${alsLabel(rangeFrom)}`}
+                accessibilityLabel={`Datum, aktuell ${alsLabel(rangeFrom)}`}
               >
-                <Text style={styles.rangeCaption}>von</Text>
+                <Text style={styles.rangeCaption}>{rangeTo && rangeTo !== rangeFrom ? "von" : "am"}</Text>
                 <Text style={styles.rangeValue}>{alsLabel(rangeFrom)}</Text>
               </TouchableOpacity>
-              <Text style={styles.rangeDash}>–</Text>
-              <TouchableOpacity
-                style={styles.rangeField}
-                onPress={() => setPickerFuer("bis")}
-                accessibilityRole="button"
-                accessibilityLabel={`Zeitraum bis, aktuell ${alsLabel(rangeTo)}`}
-              >
-                <Text style={styles.rangeCaption}>bis</Text>
-                <Text style={styles.rangeValue}>{alsLabel(rangeTo)}</Text>
-              </TouchableOpacity>
+
+              {/* „bis" erscheint erst, wenn ein erstes Datum steht — ein
+                  einzelner Tag ist der häufigere Fall und braucht nur ein Feld. */}
+              {rangeFrom ? (
+                <TouchableOpacity
+                  style={styles.rangeField}
+                  onPress={() => setPickerFuer("bis")}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Enddatum, aktuell ${rangeTo ? alsLabel(rangeTo) : "keins"}`}
+                >
+                  <Text style={styles.rangeCaption}>bis</Text>
+                  <Text style={[styles.rangeValue, !rangeTo && styles.rangePlaceholder]}>
+                    {rangeTo ? alsLabel(rangeTo) : "optional"}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {rangeFrom || rangeTo ? (
+                <TouchableOpacity
+                  onPress={() => onRange(undefined, undefined)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Datum zurücksetzen"
+                >
+                  <Text style={styles.rangeClear}>✕</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : null}
 
-          {pickerFuer ? (
-            <DateTimePicker
-              value={tagAlsDate(pickerFuer === "von" ? rangeFrom : rangeTo)}
-              mode="date"
-              display="inline"
-              locale="de-DE"
-              onChange={(ev, gewaehlt) => {
-                setPickerFuer(null);
-                // Android meldet auch den Abbruch — dann nichts aendern.
-                if (ev.type !== "set" || !gewaehlt) return;
-                const tag = alsTag(gewaehlt);
-                if (pickerFuer === "von") onRange(tag, rangeTo);
-                else onRange(rangeFrom, tag);
-              }}
-            />
-          ) : null}
+          {/* Der Picker liegt in einem Modal und schließt sich nach der Wahl.
+              `display="spinner"` statt `inline`: Der große Kalender von iOS
+              rendert als eingebettetes Element, belegt den halben Filter und
+              verschwindet nicht von selbst. */}
+          <Modal
+            visible={pickerFuer !== null}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setPickerFuer(null)}
+          >
+            <TouchableOpacity
+              style={styles.pickerBackdrop}
+              activeOpacity={1}
+              onPress={() => setPickerFuer(null)}
+            >
+              <TouchableOpacity style={styles.pickerCard} activeOpacity={1}>
+                <Text style={styles.pickerTitle}>
+                  {pickerFuer === "bis" ? "Bis wann?" : "Ab wann?"}
+                </Text>
+                <DateTimePicker
+                  value={tagAlsDate(pickerFuer === "bis" ? rangeTo ?? rangeFrom : rangeFrom)}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  locale="de-DE"
+                  themeVariant="light"
+                  onChange={(ev, gewaehlt) => {
+                    // Android schließt selbst und meldet auch den Abbruch;
+                    // auf iOS macht das Modal zu, sobald ein Tag feststeht.
+                    if (ev.type !== "set" || !gewaehlt) {
+                      setPickerFuer(null);
+                      return;
+                    }
+                    const tag = alsTag(gewaehlt);
+                    if (pickerFuer === "bis") onRange(rangeFrom, tag);
+                    else onRange(tag, rangeTo);
+                    if (Platform.OS !== "ios") setPickerFuer(null);
+                  }}
+                />
+                {Platform.OS === "ios" ? (
+                  <TouchableOpacity
+                    style={styles.pickerDone}
+                    onPress={() => setPickerFuer(null)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.pickerDoneText}>Fertig</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </Modal>
 
           <Group label="Kirchspiel">
             <Chip label="Alle" active={activeKirchspiel === null} onPress={() => onKirchspiel(null)} />
@@ -266,7 +319,31 @@ const styles = StyleSheet.create({
   },
   rangeCaption: { ...text.caption, color: colors.muted },
   rangeValue: { ...text.bodyStrong, color: colors.ink },
-  rangeDash: { ...text.body, color: colors.muted },
+  rangePlaceholder: { color: colors.muted, fontWeight: "400" },
+  rangeClear: { ...text.body, color: colors.muted, paddingHorizontal: spacing.xs },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: overlays.backdrop,
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  pickerCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  pickerTitle: { ...text.title, color: colors.ink },
+  pickerDone: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    alignSelf: "stretch",
+    alignItems: "center",
+  },
+  pickerDoneText: { ...text.bodyStrong, color: colors.onColor },
   backdrop: {
     position: "absolute",
     top: 0,
