@@ -437,14 +437,21 @@ function jsonLd(obj: unknown): string {
     .replace(/&/g, "\\u0026");
 }
 
-const CLAIM = "Moin Kark — die App für Kirche in Dithmarschen in deiner Nähe";
+const CLAIM = "Moin Kark — Kirche. In deiner Nähe.";
 const LOGO_URL = "https://moin-kark.de/icon.png";
+/** Motiv fuer Termine ohne eigenes Bild — 1200x630, s. bildHoehe unten. */
+const STANDARDBILD = "https://moin-kark.de/og.jpg";
 /** Sandfarbe des App-Hintergrunds — färbt die Kopfzeile in manchen Browsern. */
 const THEME_COLOR = "#FCF3E4";
 
 export function eventPreviewPage(p: EventPreview): string {
   const url = `https://karte.moin-kark.de/?event=${p.id}`;
-  const bild = p.imageUrl ?? "https://moin-kark.de/og.jpg";
+  const bild = p.imageUrl ?? STANDARDBILD;
+  // Die gemeldete Hoehe muss zum ausgelieferten Bild passen: Der ChurchDesk-
+  // Flyer ist 1200x676, das Standardmotiv 1200x630. Fest verdrahtet stimmte sie
+  // nur fuer den Flyer — bei den knapp 60 % der Termine ohne Bild wich das
+  // gemeldete Seitenverhaeltnis ab.
+  const bildHoehe = p.imageUrl ? 676 : 630;
   // Claim am Ende: In der Linkvorschau steht sonst nur der Termin, und niemand
   // sieht, woher er kommt.
   const beschreibung = [p.time, p.place].filter(Boolean).join(" · ") + ` · ${CLAIM}`;
@@ -463,12 +470,12 @@ export function eventPreviewPage(p: EventPreview): string {
      der ist attraktiver als ein Logo —, aber Dienste, die ein Absender-Symbol
      zeigen, greifen auf og:logo bzw. die strukturierten Daten unten zu. -->
 <!-- Masse dazu: Dienste zeigen die grosse Vorschau oft erst, wenn sie die
-     Groesse kennen, ohne das Bild vorher laden zu muessen. 1200x676 ist die
-     span12-Variante von ChurchDesk; beim Standardmotiv stimmt es ebenfalls.
-     Die Hoehe muss zum echten Bild passen — mit 630 wich das gemeldete
-     Seitenverhaeltnis von dem ab, was danach geladen wird. -->
+     Groesse kennen, ohne das Bild vorher laden zu muessen. Die Hoehe wechselt
+     mit dem Motiv: ChurchDesk-Flyer (span12) sind 1200x676, das Standardmotiv
+     ist 1200x630. Fest verdrahtet stimmte sie nur fuer den Flyer — und damit
+     fuer knapp 40 % der Termine. -->
 <meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="676">
+<meta property="og:image:height" content="${bildHoehe}">
 <meta property="og:image:alt" content="${esc(p.title)}">
 <meta property="og:logo" content="${LOGO_URL}">
 <meta name="application-name" content="Moin Kark">
