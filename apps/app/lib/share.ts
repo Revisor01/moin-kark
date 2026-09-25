@@ -46,32 +46,27 @@ interface ShareableEvent {
 }
 
 /**
- * Baut den Text, der im Teilen-Dialog landet: Titel, Zeit, Ort, Leerzeile, Link.
- * Die Zeitangabe kommt von außen, damit hier keine zweite Formatierung
- * entsteht — im Sheet steht dieselbe Zeile.
+ * Baut den Text, der im Teilen-Dialog landet: der Link, darunter die Signatur.
+ *
+ * Titel, Zeit und Ort stehen bewusst NICHT davor. iMessage und WhatsApp zeigen
+ * die Linkvorschau nur, wenn die Nachricht im Wesentlichen aus dem Link
+ * besteht; mit Text davor behandeln sie sie als gewöhnliche Nachricht und
+ * lassen Bild und Beschreibung weg. Genau diese Angaben liefert die Vorschau
+ * aber selbst (og:title, og:description) — im Text waren sie eine Dopplung,
+ * die das Bild gekostet hat.
+ *
+ * `timeLabel` bleibt im Aufruf, damit die Signatur der Funktion stabil ist und
+ * das Sheet nichts umbauen muss.
  */
-export function eventShareMessage(event: ShareableEvent, timeLabel: string): string {
-  const place = placeLine(event.locationName, event.parish);
-  const head = [event.title, timeLabel, place].filter(Boolean).join("\n");
-  // Signatur ans Ende: Wo gar keine Linkvorschau geladen wird (SMS, manche
+export function eventShareMessage(event: ShareableEvent, _timeLabel?: string): string {
+  // Signatur hinter den Link: Wo gar keine Vorschau geladen wird (SMS, manche
   // Messenger), steht sonst nur eine nackte URL und niemand sieht, woher der
   // Termin kommt.
-  return `${head}\n\n${eventShareUrl(event.id)}\n\n${SIGNATUR}`;
+  return `${eventShareUrl(event.id)}\n\n${SIGNATUR}`;
 }
 
 /** Steht unter jedem geteilten Termin. */
-const SIGNATUR = "Moin Kark — die App für Kirche in Dithmarschen in deiner Nähe";
-
-/**
- * „St. Bartholomäus, Wesselburen" — aber ohne Dopplung, wenn der Ortsname die
- * Gemeinde schon enthält („St. Bartholomäus Wesselburen").
- */
-function placeLine(locationName?: string, parish?: string): string {
-  if (!locationName) return parish ?? "";
-  if (!parish) return locationName;
-  if (locationName.toLowerCase().includes(parish.toLowerCase())) return locationName;
-  return `${locationName}, ${parish}`;
-}
+const SIGNATUR = "Moin Kark — Kirche. In deiner Nähe.";
 
 /**
  * Liest die Event-ID aus einem eingehenden Link — egal ob Universal Link

@@ -655,13 +655,25 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
     expect(html).not.toContain("http-equiv=\"refresh\"");
   });
 
-  it("gibt die echte Hoehe des Vorschaubildes an", async () => {
-    // Die span12-Variante von ChurchDesk ist 1200x676. Stand hier 630, wich das
-    // gemeldete Seitenverhaeltnis vom Bild ab.
-    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
+  it("gibt beim ChurchDesk-Flyer dessen Hoehe an", async () => {
+    // Die span12-Variante von ChurchDesk ist 1200x676.
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, image: { url: "https://edge.churchdesk.com/x/span8_16-9/y.jpg" } as any })])
+    );
     const html = await (await app.request("/event/42")).text();
     expect(html).toContain('property="og:image:width" content="1200"');
     expect(html).toContain('property="og:image:height" content="676"');
+  });
+
+  it("gibt beim Standardmotiv dessen eigene Hoehe an", async () => {
+    // og.jpg ist 1200x630, nicht 676. Die Hoehe stand fest verdrahtet auf dem
+    // Flyer-Mass — bei den knapp 60 % der Termine ohne Bild meldete die Seite
+    // damit eine Groesse, die zum ausgelieferten Bild nicht passt.
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42, image: undefined })]));
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain('property="og:image" content="https://moin-kark.de/og.jpg"');
+    expect(html).toContain('property="og:image:width" content="1200"');
+    expect(html).toContain('property="og:image:height" content="630"');
   });
 
   it("nimmt das Bild des Termins, wenn eines da ist", async () => {
@@ -785,7 +797,7 @@ describe("Vorschau-Beschreibung", () => {
   it("traegt den Claim als Site-Beschreibung", async () => {
     buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
     const html = await (await app.request("/event/42")).text();
-    expect(html).toContain("die App für Kirche in Dithmarschen in deiner Nähe");
+    expect(html).toContain("Kirche. In deiner Nähe.");
   });
 });
 

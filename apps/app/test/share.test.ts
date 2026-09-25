@@ -87,37 +87,32 @@ describe("eventIdFromUrl", () => {
 });
 
 describe("eventShareMessage", () => {
-  it("nennt Titel, Zeit, Ort und Link", () => {
+  // Titel, Zeit und Ort stehen bewusst NICHT mehr im Text: iMessage und
+  // WhatsApp zeigen die Linkvorschau nur, wenn die Nachricht im Wesentlichen
+  // aus dem Link besteht. Mit Text davor blieb das Bild weg — dieselben
+  // Angaben stehen ohnehin in der Vorschau (og:title/og:description).
+  it("stellt den Link voran, damit die Vorschau lädt", () => {
     const msg = eventShareMessage({ ...base }, "Sa., 11. Okt., 18:00");
-    expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus, Wesselburen\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — die App für Kirche in Dithmarschen in deiner Nähe"
-    );
+    expect(msg).toBe("https://moin-kark.de/event/4711\n\nMoin Kark — Kirche. In deiner Nähe.");
   });
 
-  it("lässt den Ort weg, wenn keiner da ist", () => {
-    const msg = eventShareMessage({ ...base, locationName: undefined }, "Sa., 11. Okt., 18:00");
-    expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nWesselburen\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — die App für Kirche in Dithmarschen in deiner Nähe"
-    );
+  it("beginnt mit dem Link, ohne jeden Text davor", () => {
+    // Der Kern der Sache: ein einziges Zeichen vor der URL kostet die Vorschau.
+    const msg = eventShareMessage({ ...base }, "Sa., 11. Okt., 18:00");
+    expect(msg.startsWith("https://")).toBe(true);
   });
 
-  it("lässt die Ortszeile ganz weg, wenn weder Ort noch Gemeinde da sind", () => {
-    const msg = eventShareMessage(
+  it("baut denselben Text unabhängig von Ort und Gemeinde", () => {
+    // Ort und Gemeinde kommen aus der Vorschau, nicht mehr aus dem Text — der
+    // Aufbau darf davon nicht mehr abhängen.
+    const ohneOrt = eventShareMessage({ ...base, locationName: undefined }, "Sa., 11. Okt., 18:00");
+    const ohneBeides = eventShareMessage(
       { ...base, locationName: undefined, parish: undefined },
       "Sa., 11. Okt., 18:00"
     );
-    expect(msg).toBe("Orgelkonzert\nSa., 11. Okt., 18:00\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — die App für Kirche in Dithmarschen in deiner Nähe");
-  });
-
-  it("doppelt den Ort nicht, wenn er die Gemeinde schon enthält", () => {
-    // „St. Bartholomäus Wesselburen, Wesselburen" liest sich falsch.
-    const msg = eventShareMessage(
-      { ...base, locationName: "St. Bartholomäus Wesselburen" },
-      "Sa., 11. Okt., 18:00"
-    );
-    expect(msg).toBe(
-      "Orgelkonzert\nSa., 11. Okt., 18:00\nSt. Bartholomäus Wesselburen\n\nhttps://moin-kark.de/event/4711\n\nMoin Kark — die App für Kirche in Dithmarschen in deiner Nähe"
-    );
+    const erwartet = "https://moin-kark.de/event/4711\n\nMoin Kark — Kirche. In deiner Nähe.";
+    expect(ohneOrt).toBe(erwartet);
+    expect(ohneBeides).toBe(erwartet);
   });
 });
 
