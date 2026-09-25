@@ -2,7 +2,7 @@
 
 import { eventParishes, type EventFeature, type LatLng } from "@moinkark/shared";
 
-export type DateFilter = "all" | "today" | "week" | "weekend";
+export type DateFilter = "all" | "today" | "week" | "weekend" | "range";
 
 // LatLng kommt aus dem geteilten Paket (dieselbe Form wie in der API) und wird
 // hier nur weitergereicht, damit bestehende Importe aus ./filters weiter gelten.
@@ -18,6 +18,10 @@ export interface Filters {
   parish: string | null;
   /** „Tipps"-Modus: nur Highlight-Events, über ALLE Zeiten (Datumsfilter aus). */
   highlightsOnly: boolean;
+  /** Eigener Zeitraum, erster Tag als `YYYY-MM-DD` (Berliner Kalendertag). Nur bei `date: "range"`. */
+  rangeFrom?: string;
+  /** Eigener Zeitraum, letzter Tag als `YYYY-MM-DD` — einschließlich. */
+  rangeTo?: string;
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -144,8 +148,49 @@ function startOfBerlinDay(d: Date): number {
   return asUtc - offsetMs;
 }
 
-function matchesDate(startUtc: string, filter: DateFilter, now: Date): boolean {
+/**
+ * Beginn des Berliner Kalendertags `YYYY-MM-DD` als UTC-ms.
+ *
+ * Geht über `startOfBerlinDay`, damit Sommer- und Winterzeit stimmen: Die
+ * Mittagszeit des Tages liegt in beiden Fällen sicher im richtigen Tag, egal
+ * ob der Offset +1 oder +2 Stunden beträgt.
+ */
+function berlinDayStart(tag: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(tag);
+  if (!m) return null;
+  const mittags = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12));
+  return startOfBerlinDay(mittags);
+}
+
+/**
+ * Liegt der Termin im selbst gewählten Zeitraum?
+ *
+ * Beide Grenzen sind Kalendertage und zählen ganz: vom ersten Tag 00:00 bis
+ * zum letzten Tag 23:59:59 Berliner Zeit. Eine verkehrt herum eingegebene
+ * Spanne wird gedreht — wer erst das Ende tippt, soll nicht vor einer leeren
+ * Liste sitzen. Fehlt eine Grenze, filtert der Zeitraum nicht (halbfertige
+ * Eingabe darf die Liste nicht leeren).
+ */
+function matchesRange(startUtc: string, von?: string, bis?: string): boolean {
+  if (!von || !bis) return true;
+  const a = berlinDayStart(von);
+  const b = berlinDayStart(bis);
+  if (a === null || b === null) return true;
+  const start = Math.min(a, b);
+  const ende = Math.max(a, b) + 86400_000; // Ende = Beginn des Folgetags
+  const t = new Date(startUtc).getTime();
+  return t >= start && t < ende;
+}
+
+function matchesDate(
+  startUtc: string,
+  filter: DateFilter,
+  now: Date,
+  rangeFrom?: string,
+  rangeTo?: string
+): boolean {
   if (filter === "all") return true;
+  if (filter === "range") return matchesRange(startUtc, rangeFrom, rangeTo);
   const ev = berlinParts(startUtc);
   const today = berlinParts(now.toISOString());
 
@@ -210,7 +255,8 @@ export function applyFilters(
     if (filters.highlightsOnly) {
       if (!f.properties.highlight) return false;
     } else {
-      if (!matchesDate(f.properties.startUtc, filters.date, now)) return false;
+      if (!matchesDate(f.properties.startUtc, filters.date, now, filters.rangeFrom, filters.rangeTo))
+        return false;
     }
     if (!matchesCategory(f, filters.category)) return false;
     if (filters.kirchspiel && f.properties.kirchspiel !== filters.kirchspiel) return false;
