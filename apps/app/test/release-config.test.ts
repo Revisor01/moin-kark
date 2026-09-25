@@ -154,3 +154,34 @@ describe("Nur iPhone, kein iPad", () => {
     for (const t of treffer) expect(t).toBe("1");
   });
 });
+
+describe("Privacy-Angaben fuer den App Store", () => {
+  // Apple verlangt eine Angabe zu "Product Interaction", sobald Nutzung
+  // gemessen wird -- auch ohne Cookies und ohne Werbe-IDs. "Keine Einwilligung
+  // noetig" (Datenschutzrecht) und "keine Angabe noetig" (Apple-Regel) sind
+  // zwei verschiedene Fragen. Diese Datei und lib/analytics.ts muessen
+  // zusammenpassen.
+  const privacy = read("ios/MoinKark/PrivacyInfo.xcprivacy");
+  const analytics = read("lib/analytics.ts");
+
+  it("meldet Product Interaction, solange die App misst", () => {
+    const misst = /export async function track\(/.test(analytics);
+    expect(misst).toBe(true);
+    expect(privacy).toContain("NSPrivacyCollectedDataTypeProductInteraction");
+  });
+
+  it("erklaert die Messung als nicht personenbezogen und ohne Tracking", () => {
+    // Beide false -- sonst verlangt Apple zusaetzlich den Tracking-Dialog
+    // (App Tracking Transparency), den die App bewusst nicht zeigt.
+    expect(privacy).toMatch(/NSPrivacyCollectedDataTypeLinked<\/key>\s*<false\/>/);
+    expect(privacy).toMatch(/NSPrivacyCollectedDataTypeTracking<\/key>\s*<false\/>/);
+    expect(privacy).toMatch(/NSPrivacyTracking<\/key>\s*<false\/>/);
+  });
+
+  it("nennt als Zweck nur die App-Funktion", () => {
+    expect(privacy).toContain("NSPrivacyCollectedDataTypePurposeAppFunctionality");
+    // Keine Werbung, keine Produktpersonalisierung.
+    expect(privacy).not.toContain("ThirdPartyAdvertising");
+    expect(privacy).not.toContain("DeveloperAdvertising");
+  });
+});

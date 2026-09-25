@@ -131,6 +131,9 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Geändert
 
+- Die App zählt anonym mit, welche Funktionen benutzt werden — auf einem
+  eigenen Server, ohne Cookies, ohne IP-Adresse und ohne zu erfassen, wer
+  etwas tut. Die Datenschutzerklärung beschreibt es im Einzelnen.
 - Der Filter zeigt weniger, dafür sinnvollere Kategorien: Was in den
   Gemeinden unterschiedlich geschrieben war — „Kinder/Jugendliche",
   „Kinder u. Jugend", „Kinder- und Jugendarbeit" —, steht jetzt unter einem

@@ -24,6 +24,7 @@ import { canShare, shareEvent } from "../lib/share";
 import { placeholderFor } from "../lib/placeholders";
 import type { MapsApp } from "../lib/store";
 import { colorForCategory, colors, glyph, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
+import { track } from "../lib/analytics";
 
 interface Props {
   feature: EventFeature | null;
@@ -302,7 +303,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
                 shareEvent(
                   { id: p.id, title: p.title, parish: p.parish, locationName: p.locationName },
                   time
-                )
+                ).then(() => track("geteilt", { weg: "system" }))
               }
               hitSlop={6}
               accessibilityRole="button"
