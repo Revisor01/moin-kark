@@ -136,3 +136,21 @@ describe("Release-Notes für Google Play", () => {
     expect(notes.length).toBeLessThanOrEqual(500);
   });
 });
+
+describe("Nur iPhone, kein iPad", () => {
+  // Bewusste Entscheidung: Die App wird nicht fuer Tablets ausgeliefert.
+  // Wichtig fuers Einreichen — solange iPad deklariert ist, VERLANGT Apple
+  // auch iPad-Screenshots, und `expo prebuild` schreibt die pbxproj aus
+  // app.json neu. Beide Orte muessen zusammenpassen.
+  it("meldet in app.json keine Tablet-Unterstuetzung", () => {
+    const ios = appJson.expo.ios as { supportsTablet?: boolean };
+    expect(ios.supportsTablet).toBe(false);
+  });
+
+  it("zielt im Xcode-Projekt nur auf iPhone (Family 1)", () => {
+    const treffer = [...pbxproj.matchAll(/TARGETED_DEVICE_FAMILY = "([^"]+)"/g)].map((m) => m[1]);
+    expect(treffer.length).toBeGreaterThan(0);
+    // "1" = iPhone, "2" = iPad. "1,2" hiesse beides.
+    for (const t of treffer) expect(t).toBe("1");
+  });
+});
