@@ -43,6 +43,26 @@ Die Release-Builds entstehen in GitHub Actions, aber ein versehentlicher
 wüsste niemand mehr, welcher Stand gilt. Gebumpt wird von Hand, in einem
 Commit.
 
+## Android: immer internal UND alpha
+
+Seit 26.09.2026 gehen Android-Releases in **beide** Tracks gleichzeitig:
+
+```
+gh workflow run android-release.yml --ref main \
+  -f tracks=internal,alpha -f release_status=completed -f dry_run=false
+```
+
+- **alpha** = geschlossener Test, Gruppe `testers-community@googlegroups.com`
+  (die zwölf Tester für den Production-Access).
+- **internal** = interner Test, einzeln eingeladene Personen.
+
+Beide mit `completed`, sonst liegt der Release nur als Entwurf in der Konsole
+und erreicht niemanden. `draft` war der Stand bis 25.09. und hatte zur Folge,
+dass vier Releases hintereinander bei keinem Tester ankamen.
+
+**versionCode vor jedem Lauf hochzählen** — Google lehnt einen bereits
+hochgeladenen versionCode ab, auch für einen anderen Track.
+
 ## Release-Ablauf
 
 1. **Bumpen und committen:** `app.json` (Version, `buildNumber`, `versionCode`),
