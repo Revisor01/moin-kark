@@ -12,15 +12,17 @@ on:
   workflow_dispatch:
     inputs:
       tracks:
-        description: "Ziel-Tracks (kommagetrennt, z. B. internal oder internal,production)"
-        # Erste Einreichung, geschlossener Test — Produktion erst bewusst per Input.
-        default: "internal"
+        description: "Ziel-Tracks (kommagetrennt, z. B. internal,alpha oder internal,alpha,production)"
+        # Seit 26.09.2026 immer beide Testwege: alpha = geschlossener Test
+        # (die zwölf Tester für den Production-Access), internal = einzeln
+        # eingeladene Personen. Produktion erst bewusst per Input.
+        default: "internal,alpha"
         required: true
       release_status:
-        description: "Freigabestatus im Track. draft = landet als Entwurf in der Konsole (nötig, solange die App unveröffentlicht ist). completed = sofort an die Tester:innen."
+        description: "Freigabestatus im Track. completed = sofort an die Tester:innen (Normalfall). draft = landet nur als Entwurf in der Konsole und erreicht niemanden."
         type: choice
-        options: [draft, completed]
-        default: draft
+        options: [completed, draft]
+        default: completed
       dry_run:
         description: "Dry-Run: kompletter Durchlauf, aber Play-Edit wird verworfen (kein Release)"
         type: boolean
