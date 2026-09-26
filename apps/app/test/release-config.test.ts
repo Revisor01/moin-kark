@@ -185,3 +185,30 @@ describe("Privacy-Angaben fuer den App Store", () => {
     expect(privacy).not.toContain("DeveloperAdvertising");
   });
 });
+
+describe("R8 im Android-Release", () => {
+  // Ohne R8 laeuft der Code unverschleiert und unverkleinert im Store --
+  // die Play Console meldete 1 % Verschleierung und keine Optimierung.
+  // `expo prebuild --clean` schreibt gradle.properties neu, deshalb hier
+  // festgenagelt.
+  const props = read("android/gradle.properties");
+  const rules = read("android/app/proguard-rules.pro");
+
+  it("schaltet Minify und Shrink im Release ein", () => {
+    expect(props).toMatch(/^android\.enableMinifyInReleaseBuilds=true$/m);
+    expect(props).toMatch(/^android\.enableShrinkResourcesInReleaseBuilds=true$/m);
+  });
+
+  it("haelt die Klassen, die nur ueber Reflection gerufen werden", () => {
+    // R8 sieht diese Aufrufe nicht und raeumt sie sonst weg -- der Fehler
+    // faellt erst zur Laufzeit auf, im Release, auf dem Geraet.
+    for (const muster of [
+      "com.facebook.react",
+      "com.facebook.hermes",
+      "org.maplibre.android",
+      "expo.modules",
+      "DoNotStrip",
+    ])
+      expect(rules).toContain(muster);
+  });
+});
