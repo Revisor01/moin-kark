@@ -88,6 +88,20 @@ function partialOutage(meta: FeedMeta | undefined): { affects: (orgId: number | 
   return { affects: (orgId) => ids === null || orgId === undefined || ids.has(orgId) };
 }
 
+/**
+ * Derselbe Zeitpunkt, auch in anderer Schreibweise? Verglichen wird die Zeit,
+ * nicht der Text: Die Schreibweise der ChurchDesk-Zeiten hat schon gewechselt
+ * (heute „…T12:00:00.000Z"; derselbe Zeitpunkt kann auch als
+ * „…T14:00:00+02:00" oder ohne Millisekunden kommen). Ein Textvergleich
+ * meldete bei so einem Wechsel jeden gemerkten Termin als verschoben.
+ * Unlesbares gilt nur bei gleichem Text als gleich.
+ */
+function sameInstant(a: string, b: string): boolean {
+  if (a === b) return true;
+  const t = Date.parse(a);
+  return Number.isFinite(t) && t === Date.parse(b);
+}
+
 export interface SyncResult {
   removed: number[]; // IDs die nicht mehr existieren
   changed: number[]; // IDs mit geänderter Zeit/Ort
@@ -141,7 +155,7 @@ export async function syncSavedEvents(
       continue;
     }
 
-    const timeChanged = before.startUtc !== now.properties.startUtc;
+    const timeChanged = !sameInstant(before.startUtc, now.properties.startUtc);
     const placeChanged = (before.locationName ?? null) !== (now.properties.locationName ?? null);
     if (timeChanged || placeChanged) {
       result.changed.push(id);

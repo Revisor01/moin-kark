@@ -195,6 +195,9 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- Gemerkte Termine konnten sich als „Termin geändert“ melden, obwohl die
+  Uhrzeit gleich geblieben war – dann, wenn der Gemeindekalender nur die
+  Schreibweise der Zeit umstellte.
 - Auf Android ließen sich Profil und Filter nicht überall scrollen: Wo die
   Terminliste verdeckt darunter lag, kam ein Wisch nicht an. Jetzt reagiert die
   ganze Fläche.

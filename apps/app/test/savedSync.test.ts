@@ -106,3 +106,44 @@ describe("syncSavedEvents — Teilausfall der API", () => {
     expect(scheduledRequests().immediate).toHaveLength(1);
   });
 });
+
+/** Derselbe Zeitpunkt, mit Offset statt „Z" geschrieben. */
+function mitOffset(iso: string, stunden: number): string {
+  const wanduhr = new Date(Date.parse(iso) + stunden * 3600_000).toISOString();
+  return wanduhr.replace(/\.\d{3}Z$/, `+${String(stunden).padStart(2, "0")}:00`);
+}
+
+describe("syncSavedEvents — Schreibweise der Startzeit", () => {
+  it("meldet keine Verschiebung, wenn nur die Schreibweise wechselt", async () => {
+    // Der Snapshot auf dem Gerät trägt eine andere Schreibweise
+    // („…T14:00:00+02:00") als der Feed („…T12:00:00.000Z") — derselbe
+    // Zeitpunkt. Ein Textvergleich meldete hier für jeden gemerkten Termin
+    // „Termin geändert".
+    const start = inDays(3);
+    const alt = feature({ id: 1, orgId: 5, startUtc: mitOffset(start, 2), title: "Gottesdienst" });
+    await syncSavedEvents([1], [alt], { orgsFailed: 0 });
+    notifications.reset();
+
+    const neu = feature({ id: 1, orgId: 5, startUtc: start, title: "Gottesdienst" });
+    const res = await syncSavedEvents([1], [neu], { orgsFailed: 0 });
+
+    expect(res.changed).toEqual([]);
+    expect(scheduledRequests().immediate).toHaveLength(0);
+  });
+
+  it("erkennt eine echte Verschiebung auch über die Schreibweisen hinweg", async () => {
+    const start = inDays(3);
+    const alt = feature({ id: 1, orgId: 5, startUtc: mitOffset(start, 2), title: "Gottesdienst" });
+    await syncSavedEvents([1], [alt], { orgsFailed: 0 });
+    notifications.reset();
+
+    const spaeter = new Date(Date.parse(start) + 3600_000).toISOString();
+    const moved = feature({ id: 1, orgId: 5, startUtc: spaeter, title: "Gottesdienst" });
+    const res = await syncSavedEvents([1], [moved], { orgsFailed: 0 });
+
+    expect(res.changed).toEqual([1]);
+    const { immediate } = scheduledRequests();
+    expect(immediate).toHaveLength(1);
+    expect(immediate[0].content.title).toBe("Termin geändert: Gottesdienst");
+  });
+});
