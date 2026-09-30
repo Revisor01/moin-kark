@@ -475,7 +475,10 @@ export default function Home() {
         {/* Liste links, Karte rechts — die Liste ist der Einstieg, die Karte der
             große Anzeigebereich daneben. */}
         <View style={styles.wideRow}>
-          <View style={styles.listPane}>
+          {/* Eigene Ebene aus demselben Grund wie der Kartenbereich unten: Die
+              Filterknöpfe tragen Schatten und fingen sonst Touches ab, die
+              einem offenen Sheet gelten. */}
+          <View style={styles.listPane} collapsable={false}>
             {filterBar}
             <EventList features={filtered} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); track("termin-geoeffnet", { quelle: "liste" }); }} isSaved={isSaved} onToggleSave={toggleSave} bottomInset={insets.bottom} onRefresh={refetch} refreshing={isFetching} />
           </View>
@@ -498,8 +501,15 @@ export default function Home() {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {header}
+      {/* collapsable={false}: Der Kartenbereich bildet eine eigene Ebene. Ohne
+          sie hängt React Native seine Kinder nativ an einen Vorfahren weiter
+          oben, und das Listen-Sheet lag neben den Sheets für Profil, Filter
+          und Termin. Android gibt Touches dort zuerst dem Element mit Schatten
+          (elevation), egal was oben gezeichnet ist — wo das Listen-Sheet
+          verdeckt darunter lag, ließen sich Profil und Filter nicht scrollen. */}
       <View
         style={styles.mapArea}
+        collapsable={false}
         onLayout={(e) => setMapAreaHeight(e.nativeEvent.layout.height)}
       >
         {map}
