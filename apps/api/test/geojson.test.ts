@@ -204,8 +204,8 @@ describe("toFeature — Eigenschaften", () => {
     expect(f.geometry.type).toBe("Point");
     expect(p.id).toBe(4711);
     expect(p.title).toBe("Konzert");
-    expect(p.startUtc).toBe("2026-06-15T08:00:00Z");
-    expect(p.endUtc).toBe("2026-06-15T09:00:00Z");
+    expect(p.startUtc).toBe("2026-06-15T08:00:00.000Z");
+    expect(p.endUtc).toBe("2026-06-15T09:00:00.000Z");
     expect(p.allDay).toBe(true);
     expect(p.summary).toBe("Kurz");
     expect(p.descriptionHtml).toBe("<p>Lang</p>");
@@ -222,6 +222,31 @@ describe("toFeature — Eigenschaften", () => {
     expect(p.address).toBe("Kirchenstr. 1");
     expect(p.city).toBe("Büsum");
     expect(p.zipcode).toBe("25761");
+  });
+
+  it("liefert Beginn und Ende immer in UTC, egal wie ChurchDesk sie schreibt", () => {
+    // ChurchDesk hat die Schreibweise schon gewechselt (heute „Z" mit
+    // Millisekunden). Die App vergleicht gemerkte Zeiten mit dem Feed; eine
+    // neue Schreibweise desselben Zeitpunkts darf dort nicht ankommen.
+    const mitOffset = toFeature(
+      cdEvent({ startDate: "2026-06-15T10:00:00+02:00", endDate: "2026-06-15T12:00:00+02:00" }),
+      2725
+    ).properties;
+    expect(mitOffset.startUtc).toBe("2026-06-15T08:00:00.000Z");
+    expect(mitOffset.endUtc).toBe("2026-06-15T10:00:00.000Z");
+
+    const heutige = toFeature(
+      cdEvent({ startDate: "2026-11-27T23:00:00.000Z", endDate: "2026-11-28T22:59:59.000Z" }),
+      2725
+    ).properties;
+    expect(heutige.startUtc).toBe("2026-11-27T23:00:00.000Z");
+    expect(heutige.endUtc).toBe("2026-11-28T22:59:59.000Z");
+  });
+
+  it("reicht eine unlesbare Zeitangabe unverändert durch, statt den Termin zu verlieren", () => {
+    const p = toFeature(cdEvent({ startDate: "demnächst", endDate: "" }), 2725).properties;
+    expect(p.startUtc).toBe("demnächst");
+    expect(p.endUtc).toBe("");
   });
 
   it("zeigt die Endzeit an, solange ChurchDesk sie nicht ausdrücklich abwählt", () => {

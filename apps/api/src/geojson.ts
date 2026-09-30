@@ -62,6 +62,21 @@ function pickImage(img: CdEvent["image"]): EventImage | undefined {
   };
 }
 
+/**
+ * ChurchDesk-Zeit als UTC in fester Schreibweise (`2026-06-15T08:00:00.000Z`).
+ *
+ * ChurchDesk hat die Schreibweise schon gewechselt; derselbe Zeitpunkt kann als
+ * „Z" mit oder ohne Millisekunden oder mit Offset („+02:00") kommen. Die Apps
+ * vergleichen gemerkte Zeiten mit dem Feed; eine neue Schreibweise
+ * desselben Zeitpunkts darf dort nicht ankommen — auch nicht bei Fassungen,
+ * die schon auf den Geräten laufen. Unlesbares bleibt, wie es ist: lieber ein
+ * Termin mit roher Angabe als ein fehlender.
+ */
+function utcIso(raw: string): string {
+  const t = Date.parse(raw);
+  return Number.isFinite(t) ? new Date(t).toISOString() : raw;
+}
+
 export function toFeature(event: CdEvent, orgId: number): EventFeature {
   // Ein Event kann in ChurchDesk MEHREREN Gemeinden gehören (Kirchspiel-weite
   // Termine wie die Sommerkirche hängen an allen sechs Eider-Gemeinden). Die
@@ -125,8 +140,8 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
     properties: {
       id: event.id,
       title: event.title,
-      startUtc: event.startDate,
-      endUtc: event.endDate,
+      startUtc: utcIso(event.startDate),
+      endUtc: utcIso(event.endDate),
       allDay: !!event.allDay,
       showEndtime: event.showEndtime !== false,
       summary: event.summary || undefined,
