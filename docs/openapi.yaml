@@ -428,12 +428,16 @@ components:
         startUtc:
           type: string
           format: date-time
-          description: Beginn in UTC. Die Anzeige rechnet clientseitig nach Europe/Berlin um.
-          examples: ["2026-06-15T08:00:00Z"]
+          description: |
+            Beginn in UTC, immer in derselben Schreibweise
+            (`YYYY-MM-DDTHH:mm:ss.sssZ`) — gleich, wie ChurchDesk die Zeit
+            schreibt. Nur eine unlesbare ChurchDesk-Angabe kommt unverändert
+            durch. Die Anzeige rechnet clientseitig nach Europe/Berlin um.
+          examples: ["2026-06-15T08:00:00.000Z"]
         endUtc:
           type: string
           format: date-time
-          description: Ende in UTC.
+          description: Ende in UTC, Schreibweise wie `startUtc`.
         allDay:
           type: boolean
           description: Ganztägiger Termin.
