@@ -195,6 +195,9 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- Auf Android ließen sich Profil und Filter nicht überall scrollen: Wo die
+  Terminliste verdeckt darunter lag, kam ein Wisch nicht an. Jetzt reagiert die
+  ganze Fläche.
 - Beim Teilen aus der App kam auf dem iPhone nur eine graue Textblase an: kein
   Vorschaubild, und ein Tipp darauf öffnete weder die Seite noch die App. Jetzt
   erscheint die Vorschau mit Bild, und der Link führt zum Termin.

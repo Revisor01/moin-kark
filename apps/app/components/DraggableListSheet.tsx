@@ -254,6 +254,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
     // Weicher Schatten nach OBEN — setzt das Sheet gegen die Karte ab, ohne als
     // harte Linie zu lesen (die Rahmenkante ist bewusst entfallen).
+    // Auf Android ist der Schatten eine `elevation`, und die entscheidet dort
+    // auch, wer Touches zuerst bekommt. Der Bereich um das Sheet braucht deshalb
+    // eine eigene Ebene (collapsable={false}, s. app/index.tsx) — sonst fängt
+    // das Sheet verdeckt Wischgesten ab, die Profil oder Filter gelten.
     ...shadow.sheet,
   },
   sheetInner: {
