@@ -241,24 +241,47 @@ describe("Mitteilungs-Symbol auf Android", () => {
   });
 });
 
-// Ab dem iOS-27-SDK (Xcode 27) verlangt Apple den UIScene-Lifecycle; eine App
-// ohne UIApplicationSceneManifest stürzt dann beim Start ab
-// (_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption). Mit Xcode 26
-// gebaut läuft sie auch unter iOS 27. Der Release-Workflow nimmt sonst immer das
-// neueste Xcode — der erste Runner mit Xcode 27 hätte einen Build geliefert, der
-// auf den Geräten nicht startet, ohne dass sich im Repo etwas geändert hätte.
-describe("iOS-Release: Xcode-Obergrenze", () => {
-  const workflow = readFileSync(
-    new URL("../../../.github/workflows/ios-release.yml", import.meta.url),
-    "utf8"
-  );
+// Ab dem iOS-27-SDK (Xcode 27) verlangt Apple den UIScene-Lifecycle; ohne ihn
+// stürzt die App beim Start ab (_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption).
+// Der Release-Workflow nimmt das neueste Xcode — fehlt eines der drei Teile,
+// liefert der nächste Build eine App, die auf den Geräten nicht startet.
+// `expo prebuild --clean` schreibt AppDelegate.swift neu und entfernt den
+// SceneDelegate; die Info.plist-Angabe kommt über app.json zurück, die Klasse nicht.
+describe("iOS: UIScene-Lifecycle", () => {
+  const appDelegate = read("ios/MoinKark/AppDelegate.swift");
+  const scene = (appJson.expo.ios as any).infoPlist?.UIApplicationSceneManifest;
 
-  it("bleibt bei Xcode 26, solange die App keinen Scene-Lifecycle hat", () => {
-    expect(infoPlist).not.toContain("UIApplicationSceneManifest");
-    expect(workflow).toMatch(/^\s*XCODE_MAJOR=26$/m);
-    // Auswahl nur unter Xcode_26.*, kein Rückfall auf /Applications/Xcode.app
-    // (das kann jede Version sein).
-    expect(workflow).toContain('/Applications/Xcode_${XCODE_MAJOR}.*.app');
-    expect(workflow).not.toContain("XCODE=/Applications/Xcode.app");
+  it("meldet in der Info.plist den SceneDelegate an", () => {
+    expect(infoPlist).toContain("<key>UIApplicationSceneManifest</key>");
+    expect(infoPlist).toContain("<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>");
+  });
+
+  it("steht auch in app.json, damit prebuild ihn nicht verliert", () => {
+    expect(scene).toEqual({
+      UIApplicationSupportsMultipleScenes: false,
+      UISceneConfigurations: {
+        UIWindowSceneSessionRoleApplication: [
+          {
+            UISceneConfigurationName: "Default Configuration",
+            UISceneDelegateClassName: "$(PRODUCT_MODULE_NAME).SceneDelegate",
+          },
+        ],
+      },
+    });
+  });
+
+  it("startet React im SceneDelegate, nicht im AppDelegate", () => {
+    expect(appDelegate).toMatch(/^class SceneDelegate: UIResponder, UIWindowSceneDelegate \{$/m);
+    expect(appDelegate).toContain("UIWindow(windowScene: windowScene)");
+    // Ein zweites Fenster im AppDelegate liefe am Scene-Lifecycle vorbei.
+    expect(appDelegate).not.toContain("UIWindow(frame: UIScreen.main.bounds)");
+    expect(appDelegate.match(/startReactNative\(/g)?.length).toBe(1);
+  });
+
+  it("reicht Links an den AppDelegate weiter — auch beim Kaltstart", () => {
+    expect(appDelegate).toContain("openURLContexts");
+    expect(appDelegate).toContain("func scene(_ scene: UIScene, continue userActivity: NSUserActivity)");
+    expect(appDelegate).toContain("connectionOptions.urlContexts.first?.url");
+    expect(appDelegate).toContain('"UIApplicationLaunchOptionsURLKey"');
   });
 });

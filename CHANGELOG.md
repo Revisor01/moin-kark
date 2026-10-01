@@ -195,6 +195,10 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- **Bereit für iOS 27**: Die App folgt jetzt dem Start- und Fensterablauf, den
+  Apple ab iOS 27 verlangt. Ohne die Umstellung wäre die nächste Fassung auf
+  iOS 27 gar nicht erst gestartet; Links zu Terminen öffnen weiterhin direkt
+  den Termin.
 - Erinnerungen auf Android zeigen jetzt das Moin-Kark-Symbol – den Pin
   mit der Kirche – statt eines leeren Flecks in der Statusleiste und in der
   Mitteilung.
