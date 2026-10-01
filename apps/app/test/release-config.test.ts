@@ -285,3 +285,17 @@ describe("iOS: UIScene-Lifecycle", () => {
     expect(appDelegate).toContain('"UIApplicationLaunchOptionsURLKey"');
   });
 });
+
+// Xcode 27 baut nur noch ab iOS 15.0. Einzelne Pods bringen ältere Ziele mit
+// (RNCAsyncStorage: 13.4) und brechen den Build ab; `pod install` übernimmt die
+// Ziele aus den Podspecs, deshalb hebt der post_install-Block sie an.
+describe("iOS: Mindestziel der Pods", () => {
+  const podfile = read("ios/Podfile");
+
+  it("hebt im post_install alle Pod-Ziele auf das App-Ziel an", () => {
+    const postInstall = podfile.slice(podfile.indexOf("post_install do |installer|"));
+    expect(postInstall).toContain("installer.pods_project.targets.each");
+    expect(postInstall).toContain("build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = app_target");
+    expect(podfile).toMatch(/platform :ios, podfile_properties\['ios.deploymentTarget'\] \|\| '16\.4'/);
+  });
+});

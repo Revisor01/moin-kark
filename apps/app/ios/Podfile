@@ -68,5 +68,18 @@ target 'MoinKark' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # Xcode 27 baut nur noch ab iOS 15.0; einzelne Pods (z. B. die Ressourcen von
+    # RNCAsyncStorage) bringen 13.4 mit und brechen den Build ab. Auf das Ziel der
+    # App anheben (test/release-config.test.ts wacht darüber).
+    app_target = podfile_properties['ios.deploymentTarget'] || '16.4'
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        current = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current && Gem::Version.new(current) < Gem::Version.new(app_target)
+          build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = app_target
+        end
+      end
+    end
   end
 end
