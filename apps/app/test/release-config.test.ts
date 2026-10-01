@@ -240,3 +240,25 @@ describe("Mitteilungs-Symbol auf Android", () => {
       expect(() => read(`android/app/src/main/res/drawable-${dichte}/notification_icon.png`)).not.toThrow();
   });
 });
+
+// Ab dem iOS-27-SDK (Xcode 27) verlangt Apple den UIScene-Lifecycle; eine App
+// ohne UIApplicationSceneManifest stürzt dann beim Start ab
+// (_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption). Mit Xcode 26
+// gebaut läuft sie auch unter iOS 27. Der Release-Workflow nimmt sonst immer das
+// neueste Xcode — der erste Runner mit Xcode 27 hätte einen Build geliefert, der
+// auf den Geräten nicht startet, ohne dass sich im Repo etwas geändert hätte.
+describe("iOS-Release: Xcode-Obergrenze", () => {
+  const workflow = readFileSync(
+    new URL("../../../.github/workflows/ios-release.yml", import.meta.url),
+    "utf8"
+  );
+
+  it("bleibt bei Xcode 26, solange die App keinen Scene-Lifecycle hat", () => {
+    expect(infoPlist).not.toContain("UIApplicationSceneManifest");
+    expect(workflow).toMatch(/^\s*XCODE_MAJOR=26$/m);
+    // Auswahl nur unter Xcode_26.*, kein Rückfall auf /Applications/Xcode.app
+    // (das kann jede Version sein).
+    expect(workflow).toContain('/Applications/Xcode_${XCODE_MAJOR}.*.app');
+    expect(workflow).not.toContain("XCODE=/Applications/Xcode.app");
+  });
+});

@@ -26,15 +26,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Neuestes stabiles Xcode wählen
+      - name: Neuestes stabiles Xcode 26 wählen
         run: |
           set -euo pipefail
+          # Obergrenze Xcode 26: Ab dem iOS-27-SDK (Xcode 27) verlangt Apple den
+          # UIScene-Lifecycle. Die App hat ihn (noch) nicht — mit Xcode 27 gebaut
+          # stürzt sie beim Start ab, mit Xcode 26 gebaut läuft sie auch unter
+          # iOS 27. Anheben erst, wenn Info.plist ein UIApplicationSceneManifest
+          # hat (test/release-config.test.ts wacht darüber).
+          XCODE_MAJOR=26
           # Beta-Installationen ausschließen — genau deren Stempel verursachen
           # ITMS-90111. Sortiert wird nach der herausgezogenen Versionsnummer:
           # ein `sort -V` über den ganzen Dateinamen nimmt 26.4.1 statt 26.6.
-          XCODE=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -iv beta \
-            | sed -E 's/.*Xcode_([0-9.]+)\.app/\1 &/' | sort -k1,1V | tail -1 | cut -d' ' -f2)
-          if [ -z "$XCODE" ]; then XCODE=/Applications/Xcode.app; fi
+          XCODE=$(ls -d /Applications/Xcode_${XCODE_MAJOR}.*.app 2>/dev/null | grep -iv beta \
+            | sed -E 's/.*Xcode_([0-9.]+)\.app/\1 &/' | sort -k1,1V | tail -1 | cut -d' ' -f2 || true)
+          if [ -z "$XCODE" ]; then
+            echo "FEHLER: Kein Xcode ${XCODE_MAJOR}.x auf diesem Runner. Vorhanden:"
+            ls -d /Applications/Xcode*.app || true
+            echo "Entweder ein Runner-Image mit Xcode ${XCODE_MAJOR} wählen oder die App auf den UIScene-Lifecycle umstellen und die Obergrenze anheben."
+            exit 1
+          fi
           echo "Verwende: $XCODE"
           sudo xcode-select -s "$XCODE/Contents/Developer"
           xcodebuild -version
