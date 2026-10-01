@@ -45,6 +45,10 @@ paths:
         Nennt den Dienst und antwortet immer mit `ok`, solange der Prozess
         läuft — unabhängig vom Datenstand. Für „ist da überhaupt etwas?";
         den Zustand der Daten meldet `/healthz`.
+
+        `revision` nennt den Commit, aus dem das laufende Image gebaut wurde
+        (seit 01.10.2026). Der Deploy-Workflow wartet darauf, bevor er einen
+        Deploy als gelungen meldet.
       operationId: getRoot
       responses:
         "200":
@@ -53,7 +57,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [service, status]
+                required: [service, status, revision]
                 properties:
                   service:
                     type: string
@@ -61,6 +65,12 @@ paths:
                   status:
                     type: string
                     const: ok
+                  revision:
+                    type: string
+                    description: |
+                      Voller Git-Commit-Hash des Builds; `unknown`, wenn das
+                      Image ohne Build-Argument `GIT_SHA` gebaut wurde.
+                    examples: ["0c3969c4d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6"]
 
   /events.geojson:
     get:
