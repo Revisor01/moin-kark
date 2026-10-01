@@ -212,3 +212,31 @@ describe("R8 im Android-Release", () => {
       expect(rules).toContain(muster);
   });
 });
+
+describe("Mitteilungs-Symbol auf Android", () => {
+  // Ohne eigenes Symbol nimmt Android das App-Icon und zeigt davon nur die
+  // Silhouette -- in der Statusleiste und in der Mitteilung steht dann ein
+  // leerer Fleck statt des Moin-Kark-Pins.
+  const plugins = (JSON.parse(read("app.json")) as { expo: { plugins: unknown[] } }).expo.plugins;
+  const manifest = read("android/app/src/main/AndroidManifest.xml");
+
+  it("konfiguriert expo-notifications mit Symbol und Farbe", () => {
+    const eintrag = plugins.find((p) => Array.isArray(p) && p[0] === "expo-notifications") as
+      | [string, { icon: string; color: string }]
+      | undefined;
+    expect(eintrag?.[1].icon).toBe("./assets/notification-icon.png");
+    expect(eintrag?.[1].color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(() => read("assets/notification-icon.png")).not.toThrow();
+  });
+
+  it("traegt das Symbol im Android-Projekt (prebuild nach der Aenderung vergessen?)", () => {
+    expect(manifest).toContain(
+      'android:name="expo.modules.notifications.default_notification_icon" android:resource="@drawable/notification_icon"'
+    );
+    expect(manifest).toContain(
+      'android:name="expo.modules.notifications.default_notification_color" android:resource="@color/notification_icon_color"'
+    );
+    for (const dichte of ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"])
+      expect(() => read(`android/app/src/main/res/drawable-${dichte}/notification_icon.png`)).not.toThrow();
+  });
+});

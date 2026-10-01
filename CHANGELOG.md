@@ -195,6 +195,9 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
 
 ### Behoben
 
+- Erinnerungen auf Android zeigen jetzt das Moin-Kark-Symbol – den Pin
+  mit der Kirche – statt eines leeren Flecks in der Statusleiste und in der
+  Mitteilung.
 - Gemerkte Termine konnten sich als „Termin geändert“ melden, obwohl die
   Uhrzeit gleich geblieben war – dann, wenn der Gemeindekalender nur die
   Schreibweise der Zeit umstellte.
