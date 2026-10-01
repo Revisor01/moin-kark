@@ -139,7 +139,12 @@ app.use(
   })
 );
 
-app.get("/", (c) => c.json({ service: "moinkark-api", status: "ok" }));
+// `revision` = Commit, aus dem das Image gebaut wurde (Build-Argument GIT_SHA).
+// Der Deploy-Workflow prüft daran, ob nach dem Ausrollen wirklich das neue
+// Image antwortet — ein grüner Healthcheck zeigt das nicht.
+app.get("/", (c) =>
+  c.json({ service: "moinkark-api", status: "ok", revision: process.env.GIT_SHA?.trim() || "unknown" })
+);
 
 /**
  * Betriebszustand aus dem jüngsten Datenstand — ohne selbst einen Fetch

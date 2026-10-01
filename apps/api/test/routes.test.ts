@@ -445,10 +445,29 @@ describe("GET /healthz und /status.json", () => {
 });
 
 describe("GET /", () => {
-  it("nennt Dienst und Zustand", async () => {
+  // Der Deploy-Workflow wartet nach dem Ausrollen, bis hier der gebaute Commit
+  // steht — erst dann läuft wirklich das neue Image.
+  const saved = process.env.GIT_SHA;
+  afterEach(() => {
+    if (saved === undefined) delete process.env.GIT_SHA;
+    else process.env.GIT_SHA = saved;
+  });
+
+  it("nennt Dienst, Zustand und den gebauten Commit", async () => {
+    process.env.GIT_SHA = "0c3969c4d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6";
     const res = await app.request("/");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ service: "moinkark-api", status: "ok" });
+    expect(await res.json()).toEqual({
+      service: "moinkark-api",
+      status: "ok",
+      revision: "0c3969c4d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6",
+    });
+  });
+
+  it("meldet „unknown“, wenn kein Commit mitgegeben wurde (lokaler Start)", async () => {
+    delete process.env.GIT_SHA;
+    const res = await app.request("/");
+    expect(await res.json()).toEqual({ service: "moinkark-api", status: "ok", revision: "unknown" });
   });
 });
 

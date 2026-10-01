@@ -1,39 +1,39 @@
-# Deployment-Stack für die Moin-Kark-API auf server.godsapp.de
-# (Apache/KeyHelp → Traefik:8888 → Container).
-# Build-Kontext ist der Monorepo-Root, damit packages/shared mitkommt.
+# Vorlage des Portainer-Stacks `moinkark-api` (Stack 271) auf server.godsapp.de
+# (Apache/KeyHelp → Traefik:8888 → Container). Inhalt = Stack-Datei in Portainer;
+# wer das eine ändert, ändert das andere mit.
+#
+# Das Image baut die CI (.github/workflows/api-deploy.yml) und legt es in GHCR ab;
+# der Stack-Webhook zieht `latest` neu. Ablauf und Notfallweg: docs/deploy.md.
+# Lokal bauen: `docker build -f apps/api/Dockerfile .` im Monorepo-Root.
 services:
   moinkark-api:
-    build:
-      context: ../..
-      dockerfile: apps/api/Dockerfile
-    image: moinkark-api:latest
+    image: ghcr.io/revisor01/moinkark-api:latest
     container_name: moinkark-api
     restart: unless-stopped
     environment:
+      TZ: "Europe/Berlin"
       PORT: "8787"
       CACHE_TTL_MS: "300000"
       DEFAULT_WINDOW_DAYS: "60"
       # Admin-Oberfläche (/admin) für Orts-Korrekturen; ohne Token deaktiviert.
-      ADMIN_TOKEN: "${ADMIN_TOKEN:-}"
+      ADMIN_TOKEN: "${ADMIN_TOKEN}"
       DATA_DIR: "/data"
-      # karte.* = Web-App, moin-kark.de = Landingpage. Die Alt-Domain bleibt
-      # vorerst erlaubt, damit bereits ausgelieferte App-Builds weiterlaufen.
-      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://karte.moin-kark.de,https://moin-kark.de,https://kkkarte.godsapp.de}"
-      # Tokens werden über Portainer-Stack-ENV / .env injiziert (NIE im Repo).
-      CD_TOKEN_2596: "${CD_TOKEN_2596:-}"
-      CD_TOKEN_2619: "${CD_TOKEN_2619:-}"
-      CD_TOKEN_2715: "${CD_TOKEN_2715:-}"
-      CD_TOKEN_2718: "${CD_TOKEN_2718:-}"
-      CD_TOKEN_2720: "${CD_TOKEN_2720:-}"
-      CD_TOKEN_2722: "${CD_TOKEN_2722:-}"
-      CD_TOKEN_2723: "${CD_TOKEN_2723:-}"
-      CD_TOKEN_2724: "${CD_TOKEN_2724:-}"
-      CD_TOKEN_2725: "${CD_TOKEN_2725:-}"
-      CD_TOKEN_2729: "${CD_TOKEN_2729:-}"
-      CD_TOKEN_2753: "${CD_TOKEN_2753:-}"
-      CD_TOKEN_2936: "${CD_TOKEN_2936:-}"
-      CD_TOKEN_2940: "${CD_TOKEN_2940:-}"
-      CD_TOKEN_6572: "${CD_TOKEN_6572:-}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS}"
+      # Tokens liegen ausschließlich im Stack-Env von Portainer (NIE im Repo, nie in der CI).
+      CD_TOKEN_2596: "${CD_TOKEN_2596}"
+      CD_TOKEN_2619: "${CD_TOKEN_2619}"
+      CD_TOKEN_2715: "${CD_TOKEN_2715}"
+      CD_TOKEN_2718: "${CD_TOKEN_2718}"
+      CD_TOKEN_2720: "${CD_TOKEN_2720}"
+      CD_TOKEN_2722: "${CD_TOKEN_2722}"
+      CD_TOKEN_2723: "${CD_TOKEN_2723}"
+      CD_TOKEN_2724: "${CD_TOKEN_2724}"
+      CD_TOKEN_2725: "${CD_TOKEN_2725}"
+      CD_TOKEN_2729: "${CD_TOKEN_2729}"
+      CD_TOKEN_2753: "${CD_TOKEN_2753}"
+      CD_TOKEN_2936: "${CD_TOKEN_2936}"
+      CD_TOKEN_2940: "${CD_TOKEN_2940}"
+      CD_TOKEN_6572: "${CD_TOKEN_6572}"
     volumes:
       # Über /admin gepflegte Orts-Korrekturen überleben hier Container-Neubauten.
       - moinkark-data:/data
@@ -42,6 +42,12 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.moinkark-api.rule=Host(`api.moin-kark.de`)"
+      # Geteilte Termin-Links tragen die Hauptdomain — "api.moin-kark.de"
+      # las sich fuer Empfaenger:innen technisch und wirkte wie ein Fehler.
+      # Nur diese beiden Pfade; alles andere auf moin-kark.de bleibt die
+      # statische Landingpage im KeyHelp-Docroot.
+      - "traefik.http.routers.moinkark-share.rule=Host(`moin-kark.de`) && (PathPrefix(`/event/`) || PathPrefix(`/.well-known/`) || Path(`/app`))"
+      - "traefik.http.routers.moinkark-share.service=moinkark-api"
       - "traefik.http.services.moinkark-api.loadbalancer.server.port=8787"
 
 networks:

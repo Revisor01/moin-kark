@@ -25,6 +25,12 @@ COPY apps/api ./apps/api
 
 ENV NODE_ENV=production
 ENV PORT=8787
+
+# Commit, aus dem gebaut wurde — erscheint unter GET / als `revision`. Setzt der
+# Deploy-Workflow; steht spät, damit ein neuer Commit den npm-ci-Layer nicht
+# ungültig macht.
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
 EXPOSE 8787
 
 # Nicht als root laufen. /data ist der Volume-Mountpoint der Admin-Korrekturen —

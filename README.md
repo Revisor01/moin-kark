@@ -286,29 +286,20 @@ Danach normal hochladen:
 
 ### API
 
-Läuft auf `server.godsapp.de` (Apache/KeyHelp → Traefik:8888 → Container:8787),
-Stack-Verzeichnis `/opt/stacks/moinkark-api/`.
+Läuft auf `server.godsapp.de` (Apache/KeyHelp → Traefik:8888 → Container:8787)
+als Portainer-Stack `moinkark-api`. **Ausgerollt wird über GitHub Actions**
+(`.github/workflows/api-deploy.yml`): Jeder Push auf `main`, der die API
+betrifft, testet, baut das Image nach `ghcr.io/revisor01/moinkark-api` und lässt
+Portainer es per Webhook ziehen. Der Lauf ist erst grün, wenn
+`https://api.moin-kark.de/` den gebauten Commit als `revision` meldet.
 
 ```bash
-# 1. Quellcode auf den Server spiegeln (ohne Secrets/node_modules)
-rsync -az --delete --exclude node_modules --exclude .git --exclude .env \
-  --exclude '*.log' --exclude apps/app \
-  ./ root@server.godsapp.de:/opt/stacks/moinkark-api/build/
-
-# 2. Image auf dem Server neu bauen
-ssh root@server.godsapp.de \
-  "cd /opt/stacks/moinkark-api/build && docker build -f apps/api/Dockerfile -t moinkark-api:latest ."
-
-# 3. Container mit dem NEUEN Image neu erstellen — über Portainer:
-#    Stack `moinkark-api` → „Redeploy" (oder per Portainer-MCP `redeploy_stack`).
+gh workflow run api-deploy.yml   # von Hand, z. B. nach einem Revert
 ```
 
-**Achtung:** `docker restart moinkark-api` reicht NICHT — es startet den alten
-Container mit dem alten Image neu, das frisch gebaute Image wird nie übernommen.
-(`docker-compose` v1 auf dem Server ist mit `--force-recreate` inkompatibel und
-entfernt dabei den Container — deshalb der Weg über Portainer.)
-
-Die 14 Tokens liegen als Portainer-Stack-ENV (`moinkark-api`), niemals im Repo.
+Ablauf, Secret, Rollback und Notfallweg ohne CI: [`docs/deploy.md`](docs/deploy.md).
+Die 14 ChurchDesk-Tokens und der Admin-Token liegen nur im Stack-Env von
+Portainer — nie im Repo, nie in der CI.
 
 ### Landingpage
 
