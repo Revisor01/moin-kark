@@ -14,17 +14,42 @@ updates:
           - minor
           - patch
     ignore:
-      # Expo und React Native werden gemeinsam und nur bewusst gehoben —
-      # ein einzelner Major bricht sonst den Build der ausgelieferten App.
-      - dependency-name: expo
-        update-types: ["version-update:semver-major"]
-      - dependency-name: expo-*
-        update-types: ["version-update:semver-major"]
-      - dependency-name: react-native
-        update-types: ["version-update:semver-major"]
+      # Das Expo-SDK legt die Versionen seiner nativen Pakete fest
+      # (expo/bundledNativeModules.json). Was dort exakt steht, hebt nur ein
+      # SDK-Wechsel oder `npx expo install --fix` — sonst laufen App und SDK
+      # auseinander, und der Store-Build bricht oder verhält sich anders als
+      # getestet.
       - dependency-name: react
-        update-types: ["version-update:semver-major"]
       - dependency-name: react-dom
+      - dependency-name: react-native
+      - dependency-name: react-native-reanimated
+      - dependency-name: react-native-worklets
+      - dependency-name: "@react-native-async-storage/async-storage"
+      - dependency-name: "@react-native-community/datetimepicker"
+      # Was das SDK mit ~ festlegt, bekommt Patches, mehr nicht.
+      - dependency-name: expo
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: react-native-gesture-handler
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: react-native-safe-area-context
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: react-native-screens
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: react-native-web
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # Typen folgen der Laufzeit: React-Typen der React-Version, Node-Typen
+      # der Node-Version in Dockerfile und CI (22).
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 ist der Umstieg auf den neuen Compiler (typescript-go) —
+      # ein eigenes Vorhaben, kein Routine-Update.
+      - dependency-name: typescript
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
