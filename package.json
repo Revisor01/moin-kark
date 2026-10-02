@@ -18,7 +18,7 @@
     "typecheck:app": "npm run typecheck --workspace apps/app",
     "dev:api": "npm run dev --workspace apps/api",
     "sync:theme-css": "npm run sync:theme-css --workspace packages/shared",
-    "audit:prod": "npm audit --omit=dev"
+    "audit:prod": "node .github/scripts/audit.mjs"
   },
   "overrides": {
     "nanoid": "^3.3.18",
