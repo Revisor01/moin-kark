@@ -68,6 +68,13 @@ describe("Dependabot und Expo-SDK", () => {
     expect(ignored("expo")).toEqual([MAJOR, MINOR].sort());
   });
 
+  it("bündelt die Action-Updates in einem PR", () => {
+    const actions = (parse(read(".github/dependabot.yml")) as any).updates.find(
+      (u: any) => u["package-ecosystem"] === "github-actions"
+    );
+    expect(Object.values(actions.groups).map((g: any) => g.patterns)).toEqual([["*"]]);
+  });
+
   it("lässt Pakete außerhalb des SDK in Ruhe", () => {
     for (const name of ["@maplibre/maplibre-react-native", "@tanstack/react-query", "@expo-google-fonts/dm-sans", "hono"]) {
       expect(ignored(name), name).toEqual([]);

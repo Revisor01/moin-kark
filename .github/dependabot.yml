@@ -56,3 +56,8 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
+    groups:
+      # Gebündelt, weil jeder Merge, der api-deploy.yml berührt, die API neu
+      # ausrollt — so wird es ein Deploy statt mehrerer.
+      actions:
+        patterns: ["*"]
