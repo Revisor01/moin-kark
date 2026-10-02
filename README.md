@@ -304,10 +304,10 @@ Portainer — nie im Repo, nie in der CI.
 ### Landingpage
 
 `apps/web/` ist statisches HTML ohne Build-Step und liegt im KeyHelp-Docroot von
-`moin-kark.de`:
+`moin-kark.de`. Zugang und Zielpfad stehen bewusst nicht im Repo:
 
 ```bash
-rsync -az --delete apps/web/ root@server.godsapp.de:/home/users/revisor/www/moin-kark.de/
+rsync -az --delete apps/web/ <ssh-ziel>:<docroot von moin-kark.de>/
 ```
 
 ### Web-App
@@ -316,7 +316,7 @@ rsync -az --delete apps/web/ root@server.godsapp.de:/home/users/revisor/www/moin
 
 ```bash
 cd apps/app && npm run build:web
-rsync -az --delete dist/ root@server.godsapp.de:/home/users/revisor/www/karte.moin-kark.de/
+rsync -az --delete dist/ <ssh-ziel>:<docroot von karte.moin-kark.de>/
 ```
 
 **Achtung:** `npx expo export` direkt aufzurufen reicht NICHT — `npm run build:web`
@@ -327,7 +327,8 @@ Nach dem Deploy prüfen, ob `/maplibre-gl-worker.mjs` HTTP 200 liefert.
 ## Versionierung
 
 [SemVer](https://semver.org/lang/de/); Änderungen stehen im [CHANGELOG.md](CHANGELOG.md).
-Jede ausgelieferte Version bekommt einen Tag `vX.Y.Z` und ein GitHub-Release.
+Jede ausgelieferte Version bekommt einen Tag `X.Y.Z` (ohne „v“, wie in
+[docs/store-release.md](docs/store-release.md)) und ein GitHub-Release.
 
 Einzige Quelle für Version, iOS-Build-Nummer und Android-versionCode ist
 `apps/app/app.json`. Store-Builds laufen über GitHub Actions — Ablauf, Dry-Run
