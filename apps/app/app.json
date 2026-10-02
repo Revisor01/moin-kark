@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "de.godsapp.kkdithkarte",
-      "buildNumber": "85",
+      "buildNumber": "86",
       "icon": {
         "light": "./assets/icon-ios-light.png",
         "dark": "./assets/icon-ios-dark.png",
@@ -43,7 +43,7 @@
     },
     "android": {
       "package": "de.godsapp.moinkark",
-      "versionCode": 23,
+      "versionCode": 24,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
