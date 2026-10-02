@@ -7,8 +7,10 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-Noch nicht veröffentlicht. Die erste Store-Fassung wird **1.0.0** — bis dahin
-sammelt sich hier alles, was seit Projektbeginn entstanden ist.
+## [1.0.0] - 2026-10-02
+
+Die erste Store-Fassung, seit 02.10.2026 bei Apple und Google im Review. Sie
+enthält alles, was seit Projektbeginn entstanden ist.
 
 ### Hinzugefügt
 
@@ -453,4 +455,5 @@ sammelt sich hier alles, was seit Projektbeginn entstanden ist.
   haben dafür eine einzige Quelle, und ein Test wacht darüber, dass ein
   Android-Release nie mit dem Entwicklungsschlüssel signiert wird.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/commits/main
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/Revisor01/moin-kark/releases/tag/1.0.0
