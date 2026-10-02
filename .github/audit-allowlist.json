@@ -1,0 +1,12 @@
+{
+  "$comment": "Audit-Meldungen, die die CI zulässt. Gelesen von .github/scripts/audit.mjs — dort steht, wann ein Eintrag greift. Kein Eintrag ohne Begründung, und raus damit, sobald es einen Fix gibt.",
+  "advisories": [
+    {
+      "id": "GHSA-86w9-cpqp-85rv",
+      "package": "node-forge",
+      "onlyVia": ["@expo/cli", "@expo/code-signing-certificates"],
+      "reason": "Steckt nur im Expo-Kommandozeilenwerkzeug (Code-Signing für EAS Update) — nicht in der App, nicht im API-Image. Auch die neueste node-forge (1.4.0) ist betroffen, und jede Expo-Version bis SDK 58 zieht sie.",
+      "since": "2026-10-02"
+    }
+  ]
+}

@@ -50,13 +50,17 @@ jobs:
       # Was ausgeliefert wird, muss sauber sein. Dev-Abhängigkeiten laufen nie
       # auf einem Server und brechen den Lauf deshalb nicht.
       #
-      # Schwelle „high": Der einzige offene Befund (decode-uri-component, medium)
+      # Schwelle „high": Der offene Befund decode-uri-component (moderate)
       # steckt unter expo-router und lässt sich nur durch dessen Downgrade lösen
       # — die gepatchte Fassung ist ESM-only, query-string lädt sie per require().
       # Auf „moderate" wäre der Lauf dauerhaft rot und niemand sähe den nächsten
       # echten Befund.
+      #
+      # Ausnahmen ab „high" stehen einzeln und begründet in
+      # .github/audit-allowlist.json. Ein Eintrag lässt genau eine Meldung zu,
+      # nie eine Schwelle — die Regeln stehen im Skript.
       - name: Produktiv-Abhängigkeiten
-        run: npm audit --omit=dev --audit-level=high
+        run: node .github/scripts/audit.mjs
 
       # Nur zur Ansicht — schlägt bewusst nicht fehl, sonst blockiert ein
       # Befund in einem Build-Werkzeug jeden Merge.
