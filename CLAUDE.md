@@ -63,13 +63,9 @@ Jede Verhaltensänderung bekommt Tests im selben Commit.
 
 ## Ausgelieferte Apps nie brechen
 
-**Stand 14.09.2026: noch nichts veröffentlicht** — die erste Store-Fassung wird
-1.0.0. Bis dahin lassen sich Antwortformen noch frei ändern; einzige Leserinnen
-sind die Web-App und die Landingpage, die mitdeployen.
-
-**Ab der ersten Store-Fassung gilt:** Auf den Geräten laufen Versionen, die sich
-nicht mitdeployen lassen — sie sind Leserinnen dieser API. Die Antwortformen sind
-dann ein **Vertrag**:
+**Seit 02.10.2026 liegt 1.0.0 in beiden Stores im Review.** Damit gilt: Auf den
+Geräten laufen Versionen, die sich nicht mitdeployen lassen — sie sind
+Leserinnen dieser API. Die Antwortformen sind ein **Vertrag**:
 
 - Aus einem Array wird kein Objekt (und umgekehrt).
 - Felder verschwinden nicht, Typen ändern sich nicht.
