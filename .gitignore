@@ -37,9 +37,6 @@ yarn-error.*
 .vscode/
 *.swp
 
-# Playwright MCP artifacts
-.playwright-mcp/
-
 # Laufzeit-Daten der API (lokale Entwicklung; im Container ein Volume)
 apps/api/data/
 
@@ -50,10 +47,6 @@ apps/app/credentials.json
 
 # Design-Quellgrafiken (lokal, nicht committen)
 design/
-
-# Claude Code Session-Artefakte
-.claude/scheduled_tasks.lock
-.claude/*.lock
 
 # Workspace: nur der Root-Lock ist maßgeblich
 apps/app/package-lock.json
@@ -66,3 +59,31 @@ apps/app/public/maplibre-gl-shared.mjs
 # Python-Bytecode des Play-Upload-Skripts (entsteht beim lokalen Probelauf)
 __pycache__/
 *.pyc
+
+# --- Arbeitsnotizen und lokale Konfiguration (gehoeren nicht ins Repo) ---
+.planning/
+.claude/
+CLAUDE.local.md
+HANDOFF*.md
+UEBERGABE*.md
+*review-notes*.md
+.playwright-mcp/
+
+# --- Zugangsdaten und Schluessel ---
+.env
+.env.*
+!.env.example
+*.env
+secrets*
+*.p8
+*.p12
+*.mobileprovision
+*.jks
+release.keystore
+*service-account*.json
+
+# --- System ---
+.DS_Store
+
+# Von React Native versioniert, setzt nur den Pfad zu node
+!.xcode.env
