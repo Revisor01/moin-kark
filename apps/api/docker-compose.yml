@@ -1,9 +1,8 @@
-# Vorlage des Portainer-Stacks `moinkark-api` (Stack 271) auf «server»
-# (Apache → Traefik:8888 → Container). Inhalt = Stack-Datei in Portainer;
-# wer das eine ändert, ändert das andere mit.
+# Vorlage des Portainer-Stacks `moinkark-api`. Inhalt = Stack-Datei in
+# Portainer; wer das eine ändert, ändert das andere mit.
 #
 # Das Image baut die CI (.github/workflows/api-deploy.yml) und legt es in GHCR ab;
-# der Stack-Webhook zieht `latest` neu. Ablauf und Notfallweg: docs/deploy.md.
+# der Stack-Webhook zieht `latest` neu.
 # Lokal bauen: `docker build -f apps/api/Dockerfile .` im Monorepo-Root.
 services:
   moinkark-api:

@@ -512,7 +512,7 @@ function tokenOk(header: string | undefined): boolean {
  * auch für das richtige Token, bis das Fenster abläuft. Ohne das ließe sich
  * ein Token unbegrenzt schnell durchprobieren.
  *
- * Die Adresse kommt aus X-Real-IP (setzt Apache aus REMOTE_ADDR, überschreibt
+ * Die Adresse kommt aus X-Real-IP (setzt der vorgeschaltete Proxy, überschreibt
  * damit, was der Client schickt), sonst aus dem ersten X-Forwarded-For-Eintrag.
  * Ohne beides (lokal, Tests) landen alle in einem Topf — dort gibt es nur einen.
  */

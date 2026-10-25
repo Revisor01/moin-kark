@@ -6,7 +6,6 @@ name: Android Release Build
 # Version und versionCode kommen aus apps/app/app.json (einzige Quelle;
 # `expo prebuild` schreibt sie in android/app/build.gradle). Vor dem Dispatch:
 # versionCode bumpen, apps/app/release-notes-de.txt aktualisieren, committen.
-# Ablauf und Secrets: docs/store-release.md.
 
 on:
   workflow_dispatch:
