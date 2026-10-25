@@ -1,332 +1,170 @@
-# Moin Kark — Was ist los in Dithmarschen
+<p align="center">
+  <img src="apps/app/assets/icon.png" alt="Moin Kark" width="128" height="128">
+</p>
 
-Eine stilisierte Karte des Kirchenkreises Dithmarschen, die zeigt, was wo los ist —
-Gottesdienste, Konzerte, Gruppen, Yoga … Jedes Event als exakter Pin, mit Kirchengemeinde
-und Kirchspiel. Cross-Platform: Web + iOS + Android aus einer Codebasis.
+<h1 align="center">Moin Kark</h1>
 
-| Was          | Wo                                              |
-|--------------|-------------------------------------------------|
-| Landingpage  | https://moin-kark.de                             |
-| Web-App      | https://karte.moin-kark.de                       |
-| API          | https://api.moin-kark.de                         |
-| iOS          | App Store / TestFlight (`de.godsapp.kkdithkarte`)|
+<p align="center">
+  Was ist los in Dithmarschen? Gottesdienste, Konzerte, Gruppen und Feste<br>
+  aller Kirchengemeinden des Kirchenkreises auf einer Karte.
+</p>
 
-## Architektur
+<p align="center">
+  <img src="https://img.shields.io/badge/Plattform-Web%20%C2%B7%20iOS%20%C2%B7%20Android-blue" alt="Plattform">
+  <img src="https://img.shields.io/badge/Expo-React%20Native-000020?logo=expo" alt="Expo">
+  <img src="https://img.shields.io/badge/Lizenz-quelloffen%20zur%20Einsicht-lightgrey" alt="Lizenz">
+</p>
 
-```
-ChurchDesk REST API v3 (14 Orgs, geheime Read-Tokens)
-        │  API aggregiert, dedupliziert, → GeoJSON, Cache
-        ▼
-apps/api     (Node + Hono)        →  api.moin-kark.de
-        │  GET /events.geojson
-        ▼
-apps/app     (Expo / React Native + RN Web)
-        │  MapLibre (Web: react-map-gl · Native: maplibre-react-native)
-        ▼
-   Web · iOS · Android
-```
+## Worum es geht
 
-## Struktur
+Die Termine der Kirchengemeinden im Kirchenkreis Dithmarschen stehen in vielen
+einzelnen Kalendern. Wer wissen will, was am Wochenende in der Nähe los ist,
+muss sie alle einzeln aufrufen.
 
-| Pfad               | Inhalt                                                              |
-|--------------------|---------------------------------------------------------------------|
-| `packages/shared/` | Geteilte TS-Typen, Kirchspiel-Mapping, Kirchen-Koordinaten-Fallback  |
-| `apps/api/`        | Read-Only Aggregator (Hono). Hält die 14 Tokens server-seitig.       |
-| `apps/app/`        | Expo-App (Web + iOS + Android).                                     |
-| `apps/web/`        | Statische Landingpage für `moin-kark.de`.                           |
+Moin Kark legt sie zusammen auf eine Karte: Jede Veranstaltung als Pin an
+ihrem Ort, mit Gemeinde und Kirchspiel, filterbar nach Tag, Gemeinde und Art.
+Die Termine kommen direkt aus den Kalendern der Gemeinden. Merken und
+Erinnerungen bleiben auf dem eigenen Gerät; ein Konto gibt es nicht.
 
-Ein Monorepo, weil App, API und Landingpage sich `packages/shared` teilen
-(Typen, Kirchspiel-Mapping). Getrennte Repos müssten dieses Paket duplizieren
-oder publizieren — beides ohne Gewinn.
+## Funktionen
 
-### Namensgebung
+- **Karte und Liste** — alle Termine als Pins, dazu eine ziehbare Liste; nahe
+  beieinander liegende Termine werden gebündelt
+- **Filter** — heute, diese Woche, Wochenende oder ein eigener Zeitraum; dazu
+  Gemeinde, Kategorie und der sichtbare Kartenausschnitt
+- **Standort** — wo bin ich, was ist in der Nähe
+- **Merken und Erinnern** — gemerkte Termine bleiben auf dem Gerät, Erinnerungen
+  kommen als lokale Mitteilung, ohne Server
+- **Teilen** — jeder Termin lässt sich weitergeben; der Link öffnet ihn in der
+  App oder auf der Karte im Browser
+- **Navigation** — Weg zum Ort in Apple Karten oder Google Maps
+- **Ohne Netz** — zuletzt geladene Termine bleiben lesbar
+- Web, iOS und Android aus einer Codebasis
 
-Interne Pakete heißen `@moinkark/*`, der Container `moinkark-api`.
+## Installation
 
-Nicht umbenannt und **bewusst so gelassen**: `slug` (`kkdith-karte`), `scheme`
-(`kkdith`) und die Bundle-ID (`de.godsapp.kkdithkarte`) in `apps/app/app.json`.
-Der Slug hängt am EAS-Projekt, Scheme und Bundle-ID an bereits ausgelieferten
-Builds — eine Änderung würde die App im Store zu einer anderen App machen und
-Deep-Links brechen.
+**[Im Browser öffnen »](https://karte.moin-kark.de)**
 
-## Wichtig: Secrets
+Die Apps für iOS und Android liegen seit Oktober 2026 bei Apple und Google zur
+Prüfung; die Links folgen hier, sobald sie erschienen sind.
 
-Die 14 ChurchDesk-Read-Tokens sind **geheim** und dürfen **nie** ins Repo oder ins
-App-Bundle. Sie leben ausschließlich als Container-ENV der API (`apps/api/.env`,
-gitignored). Die App kennt nur die API-URL.
+## Versionen
 
-## Quickstart
+Was sich wann geändert hat, steht in [CHANGELOG.md](CHANGELOG.md) — nach
+[Keep a Changelog](https://keepachangelog.com/de/1.1.0/), aus Sicht der
+Nutzer:innen geschrieben. Die
+[Releases](https://github.com/Revisor01/moin-kark/releases) fassen jede Version
+zusammen.
 
-Voraussetzung: Node ≥ 20. Das Repo ist ein npm-Workspace — `npm install` läuft
-**im Root** und installiert alle Pakete. Maßgeblich ist allein die
-`package-lock.json` im Root (die Apps haben bewusst keine eigene).
+## Selbst betreiben
 
-### API lokal
+Zum Ausprobieren auf dem eigenen Rechner — die Lizenz erlaubt das. Nötig ist
+Node 22 oder neuer. Das Repository ist ein npm-Workspace: `npm install` läuft
+einmal im Wurzelverzeichnis und installiert alle Teile.
 
 ```bash
+git clone https://github.com/Revisor01/moin-kark.git
+cd moin-kark
 npm install
-cd apps/api
-cp .env.example .env   # 14 Tokens eintragen
-npm run dev
-curl localhost:8787/events.geojson | python3 -m json.tool
 ```
 
-Ohne Tokens startet die API zwar, liefert aber ein leeres GeoJSON.
+**1. API starten.** Die API sammelt die Termine aus ChurchDesk ein, je
+Gemeinde mit einem Lese-Token. Die Tokens gehören nur in die Umgebung der API,
+nie in die App. Ohne Tokens startet die API trotzdem und liefert eine leere
+Karte.
 
-### App lokal
+```bash
+cd apps/api
+cp .env.example .env    # Tokens und Einstellungen eintragen
+npm run dev
+# hört auf Port 8787 — Probe: curl localhost:8787/healthz
+```
+
+| Variable | Pflicht | Bedeutung |
+|----------|---------|-----------|
+| `CD_TOKEN_<org>` | nein | ChurchDesk-Lese-Token je Organisation |
+| `ALLOWED_ORIGINS` | nein | erlaubte Herkunft für Browser, kommagetrennt |
+| `ADMIN_TOKEN` | nein | schaltet die Orts-Verwaltung unter `/admin` frei |
+| `DATA_DIR` | nein | Ablage der Ortskorrekturen aus `/admin` |
+| `PORT`, `CACHE_TTL_MS`, `DEFAULT_WINDOW_DAYS` | nein | Port, Zwischenspeicher, Zeitfenster |
+
+**2. App starten.** Ohne Angabe spricht die App die öffentliche API an; für die
+eigene gilt `EXPO_PUBLIC_API_URL`. Die Herkunft der Web-App muss dann in
+`ALLOWED_ORIGINS` stehen.
 
 ```bash
 cd apps/app
-npm run web       # Browser
-npm run ios       # Simulator (erfordert vorheriges expo prebuild)
-npm run android
+EXPO_PUBLIC_API_URL=http://localhost:8787 npm run web
 ```
 
-Die App zieht ihre Daten aus der API. Für lokale Entwicklung die eigene Origin in
-`ALLOWED_ORIGINS` eintragen; eine abweichende API-URL geht über
-`EXPO_PUBLIC_API_URL`.
+Für iOS und Android braucht es einen nativen Build (`npm run ios`,
+`npm run android`) mit Xcode bzw. Android Studio.
 
-### Design-Werte ändern
+**Tests.** `npm test` im Wurzelverzeichnis prüft das geteilte Paket, die API
+und die App; `npm run typecheck` die Typen.
 
-Farben, Abstände, Textgrößen, Radien und Schatten liegen **ausschließlich** in
-`packages/shared/src/theme.ts`. App, Landingpage und die Seiten `/admin` und
-`/status` beziehen alles von dort — Werte werden nicht in Komponenten oder CSS
-geschrieben.
+## Aufbau
 
-Die Landingpage ist statisch und kann kein TypeScript importieren; sie lädt
-`apps/web/theme.css`. Nach jeder Theme-Änderung deshalb:
-
-```bash
-npm run sync:theme-css
+```
+moin-kark
+├── apps/api/          — sammelt die Termine aus ChurchDesk, liefert GeoJSON
+├── apps/app/          — die App (Expo / React Native, auch fürs Web)
+├── apps/web/          — Landingpage, statisches HTML
+├── packages/shared/   — Typen, Kirchspiel-Zuordnung, Kirchen-Koordinaten, Gestaltung
+└── docs/              — API-Beschreibung (openapi.yaml)
 ```
 
-Wird das vergessen, schlägt der Test in `packages/shared` fehl und nennt den
-Befehl — die Landingpage kann also nicht unbemerkt auf einem alten Farbstand
-stehen bleiben.
+Die Endpunkte der API beschreibt [docs/openapi.yaml](docs/openapi.yaml).
 
-## Endpoints
+**Worauf es beim Bauen ankommt:**
+- **Die Tokens bleiben auf dem Server.** Die App kennt nur die Adresse der API.
+- **Gestaltung an einer Stelle.** Farben, Abstände und Schriftgrößen stehen nur
+  in `packages/shared/src/theme.ts`. Die Landingpage liest sie über
+  `apps/web/theme.css`; nach jeder Änderung `npm run sync:theme-css`, sonst
+  schlägt ein Test fehl.
+- **Fürs Web immer `npm run build:web`.** Der Befehl kopiert den Karten-Worker
+  mit; ohne ihn bleibt die Karte leer, ohne Fehlermeldung.
+- **Ausgelieferte Apps nie brechen.** Versionen in den Stores lesen die API mit;
+  Antwortformen ändern sich nur additiv (siehe [CLAUDE.md](CLAUDE.md)).
+- **Bundle-ID und Schema bleiben.** `de.godsapp.kkdithkarte` und `kkdith`
+  stammen aus der Anfangszeit; eine Änderung machte die App im Store zu einer
+  anderen und bräche geteilte Links.
 
-| Route               | Inhalt                                                            |
-|---------------------|-------------------------------------------------------------------|
-| `/events.geojson`   | Alle Termine als GeoJSON-FeatureCollection                        |
-| `/categories.json`  | Kategorien mit Farbe und Anzahl                                   |
-| `/version.json`     | Kurz-Hash des Datenbestands (Änderungs-Polling der App)           |
-| `/healthz`          | Health-Check mit `orgsFailed` + Cache-Alter (für Uptime-Monitore) |
-| `/status`           | Öffentliche Monitor-Seite (auch als `/status.json`)               |
-| `/admin`            | Orts-Verwaltung, nur mit `ADMIN_TOKEN` (s.u.)                     |
+## Mitmachen
 
-Das Zeitfenster ist serverseitig fest (heute + `DEFAULT_WINDOW_DAYS`). Die frühere
-`?from=`/`?to=`-Unterstützung ist entfernt: Kein Client nutzte sie, aber jeder
-beliebige Parameter erzeugte einen eigenen Cache-Eintrag samt kompletter
-14-Org-Fetch-Kaskade (Token- und Speicher-Schutz).
+Fehlermeldungen und Vorschläge sind willkommen — gern als
+[Issue](https://github.com/Revisor01/moin-kark/issues). Sicherheitslücken bitte
+vertraulich melden, wie in [SECURITY.md](SECURITY.md) beschrieben. Pull
+Requests laufen durch Tests und einen Secret-Scan; die Grundsätze für Beiträge
+stehen in [CLAUDE.md](CLAUDE.md).
 
-### Orts-Verwaltung (`/admin`)
+## Datenschutz
 
-Die statischen Koordinaten-Korrekturen (`packages/shared/src/kirchen-coords.ts`)
-bleiben die im Code versionierte Basis. Zusätzlich lassen sich Korrekturen zur
-Laufzeit unter `/admin` pflegen (Ortsname → Koordinate, Titel-Präfix → Koordinate);
-sie haben Vorrang, werden als JSON im `DATA_DIR`-Volume persistiert und stoßen
-beim Speichern sofort einen Daten-Refresh an. Login per `ADMIN_TOKEN` (ENV);
-ohne gesetzten Token ist `/admin` deaktiviert. Der `/status`-Monitor listet alle
-Events, die mangels Koordinate auf einem Gemeinde-Fallback-Pin liegen — das sind
-die Kandidaten für neue Einträge.
+Moin Kark braucht kein Konto und sammelt nichts über seine Nutzer:innen.
+Gemerkte Termine und Erinnerungen bleiben auf dem Gerät. Der Standort wird nur
+auf dem Gerät verwendet, um die Karte zu zentrieren.
 
-## Android-Signing
-
-Der Release-Keystore und seine Zugangsdaten liegen **außerhalb des Repos**;
-die EAS-Anbindung steht in `apps/app/credentials.json` (ignoriert). Die App hat
-im Keystore einen eigenen Alias, `moinkark`.
-
-Der Build liest die Werte als Gradle-Properties oder Umgebungsvariablen
-`MOINKARK_KEYSTORE_PATH`, `MOINKARK_KEYSTORE_PASSWORD`, `MOINKARK_KEY_ALIAS`,
-`MOINKARK_KEY_PASSWORD` (lokal: Werte in die Umgebung laden, dann
-`cd apps/app/android && ./gradlew bundleRelease`). Ohne sie bleibt das Release
-unsigniert — nie mit dem Debug-Key.
-
-> **Ohne diesen Schlüssel sind keine Play-Store-Updates mehr möglich.** Google
-> akzeptiert Updates nur, wenn sie mit demselben Key signiert sind wie die
-> Erstveröffentlichung. Geht er verloren, muss die App unter neuer Package-ID
-> neu veröffentlicht werden und alle Installationen sind verloren.
-> Die Datei gehört also ins Backup — ein Backup vom 2026-08-02 liegt neben ihr
-> als `.bak-20260802`.
-
-## iOS-Build: MapLibre-Workaround (wichtig)
-
-Xcodes SwiftPM hängt auf diesem Rechner beim Laden des MapLibre-Binärartefakts:
-`xcodebuild -resolvePackageDependencies` bleibt bei 0 % CPU in
-`BinaryArtifactsManager.download` stehen — ohne offene Verbindung, ohne Timeout,
-reproduzierbar auch ohne EAS. Der Download selbst funktioniert (per `curl` in
-Sekunden, Prüfsumme korrekt), es ist ein Xcode-Problem.
-
-Abhilfe ist ein lokaler SwiftPM-Mirror, der bereits eingerichtet ist:
-
-| Was | Wo |
-|---|---|
-| Mirror-Repo (enthält das XCFramework als Datei) | `~/.local/share/moinkark-spm-mirror` |
-| Mirror-Konfiguration | `~/.swiftpm/configuration/mirrors.json` |
-| Gepinnter Commit | in `ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved` |
-
-Beides liegt **außerhalb des Repos** und muss auf einem neuen Rechner neu
-angelegt werden:
-
-```bash
-# 1. Original-Repo klonen, auf die benötigte Version wechseln
-git clone https://github.com/maplibre/maplibre-gl-native-distribution ~/.local/share/moinkark-spm-mirror
-cd ~/.local/share/moinkark-spm-mirror && git checkout 6.26.0
-
-# 2. Artefakt herunterladen (URL steht in Package.swift des Tags)
-curl -L -o MapLibre.dynamic.xcframework.zip \
-  https://github.com/maplibre/maplibre-native/releases/download/ios-v6.26.0/MapLibre.dynamic.xcframework.zip
-
-# 3. In Package.swift url+checksum durch path ersetzen:
-#    .binaryTarget(name: "MapLibre", path: "MapLibre.dynamic.xcframework.zip")
-git add -A && git commit -m "local artifact" && git tag -f 6.26.0
-
-# 4. Mirror registrieren
-mkdir -p ~/.swiftpm/configuration
-cat > ~/.swiftpm/configuration/mirrors.json <<EOF
-{"object":[{"original":"https://github.com/maplibre/maplibre-gl-native-distribution",
- "mirror":"$HOME/.local/share/moinkark-spm-mirror"}],"version":1}
-EOF
-
-# 5. Den neuen Commit-Hash in Package.resolved eintragen (git rev-parse HEAD)
-```
-
-Achtung: Das Format der `mirrors.json` ist ein **Objekt** mit `object`/`version`,
-kein Array — ein Array wird stillschweigend ignoriert und die Auflösung meldet
-fälschlich Erfolg mit leerem Ergebnis.
-
-## iOS-Build: Plattform fehlt nach Xcode-Update
-
-Nach einem Xcode-Update schlägt der Build mit „iOS x.y is not installed. Please
-download and install the platform" fehl — das SDK ist da, aber die
-Plattform-Runtime fehlt (`xcrun simctl runtime list` zeigt 0 Disk Images).
-Abhilfe (~8,5 GB Download):
-
-```bash
-xcodebuild -downloadPlatform iOS
-```
-
-## iOS-Upload: eas submit versandet → altool direkt
-
-`eas submit --path …` meldet „Scheduled iOS submission", aber der Build kommt
-nie in App Store Connect an (Expo-seitige Submission verschwindet ohne Fehler;
-eine Status-Abfrage per CLI gibt es nicht). Verlässlicher Weg — direkt mit
-Apples Tool und dem ASC-API-Key (erwartet `AuthKey_<KEY_ID>.p8` in
-`~/private_keys/`):
-
-```bash
-xcrun altool --upload-app -f MoinKark.ipa -t ios \
-  --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
-```
-
-## iOS-Build: fastlane-Timeout
-
-`xcodebuild -showBuildSettings` braucht auf diesem Rechner **~18 Sekunden**.
-fastlane startet mit 3 s und gibt nach vier Versuchen bei 24 s auf — der Build
-bricht dann mit „Run fastlane step failed with an unknown error" ab, obwohl
-weder Code noch Signierung ein Problem haben. Darum vor dem Build setzen:
-
-```bash
-export FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT=120
-export FASTLANE_XCODEBUILD_SETTINGS_RETRIES=5
-```
-
-`expo-doctor` meldet außerdem einige Pakete, die ein paar Patch-Versionen hinter
-dem SDK-Soll liegen (u.a. `expo-location`, `expo-notifications`). Der Schritt
-schlägt fehl, **stoppt den Build aber nicht** — nicht mitten im Release
-aktualisieren, sondern separat mit `npx expo install --check`.
-
-## iOS-Build: „Your session has expired" beim Export
-
-Der Build läuft durch, dann bricht `exportArchive` ab mit
-`resultString = "Your session has expired. Please log in."` → `** EXPORT FAILED **`.
-Ursache ist **nicht** die Signierung, sondern `uploadSymbols`: Das Hochladen der
-dSYMs braucht eine gültige Xcode-Sitzung bei Apple, und die läuft still ab.
-
-Das Archiv ist zu dem Zeitpunkt fertig — die IPA lässt sich ohne Apple-Kontakt
-daraus exportieren:
-
-```bash
-cat > /tmp/export.plist <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>method</key><string>app-store-connect</string>
-  <key>teamID</key><string>J459G9CJT5</string>
-  <key>signingStyle</key><string>manual</string>
-  <key>provisioningProfiles</key>
-  <dict><key>de.godsapp.kkdithkarte</key><string>Moin Kark AppStore 2</string></dict>
-  <key>uploadSymbols</key><false/>
-  <key>manageAppVersionAndBuildNumber</key><false/>
-</dict></plist>
-PLIST
-
-xcodebuild -exportArchive \
-  -archivePath ~/Library/Developer/Xcode/Archives/<datum>/MoinKark*.xcarchive \
-  -exportPath /tmp/export -exportOptionsPlist /tmp/export.plist
-```
-
-Wichtig: **kein** `-allowProvisioningUpdates` — der Schalter erzwingt den
-Apple-Kontakt und lässt den Export erneut scheitern. `uploadSymbols=false`
-kostet nur die Crash-Symbolisierung in App Store Connect.
-
-Danach normal hochladen:
-`npx eas-cli submit --platform ios --profile production --path /tmp/export/MoinKark.ipa`
-
-## Deployment
-
-### API
-
-Läuft als Container hinter einem Reverse Proxy, verwaltet mit Portainer.
-**Ausgerollt wird über GitHub Actions**
-(`.github/workflows/api-deploy.yml`): Jeder Push auf `main`, der die API
-betrifft, testet, baut das Image nach `ghcr.io/revisor01/moinkark-api` und lässt
-Portainer es per Webhook ziehen. Der Lauf ist erst grün, wenn
-`https://api.moin-kark.de/` den gebauten Commit als `revision` meldet.
-
-```bash
-gh workflow run api-deploy.yml   # von Hand, z. B. nach einem Revert
-```
-
-Die 14 ChurchDesk-Tokens und der Admin-Token liegen nur im Stack-Env von
-Portainer — nie im Repo, nie in der CI.
-
-### Landingpage
-
-`apps/web/` ist statisches HTML ohne Build-Step und liegt im Webserver-Docroot von
-`moin-kark.de`. Zugang und Zielpfad stehen bewusst nicht im Repo:
-
-```bash
-rsync -az --delete apps/web/ <ssh-ziel>:<docroot von moin-kark.de>/
-```
-
-### Web-App
-
-`karte.moin-kark.de` wird aus dem Expo-Web-Export bedient:
-
-```bash
-cd apps/app && npm run build:web
-rsync -az --delete dist/ <ssh-ziel>:<docroot von karte.moin-kark.de>/
-```
-
-**Achtung:** `npx expo export` direkt aufzurufen reicht NICHT — `npm run build:web`
-kopiert vorher den MapLibre-Web-Worker nach `public/`. Fehlt der, bleibt die Karte
-leer, ohne eine einzige Fehlermeldung (siehe `apps/app/scripts/sync-map-worker.mjs`).
-Nach dem Deploy prüfen, ob `/maplibre-gl-worker.mjs` HTTP 200 liefert.
-
-## Versionierung
-
-[SemVer](https://semver.org/lang/de/); Änderungen stehen im [CHANGELOG.md](CHANGELOG.md).
-Jede ausgelieferte Version bekommt einen Tag `X.Y.Z` (ohne „v“) und ein
-GitHub-Release.
-
-Einzige Quelle für Version, iOS-Build-Nummer und Android-versionCode ist
-`apps/app/app.json`. Store-Builds laufen über GitHub Actions
-(`ios-release.yml`, `android-release.yml`); die nötigen Secrets nennen die
-Workflows im Kopf.
+Die vollständige Erklärung steht unter
+[simonluthe.de/apps/moinkark/datenschutz](https://simonluthe.de/apps/moinkark/datenschutz/).
 
 ## Lizenz
 
-Quelloffen zur Einsicht, Nutzung nur mit schriftlicher Erlaubnis; die
-Bedingungen stehen in [LICENSE](LICENSE). © 2026 Simon Luthe
+**Quelloffen zur Einsicht — Nutzung nur mit schriftlicher Erlaubnis.**
+Der vollständige Text steht in [LICENSE](LICENSE).
+
+- **Ohne Weiteres erlaubt:** lesen, herunterladen, studieren, zu Lern- und
+  Prüfzwecken auf eigenen Geräten ausführen, Sicherheitslücken melden,
+  darüber berichten.
+- **Braucht eine Vereinbarung:** der Betrieb für echte Nutzer:innen, die
+  Weitergabe an Dritte, die Verwendung von Teilen des Codes in anderer
+  Software.
+
+## Hinweis
+
+Die Termine stammen aus den Kalendern der Kirchengemeinden im Kirchenkreis
+Dithmarschen; für Inhalt und Richtigkeit sind die Gemeinden verantwortlich.
+
+## Kontakt
+
+Pastor Simon Luthe · [mail@simonluthe.de](mailto:mail@simonluthe.de) ·
+[moin-kark.de](https://moin-kark.de)
