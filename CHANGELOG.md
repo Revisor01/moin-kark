@@ -7,6 +7,10 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Sonstiges
+
+- Lizenz festgelegt: Der Quelltext ist zur Einsicht offen, der Betrieb braucht eine schriftliche Erlaubnis.
+
 ## [1.0.0] - 2026-10-02
 
 Die erste Store-Fassung, seit 02.10.2026 bei Apple und Google im Review. Sie
