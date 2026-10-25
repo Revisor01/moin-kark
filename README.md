@@ -325,3 +325,8 @@ Einzige Quelle für Version, iOS-Build-Nummer und Android-versionCode ist
 `apps/app/app.json`. Store-Builds laufen über GitHub Actions
 (`ios-release.yml`, `android-release.yml`); die nötigen Secrets nennen die
 Workflows im Kopf.
+
+## Lizenz
+
+Quelloffen zur Einsicht, Nutzung nur mit schriftlicher Erlaubnis; die
+Bedingungen stehen in [LICENSE](LICENSE). © 2026 Simon Luthe
