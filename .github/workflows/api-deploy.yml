@@ -5,10 +5,8 @@ name: API Deploy
 # bis https://api.moin-kark.de/ den gebauten Commit meldet und der Feed
 # antwortet. Erst dann ist er grün.
 #
-# Ablauf, Secret und Notfallweg: docs/deploy.md.
-#
-# Startet von selbst bei jedem Push auf main, der die API betrifft. Von Hand
-# (auch für den Cloud-Agenten): Actions → „API Deploy" → Run workflow, oder
+# Startet von selbst bei jedem Push auf main, der die API betrifft. Von Hand:
+# Actions → „API Deploy" → Run workflow, oder
 #   gh workflow run api-deploy.yml
 
 on:
@@ -107,7 +105,7 @@ jobs:
           WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_API }}
         run: |
           if [ -z "$WEBHOOK_URL" ]; then
-            echo "::error::Secret PORTAINER_WEBHOOK_API fehlt — Image liegt in GHCR, ausgerollt wurde nichts. Siehe docs/deploy.md."
+            echo "::error::Secret PORTAINER_WEBHOOK_API fehlt — Image liegt in GHCR, ausgerollt wurde nichts."
             exit 1
           fi
           curl -fsS -X POST --max-time 120 "$WEBHOOK_URL"

@@ -98,8 +98,8 @@ android {
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     // Release-Keystore: Gradle-Property (-PMOINKARK_…) hat Vorrang, sonst die
-    // gleichnamige Umgebungsvariable (lokal: `source ~/secrets/keystores/
-    // moinkark-keystore.env`). In der CI kommen die Werte aus GitHub-Secrets.
+    // gleichnamige Umgebungsvariable (lokal aus einer Datei außerhalb des Repos).
+    // In der CI kommen die Werte aus GitHub-Secrets.
     // Passwoerter gehoeren NIE in gradle.properties — die Datei ist versioniert.
     def moinkarkSigning = { String name ->
         project.hasProperty(name) ? project.property(name) : System.getenv(name)

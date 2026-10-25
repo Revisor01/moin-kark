@@ -108,13 +108,9 @@ enthält alles, was seit Projektbeginn entstanden ist.
 
 - Eigene Domain `moin-kark.de` mit vollständigem DNS (A/AAAA, Wildcard, MX, SPF,
   DKIM, DMARC, MTA-STS, TLS-RPT, CAA) und Let's-Encrypt-Zertifikaten.
-- API unter `api.moin-kark.de` (Container `moinkark-api`, Apache →
-  Traefik). Die Alt-Domain `kkkarte.godsapp.de` bleibt vorerst in der
+- API unter `api.moin-kark.de`. Die Alt-Domain `kkkarte.godsapp.de` bleibt vorerst in der
   CORS-Allowlist, solange Builds mit der alten URL im Umlauf sind.
 - Mail-Weiterleitung `moin@moin-kark.de`.
-- API läuft als Portainer-Stack `moinkark-api` (statt frei laufendem Container).
-  Deploys gehen darüber, weil `docker-compose` 1.29 auf dem Server mit der
-  neueren Docker-Engine bricht (`KeyError: 'ContainerConfig'`).
 
 ### Sicherheit
 

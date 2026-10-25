@@ -133,21 +133,13 @@ die Kandidaten für neue Einträge.
 
 ## Android-Signing
 
-Der Release-Keystore liegt **außerhalb des Repos**:
-
-| Was | Wo |
-|---|---|
-| Keystore-Datei | `~/secrets/keystores/anders-erzaehlt-release.jks` |
-| Alias für diese App | `moinkark` |
-| Zugangsdaten | `~/secrets/keystores/moinkark-keystore.env` |
-| EAS-Anbindung | `apps/app/credentials.json` (gitignored) |
-
-Die Datei wird mit *anders erzählt* geteilt, Moin Kark hat darin aber einen
-**eigenen Alias** — die Schlüssel sind getrennt, nur der Container ist derselbe.
+Der Release-Keystore und seine Zugangsdaten liegen **außerhalb des Repos**;
+die EAS-Anbindung steht in `apps/app/credentials.json` (ignoriert). Die App hat
+im Keystore einen eigenen Alias, `moinkark`.
 
 Der Build liest die Werte als Gradle-Properties oder Umgebungsvariablen
 `MOINKARK_KEYSTORE_PATH`, `MOINKARK_KEYSTORE_PASSWORD`, `MOINKARK_KEY_ALIAS`,
-`MOINKARK_KEY_PASSWORD` (lokal: `source` der Env-Datei, dann
+`MOINKARK_KEY_PASSWORD` (lokal: Werte in die Umgebung laden, dann
 `cd apps/app/android && ./gradlew bundleRelease`). Ohne sie bleibt das Release
 unsigniert — nie mit dem Debug-Key.
 
@@ -220,12 +212,12 @@ xcodebuild -downloadPlatform iOS
 `eas submit --path …` meldet „Scheduled iOS submission", aber der Build kommt
 nie in App Store Connect an (Expo-seitige Submission verschwindet ohne Fehler;
 eine Status-Abfrage per CLI gibt es nicht). Verlässlicher Weg — direkt mit
-Apples Tool und dem ASC-API-Key (erwartet den `.p8` in `~/private_keys/`):
+Apples Tool und dem ASC-API-Key (erwartet `AuthKey_<KEY_ID>.p8` in
+`~/private_keys/`):
 
 ```bash
-mkdir -p ~/private_keys && cp ~/secrets/AuthKey_REPLACE_WITH_ASC_KEY_ID.p8 ~/private_keys/
 xcrun altool --upload-app -f MoinKark.ipa -t ios \
-  --apiKey REPLACE_WITH_ASC_KEY_ID --apiIssuer REPLACE_WITH_ASC_ISSUER_ID
+  --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
 ```
 
 ## iOS-Build: fastlane-Timeout
@@ -286,8 +278,8 @@ Danach normal hochladen:
 
 ### API
 
-Läuft auf `«server»` (Apache → Traefik:8888 → Container:8787)
-als Portainer-Stack `moinkark-api`. **Ausgerollt wird über GitHub Actions**
+Läuft als Container hinter einem Reverse Proxy, verwaltet mit Portainer.
+**Ausgerollt wird über GitHub Actions**
 (`.github/workflows/api-deploy.yml`): Jeder Push auf `main`, der die API
 betrifft, testet, baut das Image nach `ghcr.io/revisor01/moinkark-api` und lässt
 Portainer es per Webhook ziehen. Der Lauf ist erst grün, wenn
@@ -297,7 +289,6 @@ Portainer es per Webhook ziehen. Der Lauf ist erst grün, wenn
 gh workflow run api-deploy.yml   # von Hand, z. B. nach einem Revert
 ```
 
-Ablauf, Secret, Rollback und Notfallweg ohne CI: [`docs/deploy.md`](docs/deploy.md).
 Die 14 ChurchDesk-Tokens und der Admin-Token liegen nur im Stack-Env von
 Portainer — nie im Repo, nie in der CI.
 
@@ -327,9 +318,10 @@ Nach dem Deploy prüfen, ob `/maplibre-gl-worker.mjs` HTTP 200 liefert.
 ## Versionierung
 
 [SemVer](https://semver.org/lang/de/); Änderungen stehen im [CHANGELOG.md](CHANGELOG.md).
-Jede ausgelieferte Version bekommt einen Tag `X.Y.Z` (ohne „v“, wie in
-[docs/store-release.md](docs/store-release.md)) und ein GitHub-Release.
+Jede ausgelieferte Version bekommt einen Tag `X.Y.Z` (ohne „v“) und ein
+GitHub-Release.
 
 Einzige Quelle für Version, iOS-Build-Nummer und Android-versionCode ist
-`apps/app/app.json`. Store-Builds laufen über GitHub Actions — Ablauf, Dry-Run
-und die nötigen Secrets stehen in [docs/store-release.md](docs/store-release.md).
+`apps/app/app.json`. Store-Builds laufen über GitHub Actions
+(`ios-release.yml`, `android-release.yml`); die nötigen Secrets nennen die
+Workflows im Kopf.

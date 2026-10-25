@@ -8,7 +8,7 @@ name: iOS Release Build
 # Version und Build-Nummer kommen aus apps/app/app.json (einzige Quelle):
 # `expo prebuild` schreibt sie in die Info.plist, scripts/apply-version.sh
 # zieht die pbxproj nach und prüft beides. Vor dem Dispatch dort bumpen und
-# committen. Ablauf und Secrets: docs/store-release.md.
+# committen.
 
 on:
   workflow_dispatch:

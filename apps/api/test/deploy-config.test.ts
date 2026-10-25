@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-// Wächter für den Deploy-Weg (docs/deploy.md): Workflow, Stack-Vorlage und
+// Wächter für den Deploy-Weg: Workflow, Stack-Vorlage und
 // Dockerfile müssen zueinander passen. Läuft einer davon auseinander, baut die
 // CI ein Image, das Portainer nie zieht — oder der Workflow wartet auf einen
 // Commit, den die API nie meldet.

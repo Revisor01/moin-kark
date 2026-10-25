@@ -29,8 +29,6 @@
     "production": {
       "ios": {
         "ascApiKeyPath": "$ASC_API_KEY_PATH",
-        "ascApiKeyId": "REPLACE_WITH_ASC_KEY_ID",
-        "ascApiKeyIssuerId": "REPLACE_WITH_ASC_ISSUER_ID",
         "ascAppId": "6781438884"
       }
     }
