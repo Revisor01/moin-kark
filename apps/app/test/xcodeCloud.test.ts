@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 /**
  * Xcode Cloud baut den iOS-Release (26.10.2026). Das Skript nach dem Klonen
- * muss dieselben Schritte gehen wie ios-release.yml und darf nur im Klon auf
+ * muss die Schritte des früheren GitHub-Release gehen und darf nur im Klon auf
  * automatisches Signieren umstellen.
  */
 const APP = join(__dirname, "..");
