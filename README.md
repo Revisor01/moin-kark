@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <b>Deutsch</b> · <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Plattform-Web%20%C2%B7%20iOS%20%C2%B7%20Android-blue" alt="Plattform">
   <img src="https://img.shields.io/badge/Expo-React%20Native-000020?logo=expo" alt="Expo">
   <img src="https://img.shields.io/github/license/Revisor01/moin-kark" alt="Lizenz">
@@ -136,7 +140,7 @@ Fehlermeldungen und Vorschläge sind willkommen — gern als
 [Issue](https://github.com/Revisor01/moin-kark/issues). Sicherheitslücken bitte
 vertraulich melden, wie in [SECURITY.md](SECURITY.md) beschrieben. Pull
 Requests laufen durch Tests und einen Secret-Scan; die Grundsätze für Beiträge
-stehen in [CLAUDE.md](CLAUDE.md).
+stehen in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Datenschutz
 
@@ -149,12 +153,10 @@ Die vollständige Erklärung steht unter
 
 ## Lizenz
 
-Moin Kark steht unter der
-[GNU Affero General Public License v3.0](LICENSE). Wer Moin Kark verändert und
-anderen zur Verfügung stellt, auch als Webdienst, legt seinen Quelltext unter
-derselben Lizenz offen. Wer das nicht möchte, bekommt auf Anfrage eine
-kommerzielle Lizenz ([mail@simonluthe.de](mailto:mail@simonluthe.de)). Für
-Beiträge gilt [CONTRIBUTING.md](CONTRIBUTING.md).
+Moin Kark steht unter der [GNU Affero General Public License v3.0](LICENSE).
+Wer Moin Kark verändert und anderen zur Verfügung stellt, auch als Webdienst,
+legt seinen Quelltext unter derselben Lizenz offen. Für Beiträge gilt
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Hinweis
 
