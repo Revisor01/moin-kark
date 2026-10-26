@@ -53,3 +53,14 @@ dazukommen, aber nicht verschwinden, umbenannt werden oder ihren Typ ändern.
 Wer die Form ändern will, legt eine neue, versionierte Route an und lässt die
 alte stehen, bis keine App sie mehr ruft. Grüne Tests beweisen das nicht, sie
 prüfen nur gegen den Stand im Repo.
+
+## In English
+
+Project instructions and handover notes are kept outside this repository.
+Without them: changes only via pull request to `main`, one topic each;
+Conventional Commits in English or German; user-visible changes go into
+`CHANGELOG.md` under `[Unreleased]`; new behaviour gets a test, a bug fix
+first gets the test that shows the bug; no new dependencies without asking;
+no credentials, private hostnames, local paths, test accounts or work notes
+anywhere in the repository. Comments explain why, at most three lines.
+Shipped apps must never break: API response shapes only change additively.
