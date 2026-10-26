@@ -4,9 +4,21 @@
     {
       "id": "GHSA-86w9-cpqp-85rv",
       "package": "node-forge",
-      "onlyVia": ["@expo/cli", "@expo/code-signing-certificates"],
+      "onlyVia": [
+        "@expo/cli",
+        "@expo/code-signing-certificates"
+      ],
       "reason": "Steckt nur im Expo-Kommandozeilenwerkzeug (Code-Signing für EAS Update) — nicht in der App, nicht im API-Image. Auch die neueste node-forge (1.4.0) ist betroffen, und jede Expo-Version bis SDK 58 zieht sie.",
       "since": "2026-10-02"
+    },
+    {
+      "id": "GHSA-mrhx-c7xc-m3w5",
+      "package": "zod",
+      "onlyVia": [
+        "@expo/cli"
+      ],
+      "reason": "Steckt nur im Expo-Kommandozeilenwerkzeug — nicht in der App, nicht im API-Image. Behoben erst in zod 4.6.6; jede Expo-CLI bis SDK 58 hängt an zod 3.",
+      "since": "2026-10-26"
     }
   ]
 }

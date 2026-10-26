@@ -10,6 +10,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 ### Sonstiges
 
 - Lizenz festgelegt: Der Quelltext ist zur Einsicht offen, der Betrieb braucht eine schriftliche Erlaubnis.
+- Abhängigkeiten mit bekannten Sicherheitslücken auf behobene Versionen angehoben.
 
 ## [1.0.0] - 2026-10-02
 
