@@ -12,6 +12,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ### Sonstiges
 
+- iOS-Builds können in Xcode Cloud entstehen.
 - Abhängigkeiten mit bekannten Sicherheitslücken auf behobene Versionen angehoben.
 - Englische Fassung der README und der Vorlagen für Fehlermeldungen.
 
