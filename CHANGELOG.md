@@ -7,6 +7,9 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Geändert
+- Neue Lizenz: GNU AGPL v3.0 statt der Lizenz „quelloffen zur Einsicht“: Betreiben ist jetzt ohne Vereinbarung erlaubt, solange Änderungen offengelegt werden. Eine kommerzielle Lizenz gibt es auf Anfrage.
+
 ### Sonstiges
 
 - Lizenz festgelegt: Der Quelltext ist zur Einsicht offen, der Betrieb braucht eine schriftliche Erlaubnis.
