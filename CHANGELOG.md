@@ -15,6 +15,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 - iOS-Builds können in Xcode Cloud entstehen.
 - Abhängigkeiten mit bekannten Sicherheitslücken auf behobene Versionen angehoben.
 - Englische Fassung der README und der Vorlagen für Fehlermeldungen.
+- Android-Fassungen gehen über einen gemeinsamen Upload-Weg zu Google Play; Tracks und Neuigkeiten werden schon vor dem Bau geprüft.
 
 ## [1.0.0] - 2026-10-02
 
