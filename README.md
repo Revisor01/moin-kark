@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Plattform-Web%20%C2%B7%20iOS%20%C2%B7%20Android-blue" alt="Plattform">
   <img src="https://img.shields.io/badge/Expo-React%20Native-000020?logo=expo" alt="Expo">
-  <img src="https://img.shields.io/badge/Lizenz-quelloffen%20zur%20Einsicht-lightgrey" alt="Lizenz">
+  <img src="https://img.shields.io/github/license/Revisor01/moin-kark" alt="Lizenz">
 </p>
 
 ## Worum es geht
@@ -149,15 +149,12 @@ Die vollständige Erklärung steht unter
 
 ## Lizenz
 
-**Quelloffen zur Einsicht — Nutzung nur mit schriftlicher Erlaubnis.**
-Der vollständige Text steht in [LICENSE](LICENSE).
-
-- **Ohne Weiteres erlaubt:** lesen, herunterladen, studieren, zu Lern- und
-  Prüfzwecken auf eigenen Geräten ausführen, Sicherheitslücken melden,
-  darüber berichten.
-- **Braucht eine Vereinbarung:** der Betrieb für echte Nutzer:innen, die
-  Weitergabe an Dritte, die Verwendung von Teilen des Codes in anderer
-  Software.
+Moin Kark steht unter der
+[GNU Affero General Public License v3.0](LICENSE). Wer Moin Kark verändert und
+anderen zur Verfügung stellt, auch als Webdienst, legt seinen Quelltext unter
+derselben Lizenz offen. Wer das nicht möchte, bekommt auf Anfrage eine
+kommerzielle Lizenz ([mail@simonluthe.de](mailto:mail@simonluthe.de)). Für
+Beiträge gilt [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Hinweis
 
