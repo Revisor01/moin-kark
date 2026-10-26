@@ -299,3 +299,23 @@ describe("iOS: Mindestziel der Pods", () => {
     expect(podfile).toMatch(/platform :ios, podfile_properties\['ios.deploymentTarget'\] \|\| '16\.4'/);
   });
 });
+
+// Ohne deutsche Grundsprache hält iOS die App für englisch: Datumsauswahl und
+// Systemknöpfe erscheinen englisch, der App Store nennt Englisch (27.10.2026).
+describe("iOS: Sprache Deutsch", () => {
+  const ios = appJson.expo.ios as any;
+  const pbxproj = read("ios/MoinKark.xcodeproj/project.pbxproj");
+
+  it("app.json meldet Deutsch als einzige Sprache", () => {
+    expect(ios.infoPlist.CFBundleDevelopmentRegion).toBe("de");
+    expect(ios.infoPlist.CFBundleLocalizations).toEqual(["de"]);
+  });
+
+  it("Info.plist und Projekt stehen auf Deutsch", () => {
+    expect(infoPlist).toMatch(/<key>CFBundleDevelopmentRegion<\/key>\s*<string>de<\/string>/);
+    expect(infoPlist).toMatch(/<key>CFBundleLocalizations<\/key>\s*<array>\s*<string>de<\/string>\s*<\/array>/);
+    expect(pbxproj).toContain("developmentRegion = de;");
+    expect(pbxproj).not.toMatch(/knownRegions = \([^)]*\ben,/);
+  });
+});
+
