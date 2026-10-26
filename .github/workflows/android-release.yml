@@ -1,7 +1,8 @@
 name: Android Release Build
 
-# Baut das signierte AAB und lädt es per Google-Play-API in die angegebenen
-# Tracks. Google startet die Prüfung mit dem Track-Commit von selbst.
+# Baut das signierte AAB und lädt es über den Baustein play-upload.yml
+# (Revisor01/workflows) in die angegebenen Tracks. Google startet die Prüfung
+# mit dem Track-Commit von selbst.
 #
 # Version und versionCode kommen aus apps/app/app.json (einzige Quelle;
 # `expo prebuild` schreibt sie in android/app/build.gradle). Vor dem Dispatch:
@@ -31,7 +32,19 @@ permissions:
   contents: read
 
 jobs:
-  build-upload:
+  tracks-pruefen:
+    # Tracks und Neuigkeiten vor dem Bau prüfen, nicht erst nach 40 Minuten.
+    uses: Revisor01/workflows/.github/workflows/play-upload.yml@97284908c8f72a4e54b593e2c43b56377eda0606 # 1.4.0
+    with:
+      paket: de.godsapp.moinkark
+      tracks: ${{ inputs.tracks }}
+      status: ${{ inputs.release_status }}
+      production-anteil: "1"
+      release-notes-datei: apps/app/release-notes-de.txt
+      nur-pruefen: true
+
+  build:
+    needs: [tracks-pruefen]
     runs-on: ubuntu-latest
     # 45 Minuten waren zu knapp: Ohne Gradle-Zwischenspeicher lud der erste
     # Lauf 41,6 Minuten, der zweite überschritt das Limit bei 46,3 und wurde
@@ -149,20 +162,26 @@ jobs:
             || { echo "FEHLER: Manifest trägt nicht versionName $ERWARTET_NAME."; grep -o 'android:versionName="[^"]*"' "$MANIFEST"; exit 1; }
           echo "OK: Release-Signatur, Version $ERWARTET_NAME ($ERWARTET_CODE)."
 
-      - name: Zu Google Play hochladen
-        env:
-          GPLAY_SA_JSON_BASE64: ${{ secrets.GPLAY_SA_JSON_BASE64 }}
-          # Freigabestatus des Releases im Track. Vorgabe "draft", weil Google
-          # bei einer noch nicht veroeffentlichten App jeden anderen Status
-          # ablehnt ("Only releases with status draft may be created on draft
-          # app.") — und weil ein Entwurf in der Konsole bewusst freigegeben
-          # wird, statt sofort an alle Tester:innen zu gehen. Fuer den
-          # Normalbetrieb auf "completed" setzen.
-          PLAY_RELEASE_STATUS: ${{ inputs.release_status }}
-        run: |
-          echo "$GPLAY_SA_JSON_BASE64" | base64 --decode > /tmp/gplay-sa.json
-          python3 .github/scripts/upload-play.py /tmp/gplay-sa.json \
-            apps/app/android/app/build/outputs/bundle/release/app-release.aab \
-            apps/app/release-notes-de.txt \
-            "${{ inputs.tracks }}" \
-            "${{ inputs.dry_run && 'validate' || 'commit' }}"
+      - name: AAB für den Upload bereitstellen
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: aab
+          path: apps/app/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 1
+
+  upload:
+    # Eigener Job, damit der Schlüssel des Dienstkontos nicht neben npm und
+    # Gradle liegt. production-anteil 1: production geht wie bisher an alle.
+    needs: [build]
+    uses: Revisor01/workflows/.github/workflows/play-upload.yml@97284908c8f72a4e54b593e2c43b56377eda0606 # 1.4.0
+    with:
+      paket: de.godsapp.moinkark
+      tracks: ${{ inputs.tracks }}
+      status: ${{ inputs.release_status }}
+      production-anteil: "1"
+      release-notes-datei: apps/app/release-notes-de.txt
+      artefakt: aab
+      dry-run: ${{ inputs.dry_run }}
+    secrets:
+      dienstkonto: ${{ secrets.GPLAY_SA_JSON_BASE64 }}
