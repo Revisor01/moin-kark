@@ -35,6 +35,14 @@ describe("Xcode-Cloud-Skript", () => {
     expect([...stellen].sort((a, b) => a - b)).toEqual(stellen);
   });
 
+  it("loest die Swift-Pakete nach pod install auf, weil Xcode Cloud es selbst nicht tut", () => {
+    const aufloesen = text.indexOf("xcodebuild -resolvePackageDependencies -workspace MoinKark.xcworkspace -scheme MoinKark");
+    expect(aufloesen).toBeGreaterThan(text.indexOf("pod install"));
+    expect(aufloesen).toBeLessThan(text.indexOf("CODE_SIGN_STYLE = Automatic;"));
+    expect(text).toContain('[ -f "$RESOLVED" ]');
+    expect(text).toContain('RESOLVED="$APP/ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved"');
+  });
+
   it("stellt genau die drei festen Signier-Zeilen der Release-Konfiguration um", () => {
     for (const zeile of ['CODE_SIGN_STYLE = Manual;', 'CODE_SIGN_IDENTITY = "Apple Distribution";', 'PROVISIONING_PROFILE_SPECIFIER = "Moin Kark AppStore CI";']) {
       expect(pbxproj.split(zeile).length - 1, zeile).toBe(1);

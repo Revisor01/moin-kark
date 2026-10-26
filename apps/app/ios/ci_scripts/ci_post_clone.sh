@@ -7,6 +7,7 @@ set -euo pipefail
 REPO="${CI_PRIMARY_REPOSITORY_PATH:?Nur fuer Xcode Cloud gedacht.}"
 APP="$REPO/apps/app"
 PBXPROJ="$APP/ios/MoinKark.xcodeproj/project.pbxproj"
+RESOLVED="$APP/ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 
 export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1
 brew install node@22 cocoapods
@@ -35,6 +36,12 @@ for versuch in 1 2 3; do
   [ "$versuch" -lt 3 ] || { echo "FEHLER: pod install nach 3 Versuchen fehlgeschlagen."; exit 1; }
   sleep 20
 done
+
+# Xcode Cloud loest Swift-Pakete nicht selbst auf und verlangt Package.resolved.
+# Die Datei entsteht hier, damit sie zur MapLibre-Version passt, die prebuild
+# gerade eingetragen hat.
+xcodebuild -resolvePackageDependencies -workspace MoinKark.xcworkspace -scheme MoinKark
+[ -f "$RESOLVED" ] || { echo "FEHLER: Package.resolved fehlt nach der Paketaufloesung."; exit 1; }
 
 # Xcode Cloud signiert selbst und braucht dafuer automatisches Signieren; die
 # Release-Konfiguration ist fest auf Profil und Distribution-Zertifikat gestellt.
