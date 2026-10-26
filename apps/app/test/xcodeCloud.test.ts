@@ -35,12 +35,20 @@ describe("Xcode-Cloud-Skript", () => {
     expect([...stellen].sort((a, b) => a - b)).toEqual(stellen);
   });
 
-  it("loest die Swift-Pakete nach pod install auf, weil Xcode Cloud es selbst nicht tut", () => {
-    const aufloesen = text.indexOf("xcodebuild -resolvePackageDependencies -workspace MoinKark.xcworkspace -scheme MoinKark");
-    expect(aufloesen).toBeGreaterThan(text.indexOf("pod install"));
-    expect(aufloesen).toBeLessThan(text.indexOf("CODE_SIGN_STYLE = Automatic;"));
-    expect(text).toContain('[ -f "$RESOLVED" ]');
-    expect(text).toContain('RESOLVED="$APP/ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved"');
+  // Xcode Cloud schaltet die automatische Paketaufloesung ab (Build 88,
+  // 27.10.2026: „a resolved file is required"); die Datei muss im Repo liegen.
+  it("Package.resolved liegt im Repo und nennt die MapLibre-Version des Projekts", () => {
+    const resolved = JSON.parse(readFileSync(join(APP, "ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved"), "utf8"));
+    const pin = resolved.pins.find((p: { identity: string }) => p.identity === "maplibre-gl-native-distribution");
+    const gefordert = pbxproj.match(/maplibre-gl-native-distribution[\s\S]*?version = ([0-9.]+);/)?.[1];
+    expect(gefordert).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(pin?.state.version).toBe(gefordert);
+  });
+
+  it("prueft die Version nach pod install und loest nicht selbst auf", () => {
+    expect(text).not.toContain("-resolvePackageDependencies");
+    expect(text.indexOf("GEFORDERT=")).toBeGreaterThan(text.indexOf("pod install"));
+    expect(text.indexOf("GEFORDERT=")).toBeLessThan(text.indexOf("CODE_SIGN_STYLE = Automatic;"));
   });
 
   it("stellt genau die drei festen Signier-Zeilen der Release-Konfiguration um", () => {
