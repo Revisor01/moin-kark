@@ -6,7 +6,9 @@
     <string>development</string>
     <key>com.apple.developer.associated-domains</key>
     <array>
+      <string>applinks:moin-kark.de</string>
       <string>applinks:karte.moin-kark.de</string>
+      <string>applinks:api.moin-kark.de</string>
     </array>
   </dict>
 </plist>
