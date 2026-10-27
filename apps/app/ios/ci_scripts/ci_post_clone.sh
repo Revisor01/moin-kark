@@ -26,6 +26,18 @@ console.log(`Version ${app.expo.version}, iOS-Build ${neu}`);' "$APP/app.json"
 
 cd "$REPO"
 npm ci --no-audit --no-fund
+
+# Xcode 27 laesst ExpoModulesJSI vor 57.0.5 Warnungen ausgeben, die der innere
+# Build als "error:" meldet, und Xcode bricht die Skriptphase ab (expo/expo#49120).
+# Der Workflow steht deshalb auf Xcode 26.6; diese Pruefung meldet es frueh.
+node -e '
+const [xcode, jsi] = process.argv.slice(1);
+const haupt = Number((/^Xcode (\d+)/.exec(xcode) || [])[1]);
+const [a, b, c] = jsi.split(".").map(Number);
+if (!(haupt > 0) || !/^\d+\.\d+\.\d+/.test(jsi)) { console.error(`FEHLER: Versionen nicht erkannt: "${xcode}", expo-modules-jsi "${jsi}".`); process.exit(1); }
+const behoben = a > 57 || (a === 57 && (b > 0 || c >= 5));
+if (haupt >= 27 && !behoben) { console.error(`FEHLER: ${xcode} bricht den Bau von expo-modules-jsi ${jsi} ab (behoben erst ab 57.0.5). Im Xcode-Cloud-Workflow Xcode 26.6 einstellen.`); process.exit(1); }
+console.log(`${xcode}, expo-modules-jsi ${jsi}`);' "$(xcodebuild -version | sed -n 1p)" "$(node -p 'require("expo-modules-jsi/package.json").version')"
 cd "$APP"
 CI=1 npx expo prebuild --platform ios --no-install
 ./scripts/apply-version.sh

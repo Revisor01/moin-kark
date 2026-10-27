@@ -22,6 +22,12 @@ function nummernPruefung(buildNummer: string, appJson: object) {
   return { code: r.status, aus: r.stdout + r.stderr, app: JSON.parse(readFileSync(datei, "utf8")) };
 }
 
+function xcodePruefung(xcode: string, jsi: string) {
+  const snippet = text.match(/node -e '\n(const \[xcode[\s\S]*?)' "\$\(xcodebuild/)![1];
+  const r = spawnSync("node", ["-e", snippet, xcode, jsi], { encoding: "utf8" });
+  return { code: r.status, aus: r.stdout + r.stderr };
+}
+
 describe("Xcode-Cloud-Skript", () => {
   it("ist ausfuehrbar und bricht bei jedem Fehler ab", () => {
     expect(statSync(SKRIPT).mode & 0o111).not.toBe(0);
@@ -56,6 +62,31 @@ describe("Xcode-Cloud-Skript", () => {
       expect(pbxproj.split(zeile).length - 1, zeile).toBe(1);
       expect(text).toContain(zeile);
     }
+  });
+
+  // Build 89 (27.10.2026) scheiterte unter Xcode 27.1 an der Skriptphase von
+  // ExpoModulesJSI; SDK 56 hat keine Fassung mit der Korrektur aus 57.0.5.
+  it("prueft Xcode und expo-modules-jsi gleich nach npm ci", () => {
+    expect(text.indexOf("const [xcode, jsi]")).toBeGreaterThan(text.indexOf("npm ci"));
+    expect(text.indexOf("const [xcode, jsi]")).toBeLessThan(text.indexOf("npx expo prebuild"));
+  });
+
+  it.each([["Xcode 26.6", "56.0.14"], ["Xcode 27.1", "57.0.5"], ["Xcode 27.1", "58.0.19"]])("laesst %s mit expo-modules-jsi %s bauen", (xcode, jsi) => {
+    const { code, aus } = xcodePruefung(xcode, jsi);
+    expect(code).toBe(0);
+    expect(aus.trim()).toBe(`${xcode}, expo-modules-jsi ${jsi}`);
+  });
+
+  it.each([["Xcode 27.1", "56.0.14"], ["Xcode 27.0", "57.0.4"]])("bricht unter %s mit expo-modules-jsi %s ab", (xcode, jsi) => {
+    const { code, aus } = xcodePruefung(xcode, jsi);
+    expect(code).toBe(1);
+    expect(aus).toContain("Xcode 26.6 einstellen");
+  });
+
+  it.each([["", "56.0.14"], ["Xcode 26.6", ""]])("bricht bei unbekannter Version (%j, %j) ab", (xcode, jsi) => {
+    const { code, aus } = xcodePruefung(xcode, jsi);
+    expect(code).toBe(1);
+    expect(aus).toContain("Versionen nicht erkannt");
   });
 
   it("uebernimmt eine hoehere Build-Nummer von Xcode Cloud in app.json", () => {
