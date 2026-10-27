@@ -37,11 +37,12 @@ for versuch in 1 2 3; do
   sleep 20
 done
 
-# Xcode Cloud loest Swift-Pakete nicht selbst auf und verlangt Package.resolved.
-# Die Datei entsteht hier, damit sie zur MapLibre-Version passt, die prebuild
-# gerade eingetragen hat.
-xcodebuild -resolvePackageDependencies -workspace MoinKark.xcworkspace -scheme MoinKark
-[ -f "$RESOLVED" ] || { echo "FEHLER: Package.resolved fehlt nach der Paketaufloesung."; exit 1; }
+# Xcode Cloud loest Swift-Pakete nicht selbst auf, sondern nimmt die
+# eingecheckte Package.resolved. Sie muss die MapLibre-Version tragen, die das
+# Projekt nach prebuild verlangt.
+GEFORDERT=$(awk '/maplibre-gl-native-distribution/{f=1} f&&/version = /{gsub(/[^0-9.]/,"",$3); print $3; exit}' "$PBXPROJ")
+AUFGELOEST=$(node -e 'const p=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).pins.find(x=>x.identity==="maplibre-gl-native-distribution");console.log(p?p.state.version:"")' "$RESOLVED" 2>/dev/null || true)
+[ -n "$GEFORDERT" ] && [ "$GEFORDERT" = "$AUFGELOEST" ] || { echo "FEHLER: Package.resolved nennt MapLibre ${AUFGELOEST:-nichts}, das Projekt verlangt ${GEFORDERT:-nichts}. Lokal im Workspace die Pakete aufloesen und Package.resolved committen."; exit 1; }
 
 # Xcode Cloud signiert selbst und braucht dafuer automatisches Signieren; die
 # Release-Konfiguration ist fest auf Profil und Distribution-Zertifikat gestellt.

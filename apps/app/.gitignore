@@ -49,7 +49,6 @@ ios/build/
 ios/Pods/
 ios/.xcode.env.local
 xcuserdata/
-# Die MapLibre-Version legt prebuild exakt fest; eine eingecheckte
-# Package.resolved veraltet beim naechsten Update. Xcode Cloud erzeugt sie in
-# ci_post_clone.sh.
-ios/MoinKark.xcworkspace/xcshareddata/swiftpm/
+# Package.resolved bleibt im Repo: Xcode Cloud loest Swift-Pakete nicht selbst
+# auf. Nur die lokale Paketkonfiguration gehoert nicht hinein.
+ios/MoinKark.xcworkspace/xcshareddata/swiftpm/configuration/
