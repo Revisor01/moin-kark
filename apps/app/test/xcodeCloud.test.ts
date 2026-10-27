@@ -35,7 +35,7 @@ describe("Xcode-Cloud-Skript", () => {
   });
 
   it("geht die Schritte des GitHub-Release in derselben Reihenfolge", () => {
-    const schritte = ["brew install node@22 cocoapods", "CI_BUILD_NUMBER", "npm ci", "npx expo prebuild --platform ios --no-install", "./scripts/apply-version.sh", "pod install", "CODE_SIGN_STYLE = Automatic;"];
+    const schritte = ["brew install node@26 cocoapods", "CI_BUILD_NUMBER", "npm ci", "npx expo prebuild --platform ios --no-install", "./scripts/apply-version.sh", "pod install", "CODE_SIGN_STYLE = Automatic;"];
     const stellen = schritte.map((s) => text.indexOf(s));
     for (const [i, s] of schritte.entries()) expect(stellen[i], s).toBeGreaterThan(-1);
     expect([...stellen].sort((a, b) => a - b)).toEqual(stellen);

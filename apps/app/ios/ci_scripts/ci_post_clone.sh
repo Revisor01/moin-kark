@@ -10,9 +10,9 @@ PBXPROJ="$APP/ios/MoinKark.xcodeproj/project.pbxproj"
 RESOLVED="$APP/ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 
 export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1
-brew install node@22 cocoapods
-export PATH="$(brew --prefix node@22)/bin:$PATH"
-[ "$(node -p 'process.versions.node.split(".")[0]')" = 22 ] || { echo "FEHLER: Node 22 erwartet."; exit 1; }
+brew install node@26 cocoapods
+export PATH="$(brew --prefix node@26)/bin:$PATH"
+[ "$(node -p 'process.versions.node.split(".")[0]')" = 26 ] || { echo "FEHLER: Node 26 erwartet."; exit 1; }
 
 # Xcode Cloud vergibt die Build-Nummer. Sie kommt in app.json, damit prebuild
 # und apply-version.sh sie wie bisher ueberall eintragen; kleiner als die

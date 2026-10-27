@@ -1,5 +1,5 @@
 # Moin Kark API — Read-Only ChurchDesk-Aggregator (Hono + tsx, kein Build-Step).
-FROM node:22-alpine
+FROM node:26-alpine
 
 # tzdata, damit TZ=Europe/Berlin im Container greift (Alpine hat es sonst nicht) — betrifft
 # lokale Zeitausgaben und Logs. Das Datumsfenster selbst hängt NICHT daran: es wird in
