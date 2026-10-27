@@ -20,8 +20,7 @@ info:
     Das Zeitfenster ist server-seitig festgelegt (ab heute, Standard 60 Tage) und
     lässt sich nicht per Anfrage steuern. Es beginnt am **Berliner** Kalendertag,
     nicht am UTC-Tag.
-# Die dokumentierten Routen sind ohne Anmeldung lesbar — das ist Absicht, nicht
-# eine vergessene Absicherung. Geschützt ist allein die Ortsverwaltung (s. unten).
+# Ohne Anmeldung lesbar ist Absicht; geschützt ist nur die Ortsverwaltung.
 security: []
 
 servers:
@@ -756,12 +755,4 @@ components:
           type: string
           description: Beschreibung des Fehlers.
 
-# Nicht dokumentiert: die Ortsverwaltung unter /admin.
-#
-# Dort werden Koordinaten-Korrekturen, Kategorie-Ausschlüsse und
-# Hervorhebungen zur Laufzeit gepflegt. Die Oberfläche liegt unter /admin, die
-# zugehörigen Routen unter /admin/api/. Sie sind durch ein Token geschützt
-# (mindestens 24 Zeichen, sonst bleibt die Verwaltung abgeschaltet) und ohne
-# gesetztes Token abgeschaltet; nach zehn Fehlversuchen von einer Adresse
-# innerhalb einer Minute antworten sie mit 429. Sie gehören nicht zur
-# öffentlichen Schnittstelle und keine App ruft sie.
+# Nicht dokumentiert: /admin und /admin/api/, per Token (mindestens 24 Zeichen) geschützt, nach zehn Fehlversuchen je Minute 429; keine App ruft sie.

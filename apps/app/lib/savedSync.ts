@@ -1,6 +1,4 @@
-// Lokaler Abgleich gemerkter Events beim App-Start und bei neuen Daten.
-// Erkennt: Event gelöscht (nicht mehr in Daten) oder verschoben (Zeit/Ort geändert).
-// Feuert dann eine lokale, klickbare Notification — ganz ohne Server/Push.
+// Lokaler Abgleich gemerkter Events: gelöscht oder verschoben meldet eine lokale Mitteilung.
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -16,12 +14,7 @@ import {
 
 const IS_WEB = Platform.OS === "web";
 
-/**
- * Teilmenge der Feed-Metadaten, die der Abgleich braucht. Bewusst lose typisiert:
- * `orgsFailedIds` (welche Gemeinden ausgefallen sind) liefert die API erst seit
- * kurzem — ältere Stände kennen nur die Zahl `orgsFailed`. Beides optional, weil
- * auch Antworten ohne `meta` verkraftet werden müssen.
- */
+/** Feed-Metadaten für den Abgleich, lose typisiert, weil ältere APIs nur `orgsFailed` kennen. */
 export type FeedMeta = {
   orgsFailed?: number;
   orgsFailedIds?: number[];
@@ -70,14 +63,7 @@ async function notify(title: string, body: string, eventId: number | null) {
   }).catch(() => {});
 }
 
-/**
- * Teilausfall der API: Eine ChurchDesk-Gemeinde hat nicht geantwortet, der Feed
- * kam trotzdem (Status 200) — nur ohne deren Termine. Die fehlen dann nicht,
- * weil sie abgesagt wären, sondern weil die Quelle gerade schweigt.
- * Ohne Gemeindeliste (ältere API) oder ohne bekannte Herkunft (alter Snapshot)
- * wird im Zweifel geschont: ein ausgebliebener Hinweis ist billiger als ein
- * falscher „entfällt".
- */
+/** Teilausfall erkennen; im Zweifel schonen, ein ausgebliebener Hinweis ist billiger als ein falsches „entfällt“. */
 function partialOutage(meta: FeedMeta | undefined): { affects: (orgId: number | undefined) => boolean } {
   const failed = meta?.orgsFailed ?? 0;
   if (!(failed > 0)) return { affects: () => false };
@@ -88,14 +74,7 @@ function partialOutage(meta: FeedMeta | undefined): { affects: (orgId: number | 
   return { affects: (orgId) => ids === null || orgId === undefined || ids.has(orgId) };
 }
 
-/**
- * Derselbe Zeitpunkt, auch in anderer Schreibweise? Verglichen wird die Zeit,
- * nicht der Text: Die Schreibweise der ChurchDesk-Zeiten hat schon gewechselt
- * (heute „…T12:00:00.000Z"; derselbe Zeitpunkt kann auch als
- * „…T14:00:00+02:00" oder ohne Millisekunden kommen). Ein Textvergleich
- * meldete bei so einem Wechsel jeden gemerkten Termin als verschoben.
- * Unlesbares gilt nur bei gleichem Text als gleich.
- */
+/** Gleicher Zeitpunkt auch in anderer Schreibweise, weil ChurchDesk sie schon gewechselt hat. */
 function sameInstant(a: string, b: string): boolean {
   if (a === b) return true;
   const t = Date.parse(a);
@@ -107,11 +86,7 @@ export interface SyncResult {
   changed: number[]; // IDs mit geänderter Zeit/Ort
 }
 
-/**
- * Gleicht die gemerkten Events gegen die frischen Daten ab und meldet Wegfall/Änderung.
- * `savedIds` = aktuell gemerkte IDs, `all` = alle frischen Features, `meta` = Feed-Metadaten
- * (Teilausfall-Erkennung). Gibt zurück, was sich geändert hat (für Reminder-Neuplanung im Aufrufer).
- */
+/** Gleicht gemerkte Events mit frischen Daten ab und gibt die Änderungen zurück. */
 export async function syncSavedEvents(
   savedIds: number[],
   all: EventFeature[],
@@ -127,8 +102,7 @@ export async function syncSavedEvents(
   const prev = await loadSnap();
   const byId = new Map(all.map((f) => [f.properties.id, f]));
   const outage = partialOutage(meta);
-  // Termine, die nur wegen eines Teilausfalls fehlen: Snapshot-Eintrag behalten,
-  // sonst gälten sie beim nächsten Lauf als „erstmals gesehen".
+  // Snapshot behalten, sonst gälten sie beim nächsten Lauf als erstmals gesehen.
   const spared: SnapMap = {};
 
   for (const id of savedIds) {
@@ -174,8 +148,7 @@ export async function syncSavedEvents(
   return result;
 }
 
-/** Gemerkte Start-Zeiten aus dem letzten Snapshot (id -> startUtc), auch für Events,
- *  die nicht mehr im Feed stehen. Dient dem Aufräumen vergangener Likes. */
+/** Gemerkte Startzeiten aus dem letzten Snapshot, auch für Events außerhalb des Feeds. */
 export async function loadSnapshotStartTimes(): Promise<Record<number, string>> {
   const snap = await loadSnap();
   const out: Record<number, string> = {};
@@ -204,25 +177,19 @@ export interface SavedSyncInput {
   removeMany: (ids: number[]) => void;
 }
 
-/**
- * Kompletter Abgleich-Lauf gegen frische Daten: vergangene Likes aufräumen,
- * Wegfall/Verschiebung melden, Merkliste und Erinnerungen nachziehen.
- */
+/** Kompletter Abgleich: Vergangenes aufräumen, Änderungen melden, Erinnerungen nachziehen. */
 export async function runSavedSync(input: SavedSyncInput): Promise<SyncResult> {
   const { savedIds, features, meta, reminderPref, removeMany } = input;
   const byId = new Map(features.map((f) => [f.properties.id, f]));
 
-  // Vergangene Likes dauerhaft aufräumen — sowohl Events, die noch im Feed
-  // stehen (über isPast) als auch verwaiste (nicht mehr im Feed), deren
-  // Startzeit aus dem Snapshot in der Vergangenheit liegt.
+  // Vergangene Likes aufräumen, auch verwaiste mit vergangener Startzeit aus dem Snapshot.
   const snapTimes = await loadSnapshotStartTimes();
   const nowMs = Date.now();
   const pastIds = savedIds.filter((id) => {
     const f = byId.get(id);
     if (f) return isPast(f);
     const startUtc = snapTimes[id];
-    // Verwaist + Startzeit vorbei → war ein vergangenes Event → entfernen.
-    // Verwaist ohne bekannte Startzeit → in Ruhe lassen (kein Snapshot).
+    // Verwaist ohne bekannte Startzeit bleibt.
     return startUtc ? new Date(startUtc).getTime() < nowMs : false;
   });
   if (pastIds.length) {
@@ -234,8 +201,7 @@ export async function runSavedSync(input: SavedSyncInput): Promise<SyncResult> {
 
   const res = await syncSavedEvents(ids, features, meta);
 
-  // Entfallene Termine verlassen auch die Merkliste — sonst zählt das Profil
-  // Phantome und die ID bleibt für immer im Speicher.
+  // Entfallene verlassen die Merkliste, sonst zählt das Profil Phantome.
   if (res.removed.length) {
     removeMany(res.removed);
     for (const id of res.removed) await cancelForEvent(id).catch(() => {});
@@ -255,8 +221,7 @@ export async function runSavedSync(input: SavedSyncInput): Promise<SyncResult> {
   const remainingSet = new Set(remaining);
   const savedNow = features.filter((f) => remainingSet.has(f.properties.id) && !isPast(f));
 
-  // Einmalig nach dem Update: ALLE Reminder neu planen, damit alte (falsch
-  // formatierte „Morgen"-) Benachrichtigungen durch die korrekte Variante ersetzt werden.
+  // Einmalig nach dem Update alle neu planen, um falsch formatierte „Morgen“-Mitteilungen zu ersetzen.
   if (reminderPref !== "off") {
     const KEY = "kkd:reminderFormatV2";
     if (!(await AsyncStorage.getItem(KEY))) {
@@ -265,9 +230,6 @@ export async function runSavedSync(input: SavedSyncInput): Promise<SyncResult> {
     }
   }
 
-  // Bestand angleichen: fehlende Erinnerungen nachplanen (etwa nach einem
-  // früheren Fehlalarm), Deckel halten, Waisen abräumen. Gemerkte Termine, die
-  // gerade nicht im Feed stehen (Teilausfall), bleiben unangetastet.
   const offFeed = remaining.filter((id) => !byId.has(id));
   await reconcileReminders(savedNow, reminderPref, offFeed);
 

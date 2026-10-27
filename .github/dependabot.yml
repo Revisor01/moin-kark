@@ -14,11 +14,7 @@ updates:
           - minor
           - patch
     ignore:
-      # Das Expo-SDK legt die Versionen seiner nativen Pakete fest
-      # (expo/bundledNativeModules.json). Was dort exakt steht, hebt nur ein
-      # SDK-Wechsel oder `npx expo install --fix` — sonst laufen App und SDK
-      # auseinander, und der Store-Build bricht oder verhält sich anders als
-      # getestet.
+      # Die Versionen legt das Expo-SDK fest, sonst laufen App und SDK auseinander.
       - dependency-name: react
       - dependency-name: react-dom
       - dependency-name: react-native
@@ -41,14 +37,12 @@ updates:
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: react-native-web
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
-      # Typen folgen der Laufzeit: React-Typen der React-Version, Node-Typen
-      # der Node-Version in Dockerfile und CI (26).
+      # Typen folgen der Laufzeit (React-Version, Node 26).
       - dependency-name: "@types/react"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # TypeScript 7 ist der Umstieg auf den neuen Compiler (typescript-go) —
-      # ein eigenes Vorhaben, kein Routine-Update.
+      # TypeScript 7 ist ein Compilerwechsel, kein Routine-Update.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
 
@@ -57,13 +51,11 @@ updates:
     schedule:
       interval: monthly
     groups:
-      # Gebündelt, weil jeder Merge, der api-deploy.yml berührt, die API neu
-      # ausrollt — so wird es ein Deploy statt mehrerer.
+      # Gebündelt, weil jeder Merge an api-deploy.yml die API neu ausrollt.
       actions:
         patterns: ["*"]
 
-  # Basis-Image der API. Node-Hauptversionen gehen mit CI und @types/node
-  # zusammen, deshalb nur Neben- und Patch-Stände.
+  # Node-Hauptversionen gehen mit CI und @types/node zusammen.
   - package-ecosystem: docker
     directory: "/apps/api"
     schedule:

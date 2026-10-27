@@ -1,21 +1,13 @@
 name: Android Release Build
 
-# Baut das signierte AAB und lädt es über den Baustein play-upload.yml
-# (Revisor01/workflows) in die angegebenen Tracks. Google startet die Prüfung
-# mit dem Track-Commit von selbst.
-#
-# Version und versionCode kommen aus apps/app/app.json (einzige Quelle;
-# `expo prebuild` schreibt sie in android/app/build.gradle). Vor dem Dispatch:
-# versionCode bumpen, apps/app/release-notes-de.txt aktualisieren, committen.
+# Signiertes AAB über play-upload.yml (Revisor01/workflows); Version und versionCode kommen aus apps/app/app.json.
 
 on:
   workflow_dispatch:
     inputs:
       tracks:
         description: "Ziel-Tracks (kommagetrennt, z. B. internal,alpha oder internal,alpha,production)"
-        # Seit 26.09.2026 immer beide Testwege: alpha = geschlossener Test
-        # (die zwölf Tester für den Production-Access), internal = einzeln
-        # eingeladene Personen. Produktion erst bewusst per Input.
+        # Immer beide Testwege: alpha für die Tester des Production-Access, internal für Eingeladene.
         default: "internal,alpha"
         required: true
       release_status:
@@ -46,10 +38,7 @@ jobs:
   build:
     needs: [tracks-pruefen]
     runs-on: ubuntu-latest
-    # 45 Minuten waren zu knapp: Ohne Gradle-Zwischenspeicher lud der erste
-    # Lauf 41,6 Minuten, der zweite überschritt das Limit bei 46,3 und wurde
-    # mitten im Bundle-Bau abgebrochen. Mit dem Cache unten liegen die Läufe
-    # deutlich darunter; 75 Minuten lassen Luft für einen kalten Cache.
+    # Ein kalter Lauf brauchte 41–46 Minuten, 75 lassen Luft.
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,9 +48,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-          # Gradle-Zwischenspeicher: Ohne ihn lädt und baut jeder Lauf alles neu
-          # (41–46 Min, ein Lauf lief ins Zeitlimit). Der Schlüssel hängt an den
-          # Gradle-Dateien, ein Wechsel der Abhängigkeiten erneuert ihn also.
+          # Ohne Cache baut jeder Lauf alles neu; der Schlüssel hängt an den Gradle-Dateien.
           cache: gradle
 
       - name: Node einrichten
@@ -78,26 +65,20 @@ jobs:
       - name: "Dry-Run: versionCode temporär anheben"
         if: ${{ inputs.dry_run }}
         working-directory: apps/app
-        # +10000, damit der Upload nicht an einem bereits verwendeten Code
-        # scheitert. Die Edit wird am Ende verworfen — der Code wird NICHT
-        # verbraucht, app.json im Repo bleibt unberührt.
+        # +10000, damit der Probe-Upload nicht am vergebenen Code scheitert; die Edit wird verworfen.
         run: |
           node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('app.json'));j.expo.android.versionCode+=10000;fs.writeFileSync('app.json',JSON.stringify(j,null,2)+'\n');console.log('Dry-Run versionCode:',j.expo.android.versionCode)"
 
       - name: Natives Projekt aus app.json aktualisieren
         working-directory: apps/app
-        # --no-clean (ab SDK 57 nötig): Das versionierte android/ mit dem
-        # Release-Signing bleibt stehen, prebuild trägt nur Version, versionCode
-        # und Plugin-Änderungen nach. --no-install, weil npm ci schon lief.
+        # --no-clean ab SDK 57, damit das versionierte android/ mit Release-Signing stehen bleibt.
         env:
           CI: 1
         run: npx expo prebuild --platform android --no-install --no-clean
 
       - name: Signing und Version im Gradle-Projekt prüfen
         working-directory: apps/app
-        # `expo prebuild --clean` setzt das Release auf den DEBUG-Key zurück —
-        # das fiele sonst erst beim Play-Upload auf. Hier bricht der Lauf ab,
-        # bevor Minuten in einen unbrauchbaren Build fließen.
+        # prebuild --clean setzt das Release auf den Debug-Key zurück, das fiele sonst erst bei Play auf.
         run: |
           set -euo pipefail
           GRADLE=android/app/build.gradle
@@ -138,9 +119,7 @@ jobs:
 
       - name: Signatur und Version des AAB prüfen
         working-directory: apps/app
-        # Der Debug-Key trägt „CN=Android Debug“; ein unsigniertes Bundle
-        # meldet keytool als „Not a signed jar file“. Beides darf nicht zu
-        # Google — und das gemergte Manifest muss die erwartete Version tragen.
+        # Weder Debug-Key noch unsigniertes Bundle dürfen zu Google.
         run: |
           set -euo pipefail
           AAB=android/app/build/outputs/bundle/release/app-release.aab
@@ -171,8 +150,7 @@ jobs:
           retention-days: 1
 
   upload:
-    # Eigener Job, damit der Schlüssel des Dienstkontos nicht neben npm und
-    # Gradle liegt. production-anteil 1: production geht wie bisher an alle.
+    # Eigener Job, damit der Dienstkonto-Schlüssel nicht neben npm und Gradle liegt.
     needs: [build]
     uses: Revisor01/workflows/.github/workflows/play-upload.yml@59236255da497972cdac8407c9af45d994ad0fcb # 1.4.1
     with:

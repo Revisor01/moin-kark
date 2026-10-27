@@ -1,8 +1,4 @@
-// Kirchspiel-Struktur nach Simons Vorgabe (maßgeblich — ERSETZT Handoff §2).
-// 6 Kirchspiele. Zuordnung erfolgt zweistufig:
-//   1. Über parishes[0].title (Gemeinde-Name) — feinste, zuverlässigste Quelle.
-//   2. Fallback über die ChurchDesk-orgId.
-// Simon korrigiert Detail-Zuordnungen live, sobald sichtbar.
+// Die sechs Kirchspiele; Zuordnung über den Gemeindenamen, sonst über die orgId.
 
 import { normalizeKey as normalize } from "./types";
 
@@ -109,9 +105,7 @@ const ORG_NAMES: Record<number, string> = {
 
 
 
-/**
- * Ermittelt das Kirchspiel: erst über den Gemeinde-Namen (parish), dann über die orgId.
- */
+/** Kirchspiel über den Gemeindenamen, sonst über die orgId. */
 export function resolveKirchspiel(parish: string | undefined, orgId: number): Kirchspiel {
   if (parish) {
     const key = normalize(parish);
@@ -129,21 +123,13 @@ export function orgName(orgId: number): string {
   return ORG_NAMES[orgId] ?? `Org ${orgId}`;
 }
 
-/**
- * Alle Gemeinden eines Events — berücksichtigt Mehrfachzuordnung (`parishes`),
- * fällt sonst auf die einzelne `parish` zurück. Für Filter und Anzeige:
- * Ein Event „gehört" zu jeder dieser Gemeinden.
- */
+/** Alle Gemeinden eines Events, auch bei Mehrfachzuordnung. */
 export function eventParishes(p: { parish?: string; parishes?: string[] }): string[] {
   if (p.parishes?.length) return p.parishes;
   return p.parish ? [p.parish] : [];
 }
 
-/**
- * Anzeigename der Gemeinde(n): bei Mehrfachzuordnung alle ausschreiben, mit dem
- * Kirchspiel als Klammer — „Kirchspiel Eider: Hennstedt, Weddingstedt … und Hemme".
- * („Kirchspiel" allein ist für viele kein vertrauter Begriff, die Gemeindenamen sind es.)
- */
+/** Anzeigename mit allen Gemeinden und dem Kirchspiel als Klammer. */
 export function parishesLabel(p: {
   parish?: string;
   parishes?: string[];

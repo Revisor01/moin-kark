@@ -97,10 +97,7 @@ android {
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
-    // Release-Keystore: Gradle-Property (-PMOINKARK_…) hat Vorrang, sonst die
-    // gleichnamige Umgebungsvariable (lokal aus einer Datei außerhalb des Repos).
-    // In der CI kommen die Werte aus GitHub-Secrets.
-    // Passwoerter gehoeren NIE in gradle.properties — die Datei ist versioniert.
+    // Gradle-Property vor Umgebungsvariable; Passwörter nie in gradle.properties, die ist versioniert.
     def moinkarkSigning = { String name ->
         project.hasProperty(name) ? project.property(name) : System.getenv(name)
     }
@@ -127,12 +124,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // ACHTUNG: `expo prebuild --clean` haengt das Release hier wieder an
-            // den Debug-Schluessel — ein damit signiertes AAB faellt erst beim
-            // Play-Upload auf. Nach jedem --clean diesen Block und den Loader
-            // oben wiederherstellen (test/release-config.test.ts wacht darueber).
-            // Ohne Keystore bleibt das Release UNSIGNIERT, damit nie
-            // versehentlich der Debug-Schluessel ins Release gelangt.
+            // prebuild --clean hängt das Release wieder an den Debug-Key; ohne Keystore bleibt es unsigniert.
             if (hasReleaseKeystore) {
                 signingConfig signingConfigs.release
             }

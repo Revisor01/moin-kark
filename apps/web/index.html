@@ -16,10 +16,7 @@
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="de_DE">
 <meta name="twitter:card" content="summary_large_image">
-<!-- Schriften liegen lokal (fonts/), NICHT bei Google: eine Einbindung über
-     fonts.googleapis.com überträgt die IP jedes Besuchers an Google und wäre
-     ohne Einwilligung datenschutzrechtlich angreifbar. Beide Familien stehen
-     unter der SIL Open Font License (s. fonts/*-LICENSE.txt). -->
+<!-- Schriften lokal statt Google Fonts, sonst ginge jede IP an Google; Lizenz in fonts/*-LICENSE.txt. -->
 <style>
   @font-face{font-family:"Bricolage Grotesque";src:url("fonts/BricolageGrotesque_400Regular.ttf") format("truetype");font-weight:400;font-display:swap}
   @font-face{font-family:"Bricolage Grotesque";src:url("fonts/BricolageGrotesque_600SemiBold.ttf") format("truetype");font-weight:600;font-display:swap}
@@ -28,17 +25,12 @@
   @font-face{font-family:"DM Sans";src:url("fonts/DMSans_500Medium.ttf") format("truetype");font-weight:500;font-display:swap}
   @font-face{font-family:"DM Sans";src:url("fonts/DMSans_700Bold.ttf") format("truetype");font-weight:700;font-display:swap}
 </style>
-<!-- Design-Tokens (Farben, Abstände, Radien, Textstufen) kommen aus
-     theme.css — erzeugt aus packages/shared/src/theme.ts, derselben Quelle
-     wie App und API-Seiten. Dort ändern, nicht hier. -->
+<!-- Design-Tokens aus theme.css, erzeugt aus packages/shared/src/theme.ts. -->
 <link rel="stylesheet" href="theme.css">
 <style>
   :root{
     --maxw:1080px;
-    /* Zwei Bildfarben aus dem Landschaftsband (deich.jpg), keine UI-Tokens:
-       der Himmel ist zugleich der Seitenhintergrund (sonst zeichnet sich die
-       Oberkante des Bildes als Linie ab), der Marschton startet den Verlauf
-       der Features. Sie müssen zur Illustration passen, nicht zur App. */
+    /* Bildfarben aus deich.jpg, keine UI-Tokens; der Himmel ist zugleich Seitenhintergrund. */
     --sky:#FBF2E3;
     --marsch:#73A89A;
   }
@@ -49,8 +41,7 @@
     font-family:var(--font-body);
     font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased;
   }
-  /* Überschriften skalieren mit der Breite (clamp) — die Pixel-Leiter der
-     App passt hier nur für Titel und Fließtext. */
+  /* Überschriften skalieren mit der Breite. */
   h1,h2,h3{font-family:var(--font-display); line-height:1.12; margin:0; letter-spacing:-.02em}
   h2{font-size:clamp(1.5rem,3vw,2rem);font-weight:var(--weight-heading)}
   h3{font-size:var(--text-title);font-weight:var(--weight-heading)}
@@ -65,16 +56,10 @@
   .brand{display:flex;align-items:center;gap:var(--space-md);font-family:var(--font-display);font-weight:var(--weight-display);font-size:var(--text-title);letter-spacing:-.02em}
   .brand img{width:38px;height:38px;border-radius:var(--radius-sm);display:block}
 
-  /* Hero — der Text sitzt im beigen Himmel des Landschaftsbandes, das unten
-     bündig im Hintergrund liegt. */
-  /* Unten so viel Raum, dass das Landschaftsband dort Platz hat; der Text
-     sitzt im beigen Himmel des Bildes. */
+  /* Unten Platz für das Landschaftsband, der Text sitzt in dessen Himmel. */
   .hero{padding:var(--space-3xl) 0 clamp(150px,21vw,300px); position:relative; overflow:hidden}
   .hero .wrap{position:relative; z-index:3}
-  /* Das Landschaftsband liegt HINTER dem Hero-Text und schließt unten bündig
-     an den nächsten Abschnitt an. Der beige Himmel des Bildes ist zugleich der
-     Hintergrund von Überschrift und Buttons — dadurch kein leerer Block
-     zwischen Text und Landschaft. */
+  /* Das Landschaftsband liegt hinter dem Hero-Text, sein Himmel ist der Hintergrund der Buttons. */
   .hero-band{
     position:absolute; left:0; right:0; bottom:-1px;
     display:block; width:100%; height:auto;
@@ -101,8 +86,7 @@
   .btn-ghost:hover{background:var(--surface);border-color:var(--primary)}
   .note{margin-top:var(--space-lg);font-size:var(--text-body);color:var(--faint)}
 
-  /* Store-Badges: noch nicht verlinkt (Launch steht bevor), daher bewusst
-     gedämpft und ohne href — sie zeigen an, was kommt, statt ins Leere zu führen. */
+  /* Store-Badges noch ohne href, deshalb gedämpft. */
   .stores{margin-top:var(--space-xxl)}
   .stores-hint{display:block;font-size:var(--text-label);color:var(--faint);margin-bottom:var(--space-md)}
   .store-row{display:flex;flex-wrap:wrap;gap:var(--space-md)}
@@ -119,8 +103,7 @@
 
   /* Features — sanfter Grünton als Fortsetzung des Landschaftsbandes. */
   .features{
-    /* Startet im Marschton des Landschaftsbandes und läuft in den Sand aus —
-       so wirkt der Abschnitt als Fortsetzung der Illustration, nicht als Bruch. */
+    /* Fortsetzung der Illustration, vom Marschton in den Sand. */
     background:linear-gradient(180deg,var(--marsch) 0%,var(--map-green) 16%,var(--surface-muted) 58%);
     padding:var(--space-4xl) 0;
   }
@@ -132,31 +115,23 @@
   .card p{margin:0;color:var(--muted);font-size:var(--text-body)}
   .ico{width:42px;height:42px;border-radius:var(--radius-md);background:rgba(var(--primary-rgb),var(--alpha-tint));display:grid;place-items:center;margin-bottom:var(--space-lg)}
   .ico svg{width:22px;height:22px;stroke:var(--primary);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-  /* Zwei Karten in Marsch-Grün, eine in Koralle — bricht das Einerlei auf,
-     ohne bunt zu werden. */
   .card:nth-child(3) .ico, .card:nth-child(5) .ico{background:rgba(var(--success-rgb),var(--alpha-tint))}
   .card:nth-child(3) .ico svg, .card:nth-child(5) .ico svg{stroke:var(--success)}
   .card:nth-child(4) .ico{background:rgba(var(--accent-rgb),var(--alpha-tint))}
   .card:nth-child(4) .ico svg{stroke:var(--accent)}
 
-  /* Orte — die Illustrationen als eigener Abschnitt. Vier Kacheln im Raster,
-     das Kohlfeld darunter über die volle Breite als Abschluss. */
   .places{padding:var(--space-4xl) 0 var(--space-sm)}
   .places h2{margin-bottom:var(--space-sm)}
   .places .sub{color:var(--muted);margin:0 0 var(--space-xxl);max-width:52ch}
-  /* Alle Gemeinden gleich groß, zu dritt: keine bekommt eine größere Kachel als
-     die andere — die Kirchen stehen nebeneinander, nicht in einer Rangfolge. */
+  /* Alle Gemeinden gleich groß, keine Rangfolge der Kirchen. */
   .place-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-lg)}
   .place{margin:0;border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);border:1px solid var(--border)}
-  /* `center 45%`: in der flachen Kachel schnitte ein tieferer Ausschnitt die
-     Turmspitzen ab — und der Turm ist das, woran man die Kirche erkennt. */
+  /* Tiefer geschnitten fehlten die Turmspitzen. */
   .place img{display:block;width:100%;height:clamp(110px,12vw,150px);object-fit:cover;object-position:center 45%}
   .place figcaption{
     padding:var(--space-sm) var(--space-md);font-weight:600;font-size:var(--text-label);color:var(--ink);
     border-top:1px solid var(--border);
   }
-  /* Das Landschaftsmotiv steht für keine Gemeinde und schließt die Reihe ab —
-     als einziges über die volle Breite, ohne Bildunterschrift-Betonung. */
   .place-wide{grid-column:1 / -1}
   .place-wide img{height:clamp(140px,16vw,190px);object-position:center 70%}
   .place-wide figcaption{color:var(--muted);font-weight:500}
@@ -176,8 +151,6 @@
   .panel h3{margin-bottom:var(--space-lg)}
   .panel p{margin:0 0 var(--space-lg);font-size:var(--text-body);color:var(--muted)}
 
-  /* Footer — Text auf Tinte: Weiß mit Alpha statt eigener Grautöne, Links im
-     hellen Teal. */
   footer{background:var(--ink);color:rgba(var(--on-color-rgb),var(--alpha-on-dark-text));padding:var(--space-3xl) 0;font-size:var(--text-body)}
   footer a{color:var(--primary-soft)}
   footer a:hover{color:var(--on-color)}
@@ -186,8 +159,6 @@
   .f-logo img{height:64px;display:block}
   .carrier{margin:var(--space-lg) 0 0;font-weight:500;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-strong))}
   .attr{margin:var(--space-lg) 0 0;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-muted));font-size:var(--text-label);max-width:56ch}
-  /* Branding-Pattern: Zeile 1 App+Version, Zeile 2 mit rotem Vogel,
-     Zeile 3 kursiv und am gedämpftesten. Abstände 4px wie in der Spec. */
   .appver{margin:0;text-align:right;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-muted));font-size:var(--text-label)}
   .made{margin:var(--space-xs) 0 0;text-align:right;color:rgba(var(--on-color-rgb),var(--alpha-on-dark-muted));font-size:var(--text-label)}
   .bird{display:inline-block;vertical-align:-2px;margin:0 var(--space-xxs)}
@@ -443,12 +414,7 @@
         </p>
       </div>
       <div>
-        <!-- Branding-Pattern (app-branding-pattern.md): drei Zeilen, in Zeile 2
-             der rote Vogel (Taube = Heiliger Geist), Zeile 3 kursiv und
-             gedämpfter. Kein Herz — das war hier falsch. -->
-        <!-- Version wird hier von Hand gepflegt. Ein früherer Kommentar sprach von
-             einer Ersetzung beim Deploy — die gibt es nicht (das README beschreibt
-             ein reines rsync), der Wert blieb dadurch stillschweigend stehen. -->
+        <!-- Drei Zeilen, in Zeile 2 der rote Vogel; die Version wird hier von Hand gepflegt. -->
         <p class="appver">Moin Kark v1.0.0</p>
         <p class="made">Made with <img class="bird" src="/bird.png" alt="Spirit" width="14" height="14"> in Hennstedt</p>
         <p class="blessing">Friede. Schalom. Salam.</p>

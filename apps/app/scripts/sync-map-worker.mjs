@@ -1,14 +1,4 @@
-// Kopiert den Web-Worker von MapLibre nach public/, damit er im Web-Export landet.
-//
-// MapLibre ab 6.0 bestimmt die URL seines Workers aus `import.meta.url`. Metro
-// löst das zu einem Pfad auf, unter dem die Datei im Export nicht liegt — der
-// Worker startet dann nie, und ohne ihn dekodiert MapLibre keine Vektorkacheln.
-// Die Karte bleibt leer, ohne eine einzige Fehlermeldung zu erzeugen.
-//
-// Die Dateien werden bei jedem Build frisch aus dem installierten Paket geholt,
-// statt im Repo zu liegen: Eine eingecheckte Kopie würde bei einem Update von
-// MapLibre still veralten — und der Fehler zeigt sich nicht als Absturz,
-// sondern als leere Karte.
+// Kopiert den MapLibre-Worker nach public/, weil Metro seine URL falsch auflöst und die Karte sonst leer bleibt.
 
 import { copyFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";

@@ -45,15 +45,7 @@ async function saveMap(m: Record<number, string[]>) {
   await AsyncStorage.setItem(MAP_KEY, JSON.stringify(m)).catch(() => {});
 }
 
-/**
- * Serialisiert alle Lese-Ändern-Schreiben-Zyklen auf der Reminder-Map.
- *
- * Ohne das überschreiben sich parallele Aufrufe gegenseitig: Wer ein Event
- * schnell hintereinander merkt und wieder entmerkt, löste sonst ein `cancel`
- * aus, das die Map noch ohne die gerade geplanten IDs las — die Erinnerung
- * feuerte später für ein längst entmerktes Event. Der Abgleich beim Start
- * stößt zudem mehrere Aufrufe gleichzeitig an.
- */
+/** Serialisiert Lese-Ändern-Schreiben auf der Reminder-Map, sonst feuern Erinnerungen für entmerkte Events. */
 let mapQueue: Promise<unknown> = Promise.resolve();
 function withMap<T>(fn: (map: Record<number, string[]>) => Promise<T>): Promise<T> {
   const run = mapQueue.then(async () => {
@@ -61,9 +53,7 @@ function withMap<T>(fn: (map: Record<number, string[]>) => Promise<T>): Promise<
     try {
       return await fn(map);
     } finally {
-      // Auch nach einem Fehler speichern: Was bis dahin geplant wurde, muss in
-      // der Map stehen — sonst lässt es sich nie mehr abbrechen und meldet
-      // sich für einen längst entmerkten Termin.
+      // Auch nach Fehlern speichern, sonst lässt sich Geplantes nie mehr abbrechen.
       await saveMap(map);
     }
   });
@@ -108,13 +98,7 @@ function relativeDay(start: Date, now: Date): string {
   return new Intl.DateTimeFormat("de-DE", { timeZone: BERLIN_TZ, weekday: "long" }).format(start);
 }
 
-/**
- * Höchstzahl gleichzeitig geplanter Termine. iOS hält pro App nur 64 ausstehende
- * Mitteilungen und verwirft darüber hinaus still — bei „Beides" sind das zwei
- * pro Termin. 30 Termine (= 60 Mitteilungen) lassen Luft für die sofortigen
- * Hinweise („entfällt"/„verschoben"); was dahinter liegt, rückt beim Abgleich
- * nach (reconcileReminders).
- */
+/** Höchstens 30 Termine, weil iOS nur 64 ausstehende Mitteilungen hält. */
 export const MAX_PLANNED_EVENTS = 30;
 
 /** Die nächsten (künftigen) Termine in Startreihenfolge, gedeckelt. */
@@ -150,9 +134,7 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
   const when = formatWhen(start);
 
   await withMap(async (map) => {
-    // Vorhandene Planungen für dieses Event zuerst abräumen — sonst sammeln sich
-    // bei erneutem Planen (Termin verschoben, Präferenz gewechselt) Doppel-
-    // Benachrichtigungen an.
+    // Erst abräumen, sonst sammeln sich Doppel-Mitteilungen.
     for (const old of map[f.properties.id] ?? []) {
       await Notifications.cancelScheduledNotificationAsync(old).catch(() => {});
     }
@@ -163,10 +145,7 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
       const id = await Notifications.scheduleNotificationAsync({
         content: {
           title: f.properties.title,
-          // z.B. „In 2 Stunden · Heute, Fr 19. Juni · 12:00 Uhr — Büsum, St. Clemens"
-          // „Heute"/„Morgen" bezogen auf den ZUSTELLzeitpunkt, nicht auf jetzt:
-        // eine heute geplante Erinnerung für morgen früh wird morgen zugestellt
-        // und hätte sonst „Morgen" gemeldet, obwohl das Event dann heute ist.
+          // „Heute“/„Morgen“ bezogen auf den Zustellzeitpunkt, nicht auf jetzt.
         body: `${t.lead}${relativeDay(start, t.date)}, ${when}${place ? ` — ${place}` : ""}`,
           data: { eventId: f.properties.id },
         },
@@ -179,13 +158,7 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
   });
 }
 
-/**
- * Gleicht die geplanten Erinnerungen mit dem Bestand ab, ohne alles neu zu planen:
- * fehlende (z. B. nach einem früheren Fehlalarm gelöschte) werden nachgeplant,
- * verwaiste (entmerkt, entfallen, jenseits des Deckels) abgeräumt.
- * `keep` = gemerkte Termine, die gerade nicht im Feed stehen (Teilausfall) —
- * deren Planungen bleiben unangetastet.
- */
+/** Plant fehlende Erinnerungen nach und räumt verwaiste ab; `keep` bleibt bei Teilausfall unangetastet. */
 export async function reconcileReminders(
   saved: EventFeature[],
   pref: ReminderPref,
@@ -223,8 +196,7 @@ export async function cancelForEvent(eventId: number): Promise<void> {
 /** Plant alle gemerkten Events neu (z.B. nach Präferenz-Wechsel). */
 export async function rescheduleAll(saved: EventFeature[], pref: ReminderPref): Promise<void> {
   if (IS_WEB) return;
-  // Leeren ebenfalls über die Queue, damit es sich nicht mit laufenden
-  // Einzelplanungen überholt.
+  // Über die Queue, damit es sich nicht mit Einzelplanungen überholt.
   await withMap(async (map) => {
     await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
     for (const key of Object.keys(map)) delete map[key as unknown as number];
@@ -237,17 +209,9 @@ export async function setReminderPref(pref: ReminderPref): Promise<void> {
   await AsyncStorage.setItem(REMINDER_KEY, pref).catch(() => {});
 }
 
-/**
- * Die zuletzt angetippte Mitteilung — oder `null` im Web.
- *
- * `Notifications.useLastNotificationResponse()` wirft im Web („is not available
- * on web"), und zwar beim Rendern: Die Web-Fassung startete dadurch gar nicht
- * mehr. Hier gekapselt statt am Aufrufer verzweigt, weil ein Hook nicht bedingt
- * aufgerufen werden darf — die Reihenfolge muss auf jeder Plattform gleich sein.
- */
+/** Zuletzt angetippte Mitteilung, im Web `null`, weil der Hook dort beim Rendern wirft. */
 export function useLastNotificationTap(): Notifications.NotificationResponse | null {
-  // Im Web existiert der Hook nicht; der Platzhalter hält die Hook-Reihenfolge
-  // stabil und liefert immer null.
+  // Platzhalter hält die Hook-Reihenfolge stabil.
   const hook = IS_WEB ? () => null : Notifications.useLastNotificationResponse;
   return hook() ?? null;
 }

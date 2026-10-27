@@ -51,9 +51,7 @@ afterEach(() => {
 
 describe("locationController", () => {
   it("T1: schlägt die Erstortung fehl, liefert das Live-Abo den Standort", async () => {
-    // Der gemeldete Fehler: iOS meldet ein vorübergehendes „location unknown"
-    // als harten Fehler — danach blieb der Standort bis zum Neustart leer.
-    // Nativ braucht der Reject Sekunden; das Abo liefert in der Zeit bereits.
+    // iOS meldet „location unknown“ als harten Fehler, das Abo liefert trotzdem.
     let rejectCurrent!: (e: Error) => void;
     const { deps, watches } = makeDeps({
       getCurrent: vi.fn(() => new Promise<typeof HEIDE>((_, rej) => (rejectCurrent = rej))),

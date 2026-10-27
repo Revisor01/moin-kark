@@ -1,5 +1,4 @@
-// Aggregiert Events über alle 14 Orgs parallel, dedupliziert über event.id,
-// baut eine GeoJSON-FeatureCollection.
+// Aggregiert Events aller 14 Orgs zu einem deduplizierten GeoJSON.
 
 import {
   normalizeKey,
@@ -12,27 +11,14 @@ import { toFeature } from "./geojson.js";
 import { isDynamicallyExcludedCategory } from "./locations.js";
 import { loadOrgs, missingOrgIds } from "./orgs.js";
 
-/**
- * Spezifität einer Org fürs Kirchspiel-Label bei Doppel-Events:
- * Einzelgemeinde-Orgs sind spezifischer als Kirchspiel-Orgs, das Dach ist am unspezifischsten.
- */
+/** Spezifität einer Org fürs Kirchspiel-Label bei Doppel-Events. */
 function specificity(orgId: number): number {
   if (orgId === 2596) return 0; // Dach
   if ([2720, 2725, 2729, 6572].includes(orgId)) return 1; // Kirchspiele
   return 2; // Einzelgemeinden
 }
 
-/**
- * Kategorien, die NICHT öffentlich auf der Karte erscheinen sollen (normalisiert, lowercase).
- * → siehe knowledge / Memory: ausgeschlossene Inhalte. Alle Stand 19.06.2026 (Simons Vorgabe).
- * - "externe buchung": Fremdnutzungen der Räume (DRK-Yoga, SSV, Liedertafel-Proben etc., v.a. Nordhastedt).
- * - "interne veranstaltungen": z.B. Kirchengemeinderatssitzung — nicht öffentlich.
- * - "kirchengemeinderatssitzung": manche Orgs (Nordhastedt) pflegen KGR als eigene Kategorie.
- * - "amtshandlungen -intern-": im Namen schon intern (NICHT die normalen „amtshandlungen" = öffentl. Tauffeste).
- * - "konfirmanden": wiederkehrender Konfi-Unterricht für angemeldete Konfis, kein offenes Event.
- *
- * Zusätzlich lassen sich über /admin weitere Kategorien zur Laufzeit ausschließen.
- */
+/** Nicht öffentliche Kategorien (normalisiert); weitere lassen sich über /admin ausschließen. */
 export const EXCLUDED_CATEGORIES = new Set<string>([
   "externe buchung",
   "interne veranstaltungen",
@@ -41,13 +27,7 @@ export const EXCLUDED_CATEGORIES = new Set<string>([
   "konfirmanden",
 ]);
 
-/**
- * Kategorie-Vergleich mit derselben Normalisierung, mit der /admin die
- * Ausschlüsse speichert (normalizeKey kollabiert auch innere Leerzeichen).
- * ChurchDesk liefert Namen mit doppelten Leerzeichen — mit einer zweiten,
- * abweichenden Normalisierung zeigte die Oberfläche den Ausschluss als aktiv,
- * die Termine blieben aber im Feed.
- */
+/** Kategorie-Vergleich mit derselben Normalisierung wie /admin, sonst greifen Ausschlüsse bei doppelten Leerzeichen nicht. */
 function isExcluded(ev: { categories?: { title: string }[] }): boolean {
   return (ev.categories ?? []).some((c) => {
     const t = normalizeKey(c.title);
@@ -66,9 +46,7 @@ export async function buildFeatureCollection(
   );
 
   let orgsOk = 0;
-  // Welche Orgs ausgefallen sind, nicht nur wie viele: Die App merkt sich
-  // Termine und meldet Absagen — ohne die IDs hielte sie jeden Termin einer
-  // fehlenden Gemeinde für entfallen.
+  // IDs der ausgefallenen Orgs, sonst hielte die App deren Termine für abgesagt.
   const orgsFailedIds: number[] = [];
   // Map id → {feature, specificity} für Dedup mit „spezifischere Org gewinnt".
   const byId = new Map<number, { feature: EventFeature; spec: number }>();
@@ -83,9 +61,7 @@ export async function buildFeatureCollection(
     orgsOk++;
     const { events } = r.value;
     for (const ev of events) {
-      // Je Event abgesichert: Ein einziger kaputter Datensatz (z. B. Kategorie
-      // mit `title: null`) darf nicht den Refresh für alle Gemeinden kippen —
-      // Fetch-Fehler sind je Org isoliert, das hier ist das Gegenstück je Event.
+      // Ein kaputter Datensatz darf nicht den Refresh aller Gemeinden kippen.
       try {
         if (isExcluded(ev)) continue; // ausgeschlossene Kategorien (z.B. „Externe Buchung")
         const spec = specificity(org.id);
@@ -101,10 +77,7 @@ export async function buildFeatureCollection(
     }
   });
 
-  // Totalausfall (ChurchDesk-Wartungsfenster, Netzstörung): NICHT erfolgreich eine
-  // leere Collection liefern — die würde den Cache überschreiben, den Versions-Hash
-  // ändern und alle Geräte ihren lokalen Bestand mit nichts ersetzen lassen.
-  // Ein Fehler lässt stattdessen die Stale-Logik des SwrCache greifen.
+  // Bei Totalausfall werfen statt leer liefern, sonst ersetzen alle Geräte ihren Bestand durch nichts.
   if (orgsOk === 0) {
     throw new Error(`Alle ${orgs.length} Org-Fetches fehlgeschlagen — alter Datenstand bleibt stehen.`);
   }
@@ -134,11 +107,7 @@ export async function buildFeatureCollection(
   };
 }
 
-/**
- * Kategorienliste für Filter-Chips, dedupliziert nach normalisiertem TITEL
- * (jede Org vergibt eigene IDs/Schreibweisen für denselben Namen). Liefert
- * Häufigkeit mit, damit das UI nach Relevanz sortieren kann.
- */
+/** Kategorien für die Filter-Chips, nach Titel dedupliziert und mit Häufigkeit. */
 export function extractCategories(
   fc: EventFeatureCollection
 ): FeedCategory[] {

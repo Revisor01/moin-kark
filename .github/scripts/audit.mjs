@@ -1,21 +1,4 @@
-// Audit der Produktiv-Abhängigkeiten, mit Allowlist für einzelne Meldungen.
-//
-//   node .github/scripts/audit.mjs [--report <datei>] [--allowlist <datei>]
-//
-// Ohne --report ruft das Skript selbst `npm audit --omit=dev --json` auf.
-//
-// Exit 1 bei jeder Meldung mit Schweregrad high oder critical, die nicht in
-// .github/audit-allowlist.json steht. Ein Eintrag greift nur, solange
-//   - GHSA-ID und Paket stimmen,
-//   - es keinen Fix gibt, den `npm audit fix` einspielen könnte,
-//   - das Paket keine direkte Abhängigkeit ist und nur über die Pakete in
-//     `onlyVia` hereinkommt (npm führt jedes weitere unter `effects` auf).
-// Ein Eintrag lässt also genau eine Meldung zu, nie ein ganzes Paket oder eine
-// Schwelle. Wird er nicht mehr gebraucht, ist der Lauf ebenfalls rot — sonst
-// überlebt die Ausnahme ihren Grund.
-//
-// Exit 2, wenn sich Bericht oder Allowlist nicht lesen lassen. Ein Audit, das
-// nicht lief, ist kein bestandenes Audit.
+// Audit der Produktiv-Abhängigkeiten mit Allowlist je Meldung: node .github/scripts/audit.mjs [--report <datei>] [--allowlist <datei>]
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -55,8 +38,7 @@ function readJson(label, text) {
 
 function loadReport() {
   if (args.report) return readJson("Bericht", readFileSync(args.report, "utf8"));
-  // npm audit endet mit Exit 1, sobald es überhaupt etwas findet — geurteilt
-  // wird hier, nicht dort.
+  // npm audit endet bei jedem Fund mit 1, geurteilt wird hier.
   const run = spawnSync("npm", ["audit", "--omit=dev", "--json"], {
     // Immer der ganze Workspace, auch wenn jemand aus apps/… heraus aufruft.
     cwd: fileURLToPath(new URL("../..", import.meta.url)),
@@ -116,8 +98,7 @@ if (report?.auditReportVersion !== 2 || !report.vulnerabilities || typeof report
 }
 const allowlist = loadAllowlist();
 
-// Nur Objekte in `via` sind Meldungen. Strings heißen „verwundbar über dieses
-// Paket" — deren Meldung steht beim Paket selbst und wird dort beurteilt.
+// Strings in `via` verweisen nur auf das Paket, dessen Meldung dort beurteilt wird.
 const findings = new Map();
 for (const vuln of Object.values(report.vulnerabilities)) {
   for (const advisory of vuln.via ?? []) {

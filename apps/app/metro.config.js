@@ -1,5 +1,4 @@
-// Metro für npm-Monorepo: muss den Repo-Root sehen, um @moinkark/shared (TS-Quelle)
-// aufzulösen und zu transpilieren.
+// Metro muss den Repo-Root sehen, um @moinkark/shared zu transpilieren.
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
 

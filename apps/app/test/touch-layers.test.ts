@@ -2,22 +2,7 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-// Wächter für einen Android-Fehler, der erst im nativen View-Baum entsteht und
-// sich hier nicht nachstellen lässt — deshalb prüft der Test den Aufbau von
-// app/index.tsx.
-//
-// Eine View, die nur eine Hintergrundfarbe trägt, bildet in React Native (neue
-// Architektur) keine eigene Ebene: Ihre Kinder hängen nativ direkt am nächsten
-// Vorfahren, der eine bildet. So wurde das Listen-Sheet zum Geschwister der
-// Sheets, die über der Karte aufgehen (Profil, Filter, Termin). Gezeichnet wird
-// nach zIndex — die Sheets liegen sichtbar oben —, Touches verteilt Android
-// unter Geschwistern aber zuerst nach `elevation`, und die hatte nur das
-// Listen-Sheet (sein Schatten). Wo es verdeckt unter dem Profil lag, ging jeder
-// Wisch an die unsichtbare Liste, und das Profil ließ sich dort nicht scrollen.
-//
-// Regel: Die View um ein Element mit Schatten bildet selbst eine Ebene —
-// `collapsable={false}` oder ein zIndex im Stil. Dann bleibt der Schatten in
-// ihr, und die Sheets bekommen ihre Touches.
+// Views um Elemente mit Schatten brauchen eine eigene Ebene, sonst fängt Android Touches nach elevation ab.
 
 const source = readFileSync(new URL("../app/index.tsx", import.meta.url), "utf8");
 const file = ts.createSourceFile("index.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);

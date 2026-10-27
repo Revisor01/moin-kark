@@ -1,17 +1,8 @@
-// Reine, testbare Maße der Terminliste. Hier — und NUR hier — steht, wie hoch
-// eine Karte ist. EventCard (Darstellung), EventList (getItemLayout) und
-// DraggableListSheet (Snap-Stufen) leiten alles aus diesen Funktionen ab;
-// vorher stand dieselbe Zahl dreimal im Code und stimmte nirgends genau.
+// Die einzige Quelle für die Kartenhöhe der Terminliste.
 
 import { spacing } from "./theme";
 
-/**
- * Bis zu dieser Systemschriftgröße wächst die Karte mit (iOS „Größerer Text“
- * 150 %, Android „Schriftgröße: Größer“). Darüber bleibt sie stehen und die
- * Kartentexte werden gedeckelt (maxFontSizeMultiplier): eine Karte, die
- * doppelt so hoch ist wie ihr Bild, ließe im Listen-Sheet nur noch einen
- * Eintrag sichtbar — dann wäre die Liste als Liste nicht mehr benutzbar.
- */
+/** Bis zu dieser Schriftgröße wächst die Karte mit, darüber würde die Liste unbrauchbar. */
 export const CARD_MAX_FONT_SCALE = 1.5;
 
 /** Anteil der Karte, der NICHT mit der Schrift wächst: Innenabstand oben+unten + Rahmen. */
@@ -44,11 +35,7 @@ export function rowHeight(fontScale = 1): number {
   return cardOuterHeight(fontScale) + CARD_GAP;
 }
 
-/**
- * Position eines Eintrags für FlatList.getItemLayout. Der obere Innenabstand
- * der Liste gehört in den Offset — ohne ihn lag die Rechnung um 16 px daneben,
- * dazu 2 px pro Eintrag durch den Rahmen: nach 50 Einträgen über 100 px.
- */
+/** Position für getItemLayout, mit oberem Innenabstand und Rahmen. */
 export function listItemLayout(
   index: number,
   fontScale = 1
@@ -57,10 +44,7 @@ export function listItemLayout(
   return { length, offset: LIST_PADDING_TOP + length * index, index };
 }
 
-/**
- * Sichtbare Sheet-Höhe (ohne Safe Area) der Stufen „ein Eintrag“ und „drei
- * Einträge“. Die 20 px sind Luft, damit die letzte Karte nicht an der Kante klebt.
- */
+/** Sichtbare Sheet-Höhe der Stufen „ein Eintrag“ und „drei Einträge“, mit 20 px Luft. */
 export function sheetSnapPx(fontScale = 1): { mid: number; large: number } {
   const card = cardOuterHeight(fontScale);
   const base = HANDLE_HEIGHT + LIST_PADDING_TOP + 20;

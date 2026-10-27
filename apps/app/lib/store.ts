@@ -1,5 +1,4 @@
-// Lokaler Speicher (AsyncStorage) für Profil-Einstellungen + gemerkte Events.
-// Kein Backend, kein Login — alles bleibt auf dem Gerät.
+// Lokaler Speicher für Einstellungen und gemerkte Events, ohne Backend.
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -43,18 +42,13 @@ function persist(set: Set<number>) {
 export function useSavedEvents() {
   const [saved, setSaved] = useState<Set<number>>(new Set());
   const [loaded, setLoaded] = useState(false);
-  // Änderungen vor dem Lesen des Speichers (Herz-Tipp direkt nach dem Start)
-  // werden gepuffert, nach dem Laden auf die gelesene Liste angewendet und
-  // dann EINMAL geschrieben. Schriebe der Tipp sofort, überschriebe er die
-  // gespeicherte Liste mit dem noch leeren Set — und die Leseantwort danach
-  // den Zustand mit der alten Liste: verlorener Schreibvorgang in beide Richtungen.
+  // Änderungen vor dem ersten Lesen puffern und einmal schreiben, sonst gehen Schreibvorgänge verloren.
   const loadedRef = useRef(false);
   const pendingRef = useRef<PendingOp[]>([]);
 
   useEffect(() => {
     AsyncStorage.getItem(SAVED_KEY)
-      // Lesefehler (beschädigter Speicher) = leere Liste, aber trotzdem „geladen":
-      // sonst warteten Abgleich und Aufräumen für immer.
+      // Auch bei Lesefehler als geladen markieren, sonst warten Abgleich und Aufräumen ewig.
       .then(parseSaved, () => new Set<number>())
       .then((stored) => {
         const ops = pendingRef.current;
@@ -114,9 +108,7 @@ import {
 
 export function useReminderPref() {
   const [pref, setPrefState] = useState<ReminderPref>(DEFAULT_REMINDER);
-  // `loaded` unterscheidet „noch nicht gelesen" von „gelesen, ist der Default".
-  // Ohne das plant der Abgleich beim Start womöglich Erinnerungen anhand des
-  // Defaults, obwohl die Person sie auf „Aus" gestellt hat.
+  // Sonst plant der Abgleich nach dem Default, obwohl Erinnerungen aus sind.
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     getReminderPref()
@@ -133,11 +125,7 @@ export function useReminderPref() {
 
 // --- Karten-App-Präferenz ---
 
-/**
- * Vorbelegung nach Plattform: Apple Karten gibt es nur auf iOS. Stand hier
- * pauschal "apple", landeten Android-Nutzer über einen Button namens
- * „In Apple Karten öffnen" im Browser statt in ihrer Google-Maps-App.
- */
+/** Vorbelegung nach Plattform, Apple Karten gibt es nur auf iOS. */
 const DEFAULT_MAPS_APP: MapsApp = Platform.OS === "ios" ? "apple" : "google";
 
 export function useMapsApp() {

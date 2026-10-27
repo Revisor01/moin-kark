@@ -1,13 +1,6 @@
 name: API Deploy
 
-# Baut das API-Image, legt es in der GitHub Container Registry ab und lässt
-# Portainer den Stack `moinkark-api` damit neu ausrollen. Danach wartet der Lauf,
-# bis https://api.moin-kark.de/ den gebauten Commit meldet und der Feed
-# antwortet. Erst dann ist er grün. Rollback: Stack-Image auf `sha-<commit>`.
-#
-# Startet von selbst bei jedem Push auf main, der die API betrifft. Von Hand:
-# Actions → „API Deploy" → Run workflow, oder
-#   gh workflow run api-deploy.yml
+# Baut das API-Image, rollt den Stack neu aus und wartet, bis der gebaute Commit antwortet.
 
 on:
   push:
@@ -21,9 +14,7 @@ on:
       - ".github/workflows/api-deploy.yml"
   workflow_dispatch:
 
-# Nie zwei Deploys gleichzeitig. Ein laufender wird nicht abgebrochen, der
-# nächste wartet: Ein abgebrochener Lauf könnte zwischen Push und Webhook
-# stehen bleiben.
+# Nie zwei Deploys gleichzeitig; nicht abbrechen, sonst bleibt ein Lauf zwischen Push und Webhook stehen.
 concurrency:
   group: api-deploy
   cancel-in-progress: false
@@ -69,8 +60,7 @@ jobs:
       dockerfile: apps/api/Dockerfile
       build-args: GIT_SHA=${{ github.sha }}
 
-  # Ein gesunder Dienst kann noch der alte Container sein; deshalb wartet der
-  # Deploy auf den gebauten Commit unter `revision`.
+  # Ein gesunder Dienst kann noch der alte Container sein, deshalb auf `revision` warten.
   deploy:
     needs: image
     uses: Revisor01/workflows/.github/workflows/portainer-deploy.yml@59236255da497972cdac8407c9af45d994ad0fcb # 1.4.1

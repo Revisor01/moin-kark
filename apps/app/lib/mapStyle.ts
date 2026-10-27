@@ -1,9 +1,4 @@
-// Gebrandeter Küsten-Kartenstil für den Kirchenkreis Dithmarschen.
-// Eigener, minimaler MapLibre-Style auf OpenFreeMap-Vektor-Tiles (kostenlos, kein Key).
-// Nordsee-Blau Wasser, warmer Sand für Land, reduzierte Straßen, dezente Labels.
-// Web + Native nutzen denselben Style UND dieselben Event-Layer: die Web-Karte
-// nimmt die Layer-Objekte direkt, die native Karte holt sich die Paint-Werte
-// per toNativeStyle() — so gibt es jede Farbe und jeden Radius nur einmal.
+// Kartenstil auf OpenFreeMap-Tiles; Web und Native nutzen dieselben Layer, nativ über toNativeStyle().
 
 import { alpha, mapColors } from "./theme";
 
@@ -14,12 +9,7 @@ const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 export const DITHMARSCHEN = {
   center: [9.0, 54.13] as [number, number], // [lng, lat]
   zoom: 9.4,
-  /**
-   * Kartengrenzen als [west, south, east, north] — das flache Format, das
-   * MapLibre auf beiden Plattformen erwartet. (Die frühere verschachtelte
-   * SW/NE-Schreibweise akzeptierten die Typen ab @vis.gl/react-maplibre 8.1.2
-   * nicht mehr, und nativ wurde sie ohnehin von Hand flachgeklopft.)
-   */
+  /** Grenzen als [west, south, east, north], wie MapLibre auf beiden Plattformen sie erwartet. */
   bounds: [8.3, 53.8, 9.6, 54.5] as [number, number, number, number],
 };
 
@@ -117,19 +107,7 @@ export const MAP_STYLE: any = {
         "line-opacity": 0.6,
       },
     },
-    // Ortsnamen — ruhig, in Tinte mit Sand-Halo.
-    //
-    // Bis Zoom 12 nur Städte (`city`/`town`), darüber auch Dörfer.
-    //
-    // `rank` taugt hier NICHT zur Unterscheidung, obwohl es danach aussieht: Im
-    // Ausschnitt um Hennstedt tragen Büsum, Meldorf, Albersdorf, Wesselburen
-    // und Heide alle Rang 11 — und Weiler wie Rehm, Fiel, Lieth und Stelle
-    // ebenfalls. Nach Rang gefiltert erschienen deshalb ausgerechnet die
-    // Kleinstorte, während die Orte mit Terminen fehlten. Die Klasse trennt
-    // sauber: `town` sind genau die Orte, um die es geht.
-    //
-    // `symbol-sort-key` nach Rang bleibt für den Fall, dass bei Platzmangel
-    // zwischen gleichrangigen Beschriftungen entschieden werden muss.
+    // Bis Zoom 12 nur `city`/`town`; nach `rank` geht nicht, Büsum und Weiler tragen denselben Rang.
     {
       id: "place-labels",
       type: "symbol",
@@ -145,12 +123,7 @@ export const MAP_STYLE: any = {
         false,
       ],
       layout: {
-        // Rückfall auf `name`: In den Kacheln über Dithmarschen ist `name:de`
-        // bei 80 von 124 Orten LEER — darunter Büsum, Meldorf, Albersdorf,
-        // Wesselburen und Heide. Mit `["get","name:de"]` allein blieben genau
-        // die Orte namenlos, an denen Termine stattfinden; beschriftet waren
-        // nur die wenigen Dörfer, die zufällig ein deutsches Namensfeld haben.
-        // Die Namen sind hier ohnehin deutsch, `name` ist also kein Rückschritt.
+        // Rückfall auf `name`, weil `name:de` bei den meisten Orten in Dithmarschen leer ist.
         "text-field": ["coalesce", ["get", "name:de"], ["get", "name"]],
         "text-font": ["Noto Sans Bold"],
         "text-size": ["interpolate", ["linear"], ["zoom"], 8, 11, 13, 16],
@@ -215,10 +188,7 @@ export const clusterCountLayer = {
     "text-field": ["get", "point_count_abbreviated"] as any,
     "text-font": ["Noto Sans Bold"] as any,
     "text-size": 13,
-    // Die Zahl gehört fest auf ihren Kreis und darf nie ausgeblendet werden;
-    // zugleich soll sie keine Ortsnamen verdrängen (sie liegt über ihnen und
-    // gewönne sonst jede Kollision — genau daran fehlten die Namen der Orte
-    // mit Terminen).
+    // Nie ausblenden, aber auch keine Ortsnamen verdrängen.
     "text-allow-overlap": true as any,
     "text-ignore-placement": true as any,
   },
@@ -239,11 +209,7 @@ export const pointLayer = {
   },
 };
 
-/**
- * MapLibre RN v11 erwartet die Style-Properties in camelCase und Layout + Paint
- * in EINEM `style`-Objekt (`circle-color` → `circleColor`). Diese Umschreibung
- * erspart es, jeden Layer für die native Karte ein zweites Mal hinzuschreiben.
- */
+/** Schreibt Layer in die camelCase-Form, die MapLibre RN v11 erwartet. */
 export function toNativeStyle(...parts: Record<string, unknown>[]): Record<string, any> {
   const out: Record<string, any> = {};
   for (const part of parts) {

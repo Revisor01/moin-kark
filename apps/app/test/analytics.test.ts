@@ -1,17 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Die Messung darf die App nie stören und nie identifizieren. Beides ist hier
-// festgenagelt, zusammen mit den beiden Umami-Eigenheiten, die am 25.09.2026
-// gegen t.godsapp.de gemessen wurden:
-//
-//  - Umami antwortet auf JEDE Anfrage mit HTTP 200, verwirft aber alles mit
-//    einem User-Agent nach `okhttp` — genau den schickt React Native auf
-//    Android. Ohne eigenen Header misst man dort nichts und merkt es nicht.
-//  - Besucher zählt Umami NUR über Seitenaufrufe. Ein Seitenaufruf ist
-//    `type:'event'` OHNE `name`; `type:'pageview'` lehnt Umami mit 400 ab.
+// Die Messung darf die App nie stören und nie identifizieren.
 
-// Die Messung laeuft nur im Release (AKTIV). Der Bundler setzt __DEV__;
-// im Test setzen wir es selbst auf false, sonst prueften die Tests nichts.
+// Im Test __DEV__ selbst auf false, sonst prüften die Tests nichts.
 vi.stubGlobal("__DEV__", false);
 
 const platform = { OS: "ios" as string };
@@ -34,8 +25,7 @@ beforeEach(() => {
 
 describe("Umami-Eigenheiten", () => {
   it("schickt einen browserartigen User-Agent", async () => {
-    // Der Kern: Mit React Natives Standard-UA (`okhttp/...`) verwirft Umami
-    // das Ereignis still und meldet trotzdem 200.
+    // Mit `okhttp/...` verwirft Umami still und meldet trotzdem 200.
     await track("termin-geoeffnet", { quelle: "liste" });
     const ua = new Headers(letzterAufruf().init.headers).get("User-Agent") ?? "";
     expect(ua).toMatch(/^Mozilla\/5\.0 /);
@@ -73,8 +63,7 @@ describe("Was mitgeschickt wird", () => {
 
 describe("Keine identifizierenden Daten", () => {
   it("laesst unbekannte Merkmale weg statt sie durchzureichen", async () => {
-    // Positivliste statt Regex: Ein Regex liesse jede Kleinbuchstabenfolge
-    // durch — also auch einen Termintitel.
+    // Ein Regex ließe auch Termintitel durch.
     await track("termin-geoeffnet", {
       quelle: "liste",
       titel: "Konfisamstag in Hennstedt",

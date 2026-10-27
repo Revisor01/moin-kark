@@ -21,9 +21,7 @@ apps/app/web-build/
 apps/app/dist/
 *.orig.*
 
-# Native Projekte (apps/app/ios, apps/app/android) sind VERSIONIERT — die
-# Release-Workflows bauen daraus. Ignoriert wird nur Generiertes; die
-# Einzelheiten stehen in apps/app/.gitignore.
+# Native Projekte sind versioniert, ignoriert wird nur Generiertes (apps/app/.gitignore).
 
 # Logs
 *.log
@@ -51,8 +49,7 @@ design/
 # Workspace: nur der Root-Lock ist maßgeblich
 apps/app/package-lock.json
 
-# Vom Build erzeugt (npm run sync:map-worker) — nicht einchecken, sonst veraltet
-# die Kopie still, wenn MapLibre aktualisiert wird.
+# Erzeugt von npm run sync:map-worker, sonst veraltet die Kopie still.
 apps/app/public/maplibre-gl-worker.mjs
 apps/app/public/maplibre-gl-shared.mjs
 

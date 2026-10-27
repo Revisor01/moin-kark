@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyFilters, DEFAULT_FILTERS } from "../lib/filters";
 import type { EventFeature } from "@moinkark/shared";
 
-// Eigener Zeitraum im Filter: von-bis, beides als Kalendertag in Berliner Zeit.
-// Die bestehenden Stufen (heute, Woche, Wochenende) rechnen ebenfalls in
-// Berliner Zeit — der eigene Zeitraum muss das genauso tun, sonst fehlt am
-// Rand ein Tag, je nach Sommer- oder Winterzeit.
+// Eigener Zeitraum in Berliner Zeit, sonst fehlt je nach Sommerzeit ein Tag.
 
 function feature(startUtc: string, id = 1): EventFeature {
   return {
@@ -46,9 +43,7 @@ describe("Eigener Zeitraum", () => {
   });
 
   it("schliesst den ersten Tag ab 00:00 ein", () => {
-    // 5.10. um 00:30 Berlin = 4.10. 22:30 UTC — der Termin gehoert zum 5.,
-    // obwohl sein UTC-Datum der 4. ist. Genau hier ginge eine UTC-Rechnung
-    // schief.
+    // 00:30 Berlin am 5. ist UTC noch der 4.
     const e = [feature("2026-10-04T22:30:00.000Z", 1)];
     expect(imZeitraum(e, "2026-10-05", "2026-10-10", now)).toEqual([1]);
   });
@@ -80,16 +75,14 @@ describe("Eigener Zeitraum", () => {
   });
 
   it("rechnet auch in der Winterzeit richtig", () => {
-    // Nach der Umstellung (25.10.2026) gilt UTC+1: 2.11. um 00:30 Berlin
-    // = 1.11. 23:30 UTC.
+    // Nach der Umstellung gilt UTC+1.
     const e = [feature("2026-11-01T23:30:00.000Z", 1)];
     const jetzt = new Date("2026-10-30T09:00:00.000Z");
     expect(imZeitraum(e, "2026-11-02", "2026-11-05", jetzt)).toEqual([1]);
   });
 
   it("zeigt bei nur EINEM Datum genau diesen Tag", () => {
-    // Wer nur von setzt, meint diesen einen Tag — nicht „ab dann alles".
-    // Sonst muesste man dasselbe Datum zweimal eintragen.
+    // Nur „von“ meint genau diesen Tag.
     const e = [
       feature("2026-10-07T08:00:00.000Z", 1), // 7.10., im Tag
       feature("2026-10-08T08:00:00.000Z", 2), // 8.10., Tag danach

@@ -6,8 +6,7 @@ import type { CdEvent } from "../src/churchdesk.js";
 import type { OrgConfig } from "../src/orgs.js";
 import { META_FIELDS } from "./meta-fields.js";
 
-// Die Org-Liste und der ChurchDesk-Client werden ersetzt: Die Tests dürfen weder
-// Tokens brauchen noch das Netz anfassen.
+// Ohne Tokens und ohne Netz.
 const fetchOrgEvents = vi.fn<(org: OrgConfig, from: Date, to: Date) => Promise<CdEvent[]>>();
 const loadOrgs = vi.fn<() => OrgConfig[]>();
 const missingOrgIds = vi.fn<() => number[]>();
@@ -44,10 +43,7 @@ function cdEvent(over: Partial<CdEvent> = {}): CdEvent {
 const FROM = new Date("2026-06-15T00:00:00Z");
 const TO = new Date("2026-08-14T00:00:00Z");
 
-/**
- * Bildet die gegebenen Orgs mit ihren Events ab; nicht genannte Orgs fallen aus.
- * `missing` sind Orgs, für die gar kein Token gesetzt ist (werden nie abgefragt).
- */
+/** Bildet die Orgs mit ihren Events ab; ungenannte fallen aus, `missing` haben kein Token. */
 function withOrgs(map: Record<number, CdEvent[] | Error>, missing: number[] = []) {
   loadOrgs.mockReturnValue(
     Object.keys(map).map((id) => ({ id: Number(id), token: "test" }))
@@ -97,8 +93,7 @@ describe("buildFeatureCollection", () => {
   });
 
   it("nennt das Abfragefenster als Berliner Kalendertage", async () => {
-    // `from`/`to` sind Zeitpunkte; ChurchDesk bekommt aber Kalendertage — und
-    // die entscheiden, ob ein Termin von heute früh noch dabei ist.
+    // ChurchDesk bekommt Kalendertage, und die entscheiden über Termine von heute früh.
     withOrgs({ 2729: [cdEvent({ id: 1 })] });
     const fc = await buildFeatureCollection(FROM, TO);
     expect(fc.meta?.windowFrom).toBe(fmtDate(FROM));
@@ -140,9 +135,7 @@ describe("buildFeatureCollection", () => {
   });
 
   it("nennt die IDs der ausgefallenen Organisationen", async () => {
-    // Die App merkt sich Termine und meldet Absagen. Fehlt eine Gemeinde im
-    // Feed, muss sie WISSEN, welche — sonst hält sie alle Termine dieser
-    // Gemeinde für abgesagt und verschickt falsche Mitteilungen.
+    // Ohne die IDs hielte die App alle Termine einer fehlenden Gemeinde für abgesagt.
     withOrgs({
       2729: [cdEvent({ id: 1 })],
       2725: new Error("ChurchDesk 2725 HTTP 401"),
@@ -155,8 +148,7 @@ describe("buildFeatureCollection", () => {
   });
 
   it("zählt Organisationen ohne Token als fehlend, nicht als erreicht", async () => {
-    // Geht beim Redeploy eine Token-Zeile verloren, fehlt eine ganze Gemeinde
-    // dauerhaft — das muss in den Zahlen auftauchen, nicht nur im Log.
+    // Eine verlorene Token-Zeile muss in den Zahlen auftauchen.
     withOrgs({ 2729: [cdEvent({ id: 1 })], 2725: [cdEvent({ id: 2 })] }, [2596]);
     const fc = await buildFeatureCollection(FROM, TO);
     expect(fc.meta).toMatchObject({
@@ -168,9 +160,7 @@ describe("buildFeatureCollection", () => {
   });
 
   it("überspringt ein kaputtes Event, statt den ganzen Refresh zu kippen", async () => {
-    // Ein Event mit `title: null` in einer Kategorie ließ die Transformation
-    // werfen — und damit scheiterte der Refresh für alle 14 Gemeinden, obwohl
-    // 13 davon einwandfrei geantwortet hatten.
+    // Ein kaputtes Event darf den Refresh der anderen 13 nicht kippen.
     const kaputt = cdEvent({
       id: 2,
       categories: [{ id: 5, title: null as unknown as string, color: 1 }],
@@ -186,8 +176,7 @@ describe("buildFeatureCollection", () => {
   });
 
   it("wirft beim Totalausfall, statt eine leere Sammlung zu liefern", async () => {
-    // Eine leere Collection würde den Cache überschreiben und alle Geräte ihren
-    // lokalen Bestand mit nichts ersetzen lassen.
+    // Leer würde den Bestand auf allen Geräten ersetzen.
     withOrgs({
       2729: new Error("ChurchDesk weg"),
       2725: new Error("ChurchDesk weg"),
@@ -228,10 +217,7 @@ describe("buildFeatureCollection", () => {
   });
 
   it("wendet einen über /admin gepflegten Ausschluss auch auf Namen mit doppelten Leerzeichen an", async () => {
-    // Der Admin klickt die Kategorie so an, wie sie im Feed steht (mit zwei
-    // Leerzeichen); gespeichert wird sie normalisiert. Der Vergleich beim
-    // Aggregieren muss dieselbe Normalisierung nutzen, sonst zeigt die
-    // Oberfläche den Ausschluss als aktiv, die Termine bleiben aber im Feed.
+    // Gespeichert normalisiert, verglichen mit derselben Normalisierung.
     loadOverrides();
     setOverrides({ locations: {}, titles: [], categories: ["Probe  Kategorie"], highlights: [] });
     withOrgs({
@@ -305,8 +291,7 @@ describe("extractCategories", () => {
   it("fasst Schreibweisen mit doppelten Leerzeichen mit der einfachen zusammen", async () => {
     const cats = extractCategories(fc([["Kinder & Familie"], ["Kinder  &  Familie"]]));
     expect(cats).toHaveLength(1);
-    // Anzeigetitel bleibt die zuerst gesehene Schreibweise — die App vergleicht
-    // Filter-Chip und Event-Kategorie über genau diesen String.
+    // Die App vergleicht Filter-Chip und Kategorie über diesen String.
     expect(cats[0].title).toBe("Kinder & Familie");
     expect(cats[0].count).toBe(2);
   });

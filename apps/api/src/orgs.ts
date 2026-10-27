@@ -1,5 +1,4 @@
-// Die 14 ChurchDesk-Organisationen. Tokens kommen AUSSCHLIESSLICH aus ENV-Variablen
-// (CD_TOKEN_<orgId>) — niemals im Code/Repo. Orgs ohne gesetzten Token werden übersprungen.
+// Die 14 ChurchDesk-Orgs; Tokens nur aus CD_TOKEN_<orgId>, Orgs ohne Token werden übersprungen.
 
 /** Alle bekannten Org-IDs des Kirchenkreises Dithmarschen. */
 const ALL_ORG_IDS = [
@@ -11,11 +10,7 @@ export interface OrgConfig {
   token: string;
 }
 
-/**
- * Orgs, für die kein Token gesetzt ist. Die werden nie abgefragt — zählen also
- * weder als ok noch als ausgefallen. Für /healthz und die Feed-Meta, damit eine
- * beim Redeploy verlorene Token-Zeile nicht nur als Log-Zeile auffällt.
- */
+/** Orgs ohne Token, damit eine beim Redeploy verlorene Zeile in /healthz und Feed-Meta auffällt. */
 export function missingOrgIds(): number[] {
   return ALL_ORG_IDS.filter((id) => !process.env[`CD_TOKEN_${id}`]?.trim());
 }

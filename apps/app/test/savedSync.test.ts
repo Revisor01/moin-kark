@@ -32,9 +32,7 @@ describe("syncSavedEvents — Teilausfall der API", () => {
   });
 
   it("Teilausfall ohne Gemeindeliste: fehlende Termine gelten NICHT als entfallen", async () => {
-    // Der gemeldete Fehler: Kirchspiel Eider antwortet einmal nicht, der Feed
-    // kommt trotzdem mit Status 200 — bisher: „Veranstaltung entfällt" pro
-    // gemerktem Termin, Erinnerung weg, Snapshot-Eintrag weg.
+    // Teilausfall mit Status 200 darf keine Termine als entfallen melden.
     const f = feature({ id: 1, orgId: 5, startUtc: inDays(3), title: "Gottesdienst" });
     await syncSavedEvents([1], [f], { orgsFailed: 0 });
     notifications.reset();
@@ -43,8 +41,7 @@ describe("syncSavedEvents — Teilausfall der API", () => {
 
     expect(res.removed).toEqual([]);
     expect(scheduledRequests().immediate).toHaveLength(0);
-    // Der Snapshot bleibt erhalten — sonst gälte der Termin beim nächsten
-    // Abgleich als „erstmals gesehen" und eine Verschiebung bliebe stumm.
+    // Snapshot bleibt, sonst bliebe eine Verschiebung stumm.
     expect(await loadSnapshotStartTimes()).toEqual({ 1: f.properties.startUtc });
   });
 
@@ -115,10 +112,7 @@ function mitOffset(iso: string, stunden: number): string {
 
 describe("syncSavedEvents — Schreibweise der Startzeit", () => {
   it("meldet keine Verschiebung, wenn nur die Schreibweise wechselt", async () => {
-    // Der Snapshot auf dem Gerät trägt eine andere Schreibweise
-    // („…T14:00:00+02:00") als der Feed („…T12:00:00.000Z") — derselbe
-    // Zeitpunkt. Ein Textvergleich meldete hier für jeden gemerkten Termin
-    // „Termin geändert".
+    // Derselbe Zeitpunkt in anderer Schreibweise ist keine Änderung.
     const start = inDays(3);
     const alt = feature({ id: 1, orgId: 5, startUtc: mitOffset(start, 2), title: "Gottesdienst" });
     await syncSavedEvents([1], [alt], { orgsFailed: 0 });

@@ -9,11 +9,7 @@ import { placeholderFor } from "../lib/placeholders";
 interface Props {
   feature: EventFeature;
   active?: boolean;
-  /**
-   * Bekommt die Event-ID — so kann die Liste ihren `onSelect` direkt
-   * durchreichen, statt pro Karte eine neue Funktion zu bauen (die machte
-   * das `memo` unten wirkungslos).
-   */
+  /** Bekommt die ID, damit die Liste `onSelect` ohne Wrapper durchreicht und memo wirkt. */
   onPress: (id: number) => void;
   /** Ist das Event gemerkt? (zeigt Herz) */
   saved?: boolean;
@@ -23,17 +19,13 @@ interface Props {
 
 function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
   const p = feature.properties;
-  // Systemschrift: Die Karte wächst bis 150 % mit (s. lib/listLayout), damit
-  // Ort und Kategorie nicht abgeschnitten werden. fontScale kommt aus dem
-  // Hook, damit ein Wechsel in den iOS-Einstellungen ohne Neustart greift.
+  // fontScale aus dem Hook, damit eine geänderte Systemschrift ohne Neustart greift.
   const { fontScale } = useWindowDimensions();
   const height = cardOuterHeight(fontScale);
   const cat = p.categories[0]?.title;
   const accent = colorForCategory(cat);
   const time = formatEventTime(p.startUtc, p.endUtc, p.allDay, p.showEndtime);
-  // Mehrfach zugeordnete Events: auf der kompakten Karte „Kirchspiel Eider" statt
-  // einer einzelnen (irreführend herausgegriffenen) Gemeinde; alle Namen stehen
-  // in der Detailansicht.
+  // Bei Mehrfachzuordnung das Kirchspiel statt einer herausgegriffenen Gemeinde.
   const place =
     eventParishes(p).length > 1
       ? `Kirchspiel ${p.kirchspiel}`
@@ -61,8 +53,7 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
             lib/placeholders.ts), hier quadratisch mittig zugeschnitten. */}
         <Image
           source={p.image?.url ? { uri: p.image.url } : placeholderFor(p.id, p.parish, p.city)}
-          // Höhe inline aus derselben Quelle wie die Karte: sonst zieht das Bild
-          // im Web die Zelle auf seine eigene Höhe und wird oben abgeschnitten.
+          // Höhe inline, sonst zieht das Bild im Web die Zelle auf seine eigene Höhe.
           style={[styles.thumb, { height }]}
           resizeMode="cover"
         />
@@ -109,10 +100,7 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // Die Höhe kommt inline aus cardOuterHeight() — sie schließt den Rahmen mit
-  // ein (Box-Modell in RN), darum sind alle Karten exakt gleich hoch, egal ob
-  // der Rahmen 1 px (normal) oder 2 px (Tipp/aktiv) breit ist. Das braucht
-  // EventList.getItemLayout, sonst rechnet die Liste beim Scrollen daneben.
+  // Höhe inklusive Rahmen, damit getItemLayout bei 1 und 2 px Rahmen stimmt.
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
@@ -121,8 +109,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadow.card,
   },
-  // Füllt die Karte; ALLE Karten gleich hoch, Bild wird per cover zentriert
-  // beschnitten (egal ob echtes Bild oder Querformat-Platzhalter).
   pressArea: { flexDirection: "row", flex: 1 },
   cardActive: {
     borderColor: colors.primary,
@@ -145,12 +131,7 @@ const styles = StyleSheet.create({
   },
   highlightBadgeText: { ...text.captionStrong, color: colors.onColor },
   accent: { width: spacing.xs },
-  // Feste Höhe, NICHT alignSelf:"stretch": Im Web zog `stretch` die Zelle auf die
-  // natürliche Bildhöhe (bei den Ortsmotiven 381 px) statt auf die Kartenhöhe —
-  // die Karte schnitt bei 104 px ab, sichtbar war nur das obere Viertel, bei
-  // Hennstedt Himmel und Turmspitze. Mit `height` bezieht sich `cover` auf den
-  // Rahmen, wie gemeint. Der Wert folgt der Kartenhöhe (s. lib/listLayout), damit
-  // beide bei großer Systemschrift zusammen wachsen.
+  // Feste Höhe statt stretch, sonst zieht das Web die Zelle auf die natürliche Bildhöhe.
   thumb: { width: 96 },
   body: { flex: 1, padding: spacing.md, gap: spacing.xxs, justifyContent: "center" },
   time: { ...text.captionStrong, color: colors.primary },
@@ -160,8 +141,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
-    // 1 px statt spacing.xxs: Die Kartenhöhe (lib/listLayout) ist auf den Textblock
-    // gerechnet — mehr Innenabstand am Tag würde die 104-px-Karte sprengen.
+    // 1 px, mehr sprengte die 104-px-Karte.
     paddingVertical: 1,
     maxWidth: 130,
   },
@@ -180,10 +160,5 @@ const styles = StyleSheet.create({
   heartActive: { color: colors.accent },
 });
 
-/**
- * memo: In langen Listen rendert sonst jede Karte neu, sobald sich irgendetwas
- * am Bildschirm ändert — obwohl sich für die meisten Karten nichts geändert hat.
- * Wirkt nur, wenn die Funktions-Props stabil sind: `onPress` bekommt deshalb die
- * ID (kein Wrapper pro Karte), `onToggleSave` kommt als useCallback aus Home.
- */
+/** memo wirkt nur mit stabilen Funktions-Props (ID statt Wrapper, useCallback aus Home). */
 export default memo(EventCard);

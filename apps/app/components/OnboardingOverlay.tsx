@@ -1,5 +1,4 @@
-// Einmaliges Onboarding-Overlay beim ersten App-Start.
-// Weist auf das Merken (Herz) + lokale Erinnerungen hin — ohne Server/Login.
+// Einmaliges Onboarding beim ersten Start.
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, glyph, overlays, radius, shadow, spacing, text } from "../lib/theme";
 

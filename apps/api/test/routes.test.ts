@@ -4,8 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EventFeature, EventFeatureCollection } from "@moinkark/shared";
 
-// Die Routen sollen ohne Netz und ohne ChurchDesk-Tokens antworten: Die
-// Aggregation wird ersetzt, alles darüber (Cache, Fenster, Serialisierung) läuft echt.
+// Ohne Netz und Tokens; nur die Aggregation ist ersetzt.
 const buildFeatureCollection = vi.fn<(from: Date, to: Date) => Promise<EventFeatureCollection>>();
 
 vi.mock("../src/aggregate.js", async (orig) => ({
@@ -31,10 +30,7 @@ const isRoot = process.getuid?.() === 0;
 
 const { fmtDate } = await import("../src/churchdesk.js");
 
-// Jeder Test bekommt eine frische API-Instanz. Der Cache lebt im Modul, und
-// ein neuer Tages-Schlüssel liefert seit dem Mitternachts-Rückfall den
-// vorherigen Stand statt eines leeren Caches — mit einer geteilten Instanz
-// erbte jeder Test die Daten seines Vorgängers.
+// Frische Instanz je Test, sonst erbt jeder über den Mitternachts-Rückfall die Daten des vorigen.
 let app: Awaited<typeof import("../src/index.js")>["app"];
 
 async function frischeApp(): Promise<void> {
@@ -96,10 +92,7 @@ function tageVor(tage: number): void {
   vi.setSystemTime(new Date(Date.now() + tage * 86400_000));
 }
 
-/**
- * Kennung eines Datenstands — jeweils aus einer frischen Instanz, damit kein
- * Cache-Rückfall dazwischenliegt und wirklich dieser Stand gehasht wird.
- */
+/** Kennung eines Datenstands aus frischer Instanz, ohne Cache-Rückfall. */
 async function kennung(fc: EventFeatureCollection): Promise<string> {
   await frischeApp();
   buildFeatureCollection.mockResolvedValue(fc);
@@ -164,8 +157,7 @@ describe("GET /events.geojson", () => {
   });
 
   it("antwortet mit 500 und festem Text, wenn gar keine Daten geladen werden können", async () => {
-    // Die interne Meldung verriet u. a. das Schema der Token-Variablen —
-    // die gehört ins Log, nicht zu jedem Aufrufer.
+    // Interna gehören ins Log.
     buildFeatureCollection.mockRejectedValue(
       new Error("[orgs] Keine ChurchDesk-Tokens konfiguriert. Setze CD_TOKEN_<orgId> in der Umgebung (.env).")
     );
@@ -182,8 +174,7 @@ describe("GET /events.geojson", () => {
   });
 
   it("liefert nach Mitternacht den Vortagesstand, wenn ChurchDesk gerade ausfällt", async () => {
-    // Der Cache-Schlüssel wechselt mit dem Kalendertag. Der Stand von gestern
-    // Abend liegt aber noch da — ein 500 leerte auf allen Geräten die Karte.
+    // Ein 500 leerte auf allen Geräten die Karte.
     buildFeatureCollection.mockResolvedValue(collection([feature({ id: 7, title: "Abendsegen" })]));
     expect((await app.request("/events.geojson")).status).toBe(200);
 
@@ -198,8 +189,7 @@ describe("GET /events.geojson", () => {
   });
 
   it("fragt ChurchDesk immer genau 60 Kalendertage ab — auch über die Zeitumstellung", async () => {
-    // 2. Oktober 2026, 00:30 Berlin (Sommerzeit). Ein Millisekunden-Offset von
-    // 60 × 24 h landete am 30. November 23:30 Berlin (Winterzeit) — 59 Tage.
+    // 2.10.2026 00:30 Berlin: 60 × 24 h landeten bei 59 Tagen.
     vi.setSystemTime(new Date("2026-10-01T22:30:00Z"));
     buildFeatureCollection.mockResolvedValue(collection([feature()]));
     await app.request("/events.geojson");
@@ -212,8 +202,6 @@ describe("GET /events.geojson", () => {
 });
 
 describe("Bedingte Anfragen und Zwischenspeichern", () => {
-  // Zwischen zwei Refreshes ist der Feed byte-identisch. Ohne Kennung im Header
-  // serialisierte und komprimierte der Server ihn trotzdem für jede Anfrage neu.
   it.each(["/events.geojson", "/categories.json", "/version.json"])(
     "%s trägt ETag und Cache-Control",
     async (pfad) => {
@@ -238,8 +226,7 @@ describe("Bedingte Anfragen und Zwischenspeichern", () => {
   });
 
   it("nimmt auch die komprimierte (schwache) Kennung und Listen an", async () => {
-    // Nach gzip meldet der Server die Kennung als W/"…" — genau die schickt der
-    // Client zurück, oft zusammen mit älteren.
+    // Nach gzip schickt der Client W/"…" zurück, oft mit älteren.
     buildFeatureCollection.mockResolvedValue(collection([feature()]));
     const etag = (await app.request("/version.json")).headers.get("etag")!;
     const stark = etag.replace(/^W\//, "");
@@ -332,8 +319,7 @@ describe("GET /version.json", () => {
     expect(zweite).not.toBe(erste);
   });
 
-  // Alles, was die App anzeigt oder wonach sie filtert, muss die Kennung
-  // ändern — sonst bleibt eine Korrektur auf den Geräten unsichtbar.
+  // Alles Sichtbare und Filterbare muss die Kennung ändern.
   it.each<[string, Partial<EventFeature["properties"]>]>([
     ["allDay", { allDay: true }],
     ["showEndtime", { showEndtime: false }],
@@ -373,8 +359,7 @@ describe("GET /healthz und /status.json", () => {
   });
 
   it("meldet degraded mit 200, wenn eine Organisation ausgefallen ist", async () => {
-    // Deren Events fehlen still — das muss sichtbar sein, darf aber den
-    // Container nicht als ungesund gelten lassen.
+    // Sichtbar, aber nicht ungesund.
     buildFeatureCollection.mockResolvedValue(
       collection([feature()], { orgsOk: 13, orgsFailed: 1 })
     );
@@ -386,9 +371,7 @@ describe("GET /healthz und /status.json", () => {
   });
 
   it("meldet degraded, wenn für eine Organisation kein Token gesetzt ist", async () => {
-    // Beim Redeploy ging eine Token-Zeile verloren: Die Gemeinde wird gar nicht
-    // erst abgefragt, zählt also weder als ok noch als ausgefallen — und der
-    // Zustand blieb „ok", obwohl ihre Termine dauerhaft fehlen.
+    // Orgs ohne Token zählen weder als ok noch als ausgefallen.
     buildFeatureCollection.mockResolvedValue(
       collection([feature()], { orgsOk: 13, orgsFailed: 0, orgsConfigured: 13, orgsMissing: 1 })
     );
@@ -445,8 +428,7 @@ describe("GET /healthz und /status.json", () => {
 });
 
 describe("GET /", () => {
-  // Der Deploy-Workflow wartet nach dem Ausrollen, bis hier der gebaute Commit
-  // steht — erst dann läuft wirklich das neue Image.
+  // Daran erkennt der Deploy das neue Image.
   const saved = process.env.GIT_SHA;
   afterEach(() => {
     if (saved === undefined) delete process.env.GIT_SHA;
@@ -506,10 +488,7 @@ describe("Admin-Routen", () => {
     expect(res.status).toBe(401);
   });
 
-  // Ist die Overrides-Datei lesbar, ist Speichern erlaubt — das Feld sagt das
-  // ausdrücklich, damit die Oberfläche den Sperr-Banner verbergen kann. Ohne
-  // dieses Feld bliebe der Banner im Sperrfall unsichtbar (der Sperrzustand
-  // selbst ist in locations.test.ts geprüft).
+  // Das Feld lässt die Oberfläche den Sperr-Banner verbergen.
   it("meldet im Normalfall keinen Ladefehler der Korrekturen", async () => {
     const res = await app.request("/admin/api/locations", { headers: ADMIN });
     expect(res.status).toBe(200);
@@ -518,8 +497,6 @@ describe("Admin-Routen", () => {
   });
 
   it("schaltet /admin ab, wenn das Token zu kurz ist", async () => {
-    // Ein einstelliges Token wurde bisher genauso angenommen wie ein langes —
-    // die Sicherheit hing allein daran, dass niemand raten würde.
     process.env.ADMIN_TOKEN = "kurz";
     try {
       await frischeApp();
@@ -605,8 +582,7 @@ describe("PUT /admin/api/locations", () => {
   });
 
   it.skipIf(isRoot)("meldet einen Schreibfehler als 500 ohne Dateipfad", async () => {
-    // Volume schreibgeschützt: Das ist kein Eingabefehler des Admins (400),
-    // und der Pfad der Ablage geht niemanden außerhalb des Logs etwas an.
+    // Schreibschutz ist kein Eingabefehler, und der Pfad bleibt im Log.
     chmodSync(DATA_DIR, 0o500);
     const res = await put(LEER);
     expect(res.status).toBe(500);
@@ -664,11 +640,7 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
   });
 
   it("leitet NICHT per meta-refresh weiter", async () => {
-    // Apples Vorschau-Dienst (iMessage) folgt einem http-equiv="refresh" wie ein
-    // Browser und landet dann auf der Karte — einer Single-Page-App ohne jede
-    // og-Angabe. Die Vorschau blieb deshalb leer und in Nachrichten stand nur
-    // die nackte URL. WhatsApp und Facebook folgen dem Refresh nicht, dort fiel
-    // es nicht auf.
+    // iMessage folgt dem Refresh und fände auf der SPA keine og-Angaben.
     buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42 })]));
     const html = await (await app.request("/event/42")).text();
     expect(html).not.toContain("http-equiv=\"refresh\"");
@@ -685,9 +657,7 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
   });
 
   it("gibt beim Standardmotiv dessen eigene Hoehe an", async () => {
-    // og.jpg ist 1200x630, nicht 676. Die Hoehe stand fest verdrahtet auf dem
-    // Flyer-Mass — bei den knapp 60 % der Termine ohne Bild meldete die Seite
-    // damit eine Groesse, die zum ausgelieferten Bild nicht passt.
+    // og.jpg ist 1200x630, nicht 676.
     buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42, image: undefined })]));
     const html = await (await app.request("/event/42")).text();
     expect(html).toContain('property="og:image" content="https://moin-kark.de/og.jpg"');
@@ -721,8 +691,6 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
   });
 
   it("maskiert HTML in Titel und Ort", async () => {
-    // Ein Titel aus ChurchDesk landet ungeprueft im Attribut — ohne Maskierung
-    // liesse sich das Dokument von aussen veraendern.
     buildFeatureCollection.mockResolvedValue(
       collection([feature({ id: 42, title: 'Konzert" onload="boese()', locationName: "<b>Kirche</b>" })])
     );
@@ -733,22 +701,16 @@ describe("GET /event/:id (Link-Vorschau beim Teilen)", () => {
   });
 
   it("bricht den Skriptblock der strukturierten Daten nicht auf", async () => {
-    // JSON.stringify allein maskiert kein </script> — der Rest des Titels
-    // landete dann als Markup im Dokument.
+    // JSON.stringify allein maskiert kein </script>.
     buildFeatureCollection.mockResolvedValue(
       collection([feature({ id: 42, title: "Konzert</script><img src=x onerror=boese()>" })])
     );
     const html = await (await app.request("/event/42")).text();
-    // Entscheidend ist, dass nichts davon als MARKUP ankommt — als Text im
-    // Titel-Attribut ist der Angriffsversuch harmlos und sogar erwuenscht
-    // sichtbar.
+    // Als Text im Attribut ist der Versuch harmlos.
     expect(html).not.toContain("</script><img");
     expect(html).not.toContain("<img src=x");
-    // Zwei Skriptbloecke, zwei Enden: die strukturierten Daten und die
-    // Weiterleitung. Mehr hiesse, der Titel haette einen davon aufgebrochen.
+    // Zwei Skriptblöcke, zwei Enden; mehr hieße, der Titel hat einen aufgebrochen.
     expect(html.match(/<\/script>/g) ?? []).toHaveLength(2);
-    // Der Titel steckt im Datenblock, und der endet erst nach ihm — ein aus dem
-    // Titel gebrochenes Ende laege davor.
     const datenEnde = html.indexOf("</script>");
     expect(html.slice(0, datenEnde)).toContain("Konzert\\u003c/script\\u003e");
   });
@@ -774,8 +736,7 @@ describe("Zuordnungsdateien fuer App-Links", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as any[];
     expect(body[0].target.package_name).toBe("de.godsapp.moinkark");
-    // Zwei Schluessel: Play signiert im Store neu, lokale Testbuilds tragen den
-    // Upload-Schluessel. Fehlt einer, oeffnet Android den Link im Browser.
+    // Play signiert neu, lokale Builds tragen den Upload-Schlüssel.
     expect(body[0].target.sha256_cert_fingerprints).toHaveLength(2);
     for (const fp of body[0].target.sha256_cert_fingerprints) {
       expect(fp).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
@@ -790,8 +751,7 @@ describe("Logo in der Link-Vorschau", () => {
       collection([feature({ id: 42, image: { url: "https://bilder.example/flyer.jpg" } as any })])
     );
     const html = await (await app.request("/event/42")).text();
-    // og:image bleibt der Flyer — der ist attraktiver als ein Logo. Das Logo
-    // kommt als eigene Angabe dazu, die manche Dienste neben dem Bild zeigen.
+    // Der Flyer bleibt og:image, das Logo kommt als eigene Angabe.
     expect(html).toContain('property="og:image" content="https://bilder.example/flyer.jpg"');
     expect(html).toContain('property="og:logo" content="https://moin-kark.de/icon.png"');
   });
@@ -822,8 +782,7 @@ describe("Vorschau-Beschreibung", () => {
 
 describe("Vorschaubild in Vorschau-Groesse", () => {
   it("hebt ChurchDesk-Bilder auf die grosse Variante an", async () => {
-    // span4 liefert 400x225 — zu klein, WhatsApp zeigt dann gar kein Bild.
-    // span12 liefert 1200x676, die uebliche Groesse fuer Linkvorschauen.
+    // span4 ist 400x225, zu klein für WhatsApp.
     buildFeatureCollection.mockResolvedValue(
       collection([feature({ id: 42, image: { url: "https://edge.churchdesk.com/event-1/span4_16-9/public/o/2596/f.jpg?org=2596" } as any })])
     );
@@ -842,9 +801,7 @@ describe("Vorschaubild in Vorschau-Groesse", () => {
 });
 
 describe("GET /app (QR-Weiche in den passenden Store)", () => {
-  // Ein QR-Code ist statischer Text und kann nichts entscheiden. Die Weiche
-  // sitzt deshalb hier: ein Link fuers Plakat, der Scanner landen je nach
-  // Geraet im richtigen Store.
+  // Die Weiche für den QR-Code sitzt hier, weil der Code selbst nichts entscheiden kann.
   const IOS = "https://apps.apple.com/de/app/id6781438884";
   const PLAY = "https://play.google.com/store/apps/details?id=de.godsapp.moinkark";
 
@@ -880,23 +837,19 @@ describe("GET /app (QR-Weiche in den passenden Store)", () => {
   });
 
   it("verwechselt macOS nicht mit iOS", async () => {
-    // "Mac OS X" steht auch im iPhone-UA — eine Suche nach "mac" allein
-    // schickte Desktop-Nutzer in den App Store.
+    // "Mac OS X" steht auch im iPhone-UA.
     expect(await ziel("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15"))
       .toBe("https://moin-kark.de/");
   });
 
   it("haelt Android von iOS auseinander", async () => {
-    // Android-UAs tragen "Linux" und "AppleWebKit" — Letzteres darf nicht
-    // nach Apple fuehren.
+    // Android-UAs tragen auch "AppleWebKit".
     expect(await ziel("Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 Chrome/120")).toBe(PLAY);
   });
 });
 
 describe("Ortsangabe in der Vorschau", () => {
   it("doppelt die Gemeinde nicht, wenn der Ortsname sie schon enthaelt", async () => {
-    // "Hennstedt, Gemeindehaus, Hennstedt" las sich falsch. Dieselbe Regel
-    // galt frueher schon fuer den Teilen-Text der App.
     buildFeatureCollection.mockResolvedValue(
       collection([feature({ id: 42, locationName: "Hennstedt, Gemeindehaus", parish: "Hennstedt" })])
     );

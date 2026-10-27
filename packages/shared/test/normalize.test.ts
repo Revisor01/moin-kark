@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import { normalizeKey } from "../src/types";
 import { kanonischeKategorie } from "../src/kategorien";
 
-// An normalizeKey hängen die statischen Tabellen (Kirchspiele, Koordinaten) UND
-// die über /admin gepflegten Laufzeit-Korrekturen. Driftet sie, greifen gepflegte
-// Korrekturen still nicht mehr — deshalb ist sie hier eng festgenagelt.
+// An normalizeKey hängen Tabellen und /admin-Korrekturen, deshalb eng festgenagelt.
 describe("normalizeKey", () => {
   it("macht klein und schneidet Rand-Leerzeichen weg", () => {
     expect(normalizeKey("  BÜSUM  ")).toBe("büsum");
@@ -19,16 +17,14 @@ describe("normalizeKey", () => {
   });
 
   it("lässt Umlaute und ß stehen, statt sie zu ersetzen", () => {
-    // Die Tabellen sind mit Umlauten geschrieben ("büsum", "wöhrden") — würde
-    // hier transliteriert, träfe kein einziger Eintrag mehr.
+    // Die Tabellen sind mit Umlauten geschrieben.
     expect(normalizeKey("Wöhrden")).toBe("wöhrden");
     expect(normalizeKey("Süderhastedt")).toBe("süderhastedt");
     expect(normalizeKey("STRAßE")).toBe("straße");
   });
 
   it("lässt Bindestriche und Satzzeichen unangetastet", () => {
-    // "lohe-rickelshof" und "st. annen" sind Tabellen-Schlüssel: ein entfernter
-    // Bindestrich oder Punkt würde sie unauffindbar machen.
+    // Bindestrich und Punkt gehören zu Tabellenschlüsseln.
     expect(normalizeKey("Lohe-Rickelshof")).toBe("lohe-rickelshof");
     expect(normalizeKey("St. Martins-Kirche")).toBe("st. martins-kirche");
   });
@@ -45,10 +41,7 @@ describe("normalizeKey", () => {
 });
 
 describe("kanonischeKategorie", () => {
-  // ChurchDesk laesst jede Gemeinde ihre Kategorien selbst benennen. Dieselbe
-  // Sache heisst dadurch bis zu achtmal anders und erscheint im Filter als
-  // acht Knoepfe. Gemessen am 25.09.2026: 215 Kinder/Jugend-Termine in acht
-  // Schreibweisen, 195 Musik-Termine in fuenf.
+  // Jede Gemeinde benennt Kategorien selbst, bis zu achtmal anders.
   it("fasst die acht Kinder- und Jugend-Schreibweisen zusammen", () => {
     for (const s of [
       "Kinder/Jugendliche",

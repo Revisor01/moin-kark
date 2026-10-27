@@ -1,6 +1,4 @@
-// Reine Entscheidung für die Android-Zurücktaste: Welche Ebene schließt sich?
-// Die drei Sheets sind normale Views im einzigen Router-Screen — ohne diese
-// Logik ging „Zurück“ an den Root-Stack und schickte die App in den Hintergrund.
+// Android-Zurücktaste: welche Ebene schließt sich, sonst ginge die App in den Hintergrund.
 
 export interface OpenLayers {
   eventOpen: boolean;
@@ -10,10 +8,7 @@ export interface OpenLayers {
 
 export type BackTarget = "event" | "filters" | "profile";
 
-/**
- * Oberste offene Ebene, von innen nach außen: erst die Terminansicht, dann
- * der Filter, dann das Profil. `null` = nichts offen → Zurück darf ans System.
- */
+/** Oberste offene Ebene (Termin, Filter, Profil), `null` wenn nichts offen ist. */
 export function resolveBackPress(layers: OpenLayers): BackTarget | null {
   if (layers.eventOpen) return "event";
   if (layers.filtersOpen) return "filters";

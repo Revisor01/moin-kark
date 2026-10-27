@@ -23,9 +23,7 @@ export function openInMaps(
   }
 
   if (app === "google") {
-    // Google Maps App (falls installiert) sonst Web-Fallback.
-    // iOS braucht „comgooglemaps" in LSApplicationQueriesSchemes, sonst liefert
-    // canOpenURL immer false und es landet trotz App im Browser (siehe app.json).
+    // iOS braucht „comgooglemaps“ in LSApplicationQueriesSchemes, sonst öffnet immer der Browser.
     const appUrl = `comgooglemaps://?q=${q}&center=${lat},${lng}`;
     const webUrl = googleMapsWebUrl(lat, lng);
     Linking.canOpenURL(appUrl)
@@ -37,9 +35,7 @@ export function openInMaps(
   if (Platform.OS === "ios") {
     Linking.openURL(`maps://?ll=${lat},${lng}&q=${q}`);
   } else {
-    // Auf Android gibt es keine Apple-Karten-App. Die maps.apple.com-URL öffnete
-    // hier nur eine Weboberfläche ohne Navigation — daher Google-Web, wie es der
-    // Kommentar immer schon versprochen hat.
+    // Android hat keine Apple-Karten-App, daher Google im Web.
     Linking.openURL(googleMapsWebUrl(lat, lng));
   }
 }

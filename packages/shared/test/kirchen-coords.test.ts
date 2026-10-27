@@ -28,24 +28,20 @@ describe("fallbackCoords", () => {
   });
 
   it("hat für Helgoland einen eigenen Punkt statt des Büsumer Org-Pins", () => {
-    // Regression: Helgoland gehört zum Kirchspiel West, hatte aber keinen eigenen
-    // Punkt — die Termine landeten rund 65 km entfernt in Büsum.
+    // Sonst landet Helgoland in Büsum.
     const helgoland = fallbackCoords("Helgoland", 2729);
     expect(helgoland).toEqual({ lat: 54.178889, lng: 7.886389 });
     expect(distanceMeters(helgoland, BUESUM)).toBeGreaterThan(50_000);
   });
 
   it("hat für Neuenkirchen einen eigenen Punkt statt des Büsumer Org-Pins", () => {
-    // Regression: ohne Eintrag fiel Neuenkirchen auf die orgId 2729 zurück und
-    // landete rund 10 km entfernt in Büsum.
+    // Sonst landet Neuenkirchen in Büsum.
     const neuenkirchen = fallbackCoords("Neuenkirchen", 2729);
     expect(neuenkirchen).toEqual({ lat: 54.23672, lng: 8.9898787 });
     expect(distanceMeters(neuenkirchen, BUESUM)).toBeGreaterThan(9_000);
   });
 
   it("setzt Pahlen und Delve auf ihre Kirchen, nicht auf den alten Geest-Punkt", () => {
-    // Regression: ORG_COORDS[2723] war ein grober Regionspunkt ~10 km neben allen
-    // zugehörigen Orten. Beide Orte haben jetzt eigene Koordinaten.
     const pahlen = fallbackCoords("Pahlen", 2723);
     const delve = fallbackCoords("Delve", 2723);
     expect(pahlen).toEqual({ lat: 54.2628322, lng: 9.2956512 });
@@ -72,8 +68,7 @@ describe("fallbackCoords", () => {
   });
 
   it("liefert für jede Gemeinde einen Punkt in Dithmarschen oder auf Helgoland", () => {
-    // Grobe Plausibilität: kein Eintrag darf versehentlich am Nullpunkt oder in
-    // einer anderen Ecke Deutschlands liegen.
+    // Kein Eintrag am Nullpunkt oder anderswo in Deutschland.
     for (const parish of ["Büsum", "Marne", "Heide", "Tellingstedt", "Helgoland", "Lunden"]) {
       const c = fallbackCoords(parish, 9999);
       expect(c.lat).toBeGreaterThan(53.8);
@@ -86,9 +81,7 @@ describe("fallbackCoords", () => {
 
 describe("coordFixFor", () => {
   it("korrigiert die Wesselburener Kirche weg vom Pastorat", () => {
-    // Regression: Kirche und Pastorat sind beide unter „Marktstr. 2" gepflegt und
-    // bekamen von ChurchDesk exakt dieselbe Koordinate — ein Pin lag unsichtbar
-    // unter dem anderen.
+    // Kirche und Pastorat unter derselben Adresse dürfen nicht aufeinander liegen.
     const kirche = coordFixFor("Wesselburen | St. Bartholomäus");
     expect(kirche).toEqual({ lat: 54.2120945, lng: 8.9225438 });
     // Deutlich abseits des Gemeindepunkts (Gemeindehaus).
@@ -96,8 +89,6 @@ describe("coordFixFor", () => {
   });
 
   it("trennt die drei Tellingstedter Kirchen voneinander", () => {
-    // Regression: Wrohm, Tellingstedt und Albersdorf lagen alle auf dem
-    // Gemeindepunkt Tellingstedt.
     const wrohm = coordFixFor("Friedenskirche Wrohm")!;
     const tellingstedt = coordFixFor("St. Martins-Kirche")!;
     const albersdorf = coordFixFor("St. Remigius-Kirche")!;
@@ -120,8 +111,7 @@ describe("coordFixFor", () => {
   });
 
   it("trifft keine Einträge aus der Prototypkette", () => {
-    // Ein Ortsname „Constructor" fand bisher Object.prototype.constructor und das
-    // Feature bekam [null, null] als Koordinate.
+    // „Constructor“ traf Object.prototype.constructor.
     expect(coordFixFor("Constructor")).toBeUndefined();
     expect(coordFixFor("__proto__")).toBeUndefined();
     expect(coordFixFor("hasOwnProperty")).toBeUndefined();
@@ -173,8 +163,7 @@ describe("coordOverrideForTitle", () => {
   });
 
   it("überstimmt nichts bei Titeln, die nur einen normalen Titel-Fix haben", () => {
-    // „Pilgern in Büsum" hat eine Titel-Zuordnung, darf aber eine gepflegte
-    // ChurchDesk-Koordinate NICHT überstimmen.
+    // Ohne Override überstimmt eine Titel-Zuordnung keine gepflegte Koordinate.
     expect(coordFixForTitle("Pilgern in Büsum")).toBeDefined();
     expect(coordOverrideForTitle("Pilgern in Büsum")).toBeUndefined();
   });

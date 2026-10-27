@@ -1,13 +1,4 @@
-// Ablauflogik der Ortung — ohne React und ohne expo-Module, damit sie ohne
-// Gerät testbar ist. Der Hook `useLocation` ist nur die dünne Hülle darum und
-// reicht die echten expo-location-Aufrufe als Abhängigkeiten herein.
-//
-// Grundidee: Die Berechtigung entscheidet, ob geortet wird — nicht der Erfolg
-// einer einzelnen Messung. Sobald sie erteilt ist, läuft das Live-Abo immer;
-// die Einmal-Ortung ist nur noch ein Beschleuniger für den ersten Marker.
-// Vorher war die Einmal-Ortung der einzige Einstieg: Schlug sie fehl (iOS
-// meldet schon ein vorübergehendes „location unknown" als harten Fehler),
-// gab es bis zum Neustart weder Standort noch Abo.
+// Ortung ohne React und expo, damit sie testbar ist; die Berechtigung entscheidet, nicht eine einzelne Messung.
 
 import type { LatLng } from "./filters";
 
@@ -49,8 +40,7 @@ export interface LocationController {
   getState: () => LocationState;
 }
 
-// Neustart eines abgebrochenen Abos: erst nach 5 s, bei wiederholtem Fehler
-// doppelnd bis höchstens 60 s. Eine Position aus dem Abo setzt zurück.
+// Neustart eines abgebrochenen Abos nach 5 s, doppelnd bis 60 s.
 export const RETRY_MIN_MS = 5_000;
 export const RETRY_MAX_MS = 60_000;
 // Im Browser hängt getCurrentPosition ohne Timeout unbegrenzt (Standard: Infinity).
@@ -64,8 +54,7 @@ export function createLocationController(deps: LocationDeps): LocationController
 
   let watchSub: WatchSubscription | null = null;
   let watchPending = false;
-  // Laufnummer des aktuellen Abos. Positionen und Fehler eines älteren Abos
-  // (z. B. eines, das erst nach dem Verwerfen fertig wurde) werden ignoriert.
+  // Positionen und Fehler älterer Abos werden ignoriert.
   let generation = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let retryDelay = RETRY_MIN_MS;
@@ -100,15 +89,13 @@ export function createLocationController(deps: LocationDeps): LocationController
 
   const onWatchError = (gen: number) => {
     if (destroyed || gen !== generation) return;
-    // Der native Stream hat sich beendet (iOS räumt sich z. B. bei „denied"
-    // selbst auf). Das Abo ist tot — verwerfen und mit Backoff neu aufbauen.
+    // Der native Stream ist beendet, mit Backoff neu aufbauen.
     dropWatch();
     scheduleRestart();
   };
 
   const startWatch = async () => {
-    // Re-Entrancy-Guard: ein zweiter Aufruf während des Starts (Button-Tipp
-    // während „loading") erzeugte früher ein zweites, nie entferntes Abo.
+    // Re-Entrancy-Guard gegen ein zweites, nie entferntes Abo.
     if (destroyed || watchSub !== null || watchPending) return;
     watchPending = true;
     const gen = ++generation;
@@ -131,8 +118,7 @@ export function createLocationController(deps: LocationDeps): LocationController
     }
     watchPending = false;
     if (destroyed || gen !== generation) {
-      // Abo kam zu spät: Hook ist weg oder das Abo wurde inzwischen für tot
-      // erklärt. Sofort wieder entfernen, sonst liefe die Ortung weiter.
+      // Zu spät gekommenes Abo sofort entfernen.
       sub.remove();
       if (!destroyed) scheduleRestart();
       return;
@@ -159,8 +145,7 @@ export function createLocationController(deps: LocationDeps): LocationController
     // „granted" hängt an der Berechtigung, nicht am Erfolg einer Messung.
     setState({ status: "granted" });
 
-    // Letzte bekannte Position als sofortiger Marker — aber nur, solange noch
-    // nichts Frischeres (aus dem Abo) da ist.
+    // Letzte bekannte Position nur, solange nichts Frischeres da ist.
     const lastKnown = deps
       .getLastKnown()
       .then((loc) => {
@@ -172,8 +157,7 @@ export function createLocationController(deps: LocationDeps): LocationController
     clearRetry();
     void startWatch();
 
-    // Einmal-Ortung nur noch als Beschleuniger. Ihr Scheitern ändert nichts
-    // am Status — die Berechtigung ist ja da, das Abo liefert nach.
+    // Scheitern ändert nichts, das Abo liefert nach.
     try {
       const loc = await deps.getCurrent(
         deps.platform === "web" ? { timeout: WEB_CURRENT_TIMEOUT_MS } : {}

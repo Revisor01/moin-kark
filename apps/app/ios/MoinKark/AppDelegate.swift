@@ -20,9 +20,7 @@ class AppDelegate: ExpoAppDelegate {
     reactNativeDelegate = delegate
     reactNativeFactory = factory
 
-    // Fenster und React-Start liegen im SceneDelegate (unten): Ab dem iOS-27-SDK
-    // verlangt Apple den UIScene-Lifecycle (Info.plist: UIApplicationSceneManifest),
-    // sonst stürzt die App beim Start ab.
+    // Fenster und React-Start im SceneDelegate, weil das iOS-27-SDK den UIScene-Lifecycle verlangt.
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -64,14 +62,7 @@ class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
   }
 }
 
-/// UIScene-Lifecycle — Pflicht ab dem iOS-27-SDK. Nachbau von Expos
-/// `ExpoAppSceneDelegate` (erst ab SDK 57 enthalten; beim Umstieg auf SDK 57
-/// diese Klasse löschen und in der Info.plist `EXExpoAppSceneDelegate` eintragen).
-///
-/// Unter Scenes ruft UIKit die Link-, Aktivitäts- und Lebenszyklus-Methoden des
-/// AppDelegate nicht mehr auf. Diese Klasse reicht sie deshalb dorthin weiter:
-/// `ExpoAppDelegate` verteilt sie an die Expo-Module, die Overrides oben geben
-/// Links an `RCTLinkingManager`.
+/// UIScene-Lifecycle nach Expos `ExpoAppSceneDelegate`; ab Expo SDK 57 löschen und `EXExpoAppSceneDelegate` eintragen.
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   var window: UIWindow?
 
@@ -91,9 +82,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // Code, der `UIApplication.shared.delegate?.window` liest (z. B. expo-system-ui).
     appDelegate.window = window
 
-    // Kaltstart per Link: UIKit liefert URL und Universal Link hier statt in den
-    // launchOptions. `Linking.getInitialURL()` liest aber nur die launchOptions —
-    // ohne diesen Nachbau öffnete ein geteilter Termin bei geschlossener App nur die Karte.
+    // Beim Kaltstart kommt der Link hier, `getInitialURL()` liest aber nur die launchOptions.
     let webActivity = connectionOptions.userActivities.first {
       $0.activityType == NSUserActivityTypeBrowsingWeb
     }
@@ -140,8 +129,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     _ = appDelegate?.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
   }
 
-  /// Baut die launchOptions so, wie React Natives `getInitialURL` sie liest. Die
-  /// Schlüssel als Rohwerte: Die `UIApplication`-Konstanten sind seit iOS 26 veraltet.
+  /// launchOptions für `getInitialURL`, mit Rohwert-Schlüsseln, weil die Konstanten seit iOS 26 veraltet sind.
   static func launchOptions(url: URL?, userActivity: NSUserActivity?) -> [UIApplication.LaunchOptionsKey: Any]? {
     var options: [UIApplication.LaunchOptionsKey: Any] = [:]
     if let url {
