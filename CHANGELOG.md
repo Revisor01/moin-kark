@@ -20,6 +20,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 - README, Vorlagen und Hinweise gibt es nur noch auf Deutsch.
 - Android-Fassungen gehen über einen gemeinsamen Upload-Weg zu Google Play; Tracks und Neuigkeiten werden schon vor dem Bau geprüft.
 - Technische Grundlage der App aktualisiert; dabei sind zwei bekannte Sicherheitslücken in den Bauwerkzeugen weggefallen.
+- Laufzeitumgebung von Schnittstelle und App-Bau auf die aktuelle Langzeit-Version gehoben.
 
 ## [1.0.0] - 2026-10-02
 

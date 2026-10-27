@@ -42,7 +42,7 @@ updates:
       - dependency-name: react-native-web
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
       # Typen folgen der Laufzeit: React-Typen der React-Version, Node-Typen
-      # der Node-Version in Dockerfile und CI (22).
+      # der Node-Version in Dockerfile und CI (26).
       - dependency-name: "@types/react"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "@types/node"
