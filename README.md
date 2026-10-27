@@ -10,10 +10,6 @@
 </p>
 
 <p align="center">
-  <b>Deutsch</b> · <a href="README.en.md">English</a>
-</p>
-
-<p align="center">
   <img src="https://img.shields.io/badge/Plattform-Web%20%C2%B7%20iOS%20%C2%B7%20Android-blue" alt="Plattform">
   <img src="https://img.shields.io/badge/Expo-React%20Native-000020?logo=expo" alt="Expo">
   <img src="https://img.shields.io/github/license/Revisor01/moin-kark" alt="Lizenz">

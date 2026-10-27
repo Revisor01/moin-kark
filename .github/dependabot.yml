@@ -61,3 +61,16 @@ updates:
       # ausrollt — so wird es ein Deploy statt mehrerer.
       actions:
         patterns: ["*"]
+
+  # Basis-Image der API. Node-Hauptversionen gehen mit CI und @types/node
+  # zusammen, deshalb nur Neben- und Patch-Stände.
+  - package-ecosystem: docker
+    directory: "/apps/api"
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: chore
