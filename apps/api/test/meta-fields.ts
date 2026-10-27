@@ -1,8 +1,4 @@
-/**
- * Alle Felder von `meta` im Feed, alphabetisch. aggregate.test.ts prüft die
- * Liste gegen das, was die API liefert; openapi.test.ts gegen die Doku. Wer ein
- * Feld ergänzt, muss beides nachziehen — sonst schlägt genau ein Test fehl.
- */
+/** Alle `meta`-Felder des Feeds; aggregate.test.ts und openapi.test.ts prüfen gegen diese Liste. */
 export const META_FIELDS = [
   "from",
   "generatedAt",

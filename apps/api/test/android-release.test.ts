@@ -3,8 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-// Wächter für den Android-Release: Upload über den Baustein play-upload.yml,
-// mit denselben Eingaben wie vorher das eigene Skript.
+// Android-Release über play-upload.yml mit denselben Eingaben wie zuvor.
 
 const pfad = (rel: string) => fileURLToPath(new URL(`../../../${rel}`, import.meta.url));
 const workflow = parse(readFileSync(pfad(".github/workflows/android-release.yml"), "utf8")) as any;
@@ -37,8 +36,7 @@ describe("Android-Release", () => {
     expect(upload.secrets).toEqual({ dienstkonto: "${{ secrets.GPLAY_SA_JSON_BASE64 }}" });
   });
 
-  // Ab SDK 57 ist --clean die Vorgabe von prebuild: android/ samt
-  // Release-Signing würde neu erzeugt.
+  // Ab SDK 57 ist --clean Standard und würde das Release-Signing neu erzeugen.
   it("aktualisiert das native Projekt ohne es neu zu erzeugen", () => {
     const schritt = build.steps.find((s: any) => s.name === "Natives Projekt aus app.json aktualisieren");
     expect(schritt.run).toBe("npx expo prebuild --platform android --no-install --no-clean");

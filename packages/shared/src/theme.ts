@@ -1,23 +1,6 @@
-// Design-Tokens für Moin Kark — die EINE Quelle für Farben, Abstände, Radien,
-// Schatten, Schriften und Textstufen. Hier ändern, nirgends sonst:
-//
-//   App (React Native)   → apps/app/lib/theme.ts re-exportiert und baut daraus
-//                          StyleSheet-Objekte (Schriftschnitte, elevation).
-//   API-Seiten /status, /admin → rendern themeCss() direkt in ihr <style>.
-//   Landingpage (statisch) → apps/web/theme.css wird aus themeCss() erzeugt
-//                          (`npm run sync:theme-css -w packages/shared`); ein
-//                          Test prüft, dass die Datei zum Stand hier passt.
-//
-// Küstlich-evangelischer, warm-redaktioneller Look: Nordsee-Teal + warmer Sand
-// + Koralle. Plattformneutral — nur Daten, keine React-Native-Typen.
+// Design-Tokens, die einzige Quelle für App, API-Seiten und Landingpage (theme.css über sync:theme-css).
 
-// ---------------------------------------------------------------------------
-// Farben — 20 Namen, 19 Werte (onColor teilt sich den Wert mit surface).
-// Alles Weitere (Backdrop, Tints, Overlays, Schatten) sind Alpha-Varianten
-// dieser Werte, keine eigenen Farben — s. `alpha` und `withAlpha()`.
-// Kontrastangaben: WCAG-Verhältnis auf Sand (`background`), AA für Fließtext
-// ist 4,5:1. Der Test in test/theme.test.ts rechnet das nach.
-// ---------------------------------------------------------------------------
+// ── Farben; Kontraste auf `background`, test/theme.test.ts rechnet nach ──
 export const colors = {
   // Text
   ink: "#1C2B2B", // Text, Schatten, Backdrop, Fog, Kartenlabels (13,7:1)
@@ -50,8 +33,6 @@ export const colors = {
   location: "#2563EB", // „Du bist hier" — muss sich von Cluster-Teal und Pin-Koralle abheben
   mapGreen: "#E4EBDA", // Grünflächen, kein UI-Gegenstück
 
-  // Kategorien, die keine andere Rolle haben. Gottesdienst = primary,
-  // Treffpunkt = accent, Yoga = success, Senioren = warning (s. categoryColors).
   catAndacht: "#3A8A8A", // bewusst getrennt von Gottesdienst — auf der Karte unterscheidbar
   catConcert: "#8E44AD",
   catKids: "#D4A017",
@@ -82,10 +63,7 @@ export function withAlpha(hex: string, a: number): string {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-// ---------------------------------------------------------------------------
-// Kategorie-Farben (Pins/Chips/Badges) — Referenzen auf die Tokens oben,
-// keine Kopien: ändert sich `primary`, wandert Gottesdienst mit.
-// ---------------------------------------------------------------------------
+// ── Kategorie-Farben als Referenzen auf die Tokens ──
 export const categoryColors: Record<string, string> = {
   Gottesdienst: colors.primary,
   Andacht: colors.catAndacht,
@@ -112,9 +90,7 @@ export function colorForCategory(title?: string): string {
   return categoryColors.default;
 }
 
-// ---------------------------------------------------------------------------
-// Kartenfarben — Rollen auf der Karte, ebenfalls nur Referenzen.
-// ---------------------------------------------------------------------------
+// ── Kartenfarben ──
 export const mapColors = {
   land: colors.background,
   water: colors.primarySoft,
@@ -131,9 +107,7 @@ export const mapColors = {
   user: colors.location,
 } as const;
 
-// ---------------------------------------------------------------------------
-// Abstände, Radien, Bauteilmaße
-// ---------------------------------------------------------------------------
+// ── Abstände, Radien, Bauteilmaße ──
 export const spacing = {
   xxs: 2,
   xs: 4,
@@ -153,7 +127,7 @@ export const radius = {
   pill: 999, // Pillen und alle Kreise (statt „Größe / 2")
 } as const;
 
-/** Feste Maße wiederkehrender Bauteile. Layout-Geometrie (Kartenhöhe, Breakpoints) bleibt bei den Komponenten. */
+/** Feste Maße wiederkehrender Bauteile. */
 export const sizes = {
   icon: { sm: 18, md: 22 }, // Glyph-Icons (♥ × ★) und Ionicons
   iconButton: 46, // runde Buttons über der Karte
@@ -165,22 +139,13 @@ export const sizes = {
   chipMinHeight: 38,
 } as const;
 
-// ---------------------------------------------------------------------------
-// Schriften und Textstufen
-// ---------------------------------------------------------------------------
+// ── Schriften und Textstufen ──
 export const fontFamilies = {
   display: "Bricolage Grotesque", // Headlines, Titel
   body: "DM Sans", // Fließtext, UI
 } as const;
 
-/**
- * Die Typo-Leiter: sechs Stufen, je Größe, Zeilenhöhe, Familie und Grundschnitt.
- * body/label/caption gibt es in der App zusätzlich als Medium (500) und
- * Strong (600); Größe und Zeilenhöhe bleiben dabei die der Stufe.
- *
- * caption hat bewusst eine knappe Zeilenhöhe (1,25): sie sitzt in Badges und
- * auf der 104 px hohen Terminkarte, wo jede Zeile zählt.
- */
+/** Typo-Leiter mit sechs Stufen; caption bewusst knapp (1,25) für die 104-px-Karte. */
 export const type = {
   display: { size: 26, lineHeight: 30, family: "display", weight: 700 }, // H1, Event-Titel, Onboarding
   heading: { size: 24, lineHeight: 28, family: "display", weight: 700 }, // Sheet-Überschriften
@@ -195,20 +160,13 @@ export type TypeStep = keyof typeof type;
 /** Kicker und Abschnitts-Labels: caption, Versalien, leicht gesperrt. */
 export const eyebrow = { letterSpacing: 0.5 } as const;
 
-// ---------------------------------------------------------------------------
-// Schatten — zwei Stufen, beide aus `ink`.
-// ---------------------------------------------------------------------------
+// ── Schatten ──
 export const shadows = {
   card: { color: colors.ink, opacity: 0.08, blur: 12, y: 4, elevation: 3 },
   sheet: { color: colors.ink, opacity: 0.18, blur: 20, y: -6, elevation: 16 }, // nach oben, Sheet gegen die Karte
 } as const;
 
-// ---------------------------------------------------------------------------
-// CSS-Ausgabe — dieselben Tokens als Custom-Properties für Landingpage und
-// API-Seiten. Farben zusätzlich als RGB-Tripel (`--ink-rgb`), damit
-// `rgba(var(--ink-rgb),var(--alpha-backdrop))` dieselbe Alpha-Regel nutzt wie
-// die App.
-// ---------------------------------------------------------------------------
+// ── CSS-Ausgabe; Farben zusätzlich als RGB-Tripel für dieselbe Alpha-Regel wie in der App ──
 const kebab = (s: string) => s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 
 function cssShadow(s: (typeof shadows)[keyof typeof shadows]): string {

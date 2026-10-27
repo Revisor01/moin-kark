@@ -1,14 +1,4 @@
-// Schreibt die Design-Tokens als CSS-Custom-Properties nach apps/web/theme.css.
-//
-// Die Landingpage ist statisches HTML ohne Build-Step und kann aus dem
-// TypeScript-Theme nichts importieren — sie bekommt deshalb eine erzeugte Datei,
-// die mit ins Repo geht (das Deploy ist ein reines rsync). Nach jeder Änderung an
-// packages/shared/src/theme.ts einmal laufen lassen:
-//
-//   npm run sync:theme-css -w packages/shared
-//
-// Vergisst man es, schlägt der Test in test/theme.test.ts an (Diff-Check).
-// Muster: apps/app/scripts/sync-map-worker.mjs.
+// Schreibt die Design-Tokens nach apps/web/theme.css. Nach Änderungen an theme.ts: npm run sync:theme-css -w packages/shared
 
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

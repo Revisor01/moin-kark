@@ -1,24 +1,7 @@
 // Reine Auswahl-Logik für den Pin-Tap — plattformneutral, ohne Karten-Abhängigkeit.
 import type { EventFeature } from "@moinkark/shared";
 
-/**
- * Wählt aus den Events an einer angetippten Koordinate den zeitlich nächsten.
- *
- * Nötig, weil an einem Ort viele Events auf EXAKT derselben Koordinate liegen
- * (St. Bartholomäus Wesselburen: 13 Termine). MapLibre meldet dann entweder nur
- * den obersten Pin oder mehrere in beliebiger Reihenfolge — in beiden Fällen ist
- * `features[0]` Zufall. Darum: alle Events an dieser Koordinate aus den Daten
- * heraussuchen und den nehmen, der als nächstes stattfindet.
- *
- * @param features  Alle aktuell auf der Karte liegenden Events.
- * @param spot      Koordinate des getroffenen Pins als [lng, lat] — kann fehlen.
- * @param fallbackIds  IDs der von der Karte gemeldeten Treffer, in Meldereihenfolge.
- *   Greifen nur, wenn an `spot` kein Event liegt (die Karte liefert Koordinaten
- *   mitunter kachelgenau gerundet, dann trifft der exakte Vergleich nicht).
- * @returns Die Event-ID oder null, wenn sich nichts Sinnvolles auswählen lässt —
- *   NIE NaN: Vorher lief im Web `Number(undefined)` bis in die Auswahl durch, und
- *   das Sheet öffnete ohne Inhalt.
- */
+/** Zeitlich nächstes Event an einer Koordinate, weil `features[0]` bei deckungsgleichen Pins Zufall ist; nie NaN. */
 export function pickNearestAtSpot(
   features: EventFeature[],
   spot: [number, number] | undefined,
@@ -42,8 +25,7 @@ export function pickNearestAtSpot(
     return Number.isFinite(raw) ? raw : null;
   }
 
-  // Frühester Start gewinnt. Vergangene sind hier bereits ausgefiltert
-  // (applyFilters/isPast laufen vor der Übergabe an die Karte).
+  // Vergangene sind hier schon ausgefiltert.
   let best = candidates[0];
   for (const f of candidates) {
     if (new Date(f.properties.startUtc) < new Date(best.properties.startUtc)) best = f;

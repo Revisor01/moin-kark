@@ -20,8 +20,7 @@ beforeEach(() => {
 
 describe("useSavedEvents", () => {
   it("gilt auch bei einem Lesefehler als geladen (Abgleich und Aufräumen laufen dann trotzdem)", async () => {
-    // Der gemeldete Fehler: `.then` ohne `.catch` — bei beschädigtem Speicher
-    // blieb `loaded` für immer false, dazu eine unbehandelte Rejection.
+    // Bei beschädigtem Speicher blieb `loaded` sonst für immer false.
     storage.getItem.mockRejectedValueOnce(new Error("Speicher defekt"));
 
     const hook = await renderHook(() => useSavedEvents(), undefined);
@@ -31,9 +30,7 @@ describe("useSavedEvents", () => {
   });
 
   it("verliert keinen Herz-Tipp, der vor dem Laden der Merkliste kommt", async () => {
-    // Der gemeldete Fehler: Der Tipp schrieb `[3]` aus dem noch leeren Set in den
-    // Speicher; dann kam die Leseantwort `[1, 2]` und überschrieb den Zustand —
-    // im Speicher stand nur noch die 3, in der App fehlte sie.
+    // Ein Tipp vor dem ersten Lesen darf die gespeicherte Liste nicht überschreiben.
     let resolveRead!: (v: string | null) => void;
     storage.getItem.mockReturnValueOnce(new Promise<string | null>((r) => (resolveRead = r)));
 

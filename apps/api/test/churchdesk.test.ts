@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fmtDate } from "../src/churchdesk.js";
 
-/**
- * Das Abfragefenster wird über den Berliner Kalendertag gebildet, nicht über UTC.
- * Regression: mit toISOString() begann das Fenster zwischen Mitternacht und
- * 01:00 (Winter) bzw. 02:00 (Sommer) Berliner Zeit noch beim Vortag und schloss
- * bereits gelaufene Events ein.
- */
+/** Das Abfragefenster beginnt am Berliner Kalendertag, nicht am UTC-Tag. */
 describe("fmtDate", () => {
   it("liefert das Datum als YYYY-MM-DD", () => {
     expect(fmtDate(new Date("2026-06-15T12:00:00Z"))).toBe("2026-06-15");
@@ -23,8 +18,7 @@ describe("fmtDate", () => {
   });
 
   it("wechselt den Tag erst um Mitternacht Berliner Zeit, nicht um Mitternacht UTC", () => {
-    // 23:30 Berliner Ortszeit im Sommer — UTC steht da schon auf 21:30 desselben
-    // Tages, der Berliner Tag darf aber noch nicht weitergesprungen sein.
+    // 23:30 Berlin im Sommer, der Berliner Tag darf noch nicht weiter sein.
     expect(fmtDate(new Date("2026-06-15T21:30:00Z"))).toBe("2026-06-15");
     // Eine Stunde später ist es in Berlin der Folgetag, in UTC noch nicht.
     expect(fmtDate(new Date("2026-06-15T22:30:00Z"))).toBe("2026-06-16");
@@ -38,8 +32,7 @@ describe("fmtDate", () => {
   });
 
   it("hängt nicht an der TZ-Umgebungsvariable des Prozesses", () => {
-    // Der Container läuft mit TZ=Europe/Berlin, Tests und CI oft mit UTC.
-    // Beide müssen dasselbe liefern.
+    // Container mit TZ=Europe/Berlin, CI mit UTC: beide gleich.
     expect(fmtDate(new Date("2026-06-14T22:30:00Z"))).toBe("2026-06-15");
   });
 });

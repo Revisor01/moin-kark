@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-// Zählt, wie oft Intl.DateTimeFormat gebaut wird — BEVOR das Modul geladen
-// wird, damit auch die erste (lazy) Instanz mitgezählt wird.
+// Vor dem Laden zählen, damit auch die erste Instanz erfasst wird.
 const Original = Intl.DateTimeFormat;
 let constructed = 0;
 
@@ -26,9 +25,7 @@ describe("formatEventTime — Formatter werden wiederverwendet", () => {
     const { formatEventTime } = await import("../lib/filters");
     constructed = 0;
     expect(formatEventTime(start, end, false, true)).toBe("So., 20. Sept. · 18:00–19:30 Uhr");
-    // Datum, Uhrzeit, Berlin-Kalendertag (für den Gleicher-Tag-Vergleich).
-    // Vorher waren es VIER neue Instanzen bei JEDEM Aufruf — je sichtbarer
-    // Karte und Render.
+    // Datum, Uhrzeit, Berliner Kalendertag.
     expect(constructed).toBe(3);
 
     constructed = 0;

@@ -1,5 +1,4 @@
-# Build-Kontext ist der Repo-Root (s. apps/api/docker-compose.yml). Alles hier
-# Gelistete darf NIE in ein Image-Layer wandern.
+# Build-Kontext ist der Repo-Root; was hier steht, darf nie in ein Image.
 
 # Secrets — apps/api/.env enthält die 14 ChurchDesk-Read-Tokens!
 .env

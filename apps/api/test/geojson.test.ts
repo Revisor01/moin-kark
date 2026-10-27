@@ -38,8 +38,7 @@ describe("toFeature — Koordinaten", () => {
   });
 
   it("lehnt 0/0 ab und nutzt den Gemeinde-Fallback", () => {
-    // Regression: ChurchDesk liefert 0/0 (Golf von Guinea) für nicht geokodierte
-    // Orte. Ungeprüft übernommen lagen diese Events mitten im Atlantik.
+    // 0/0 liefert ChurchDesk für nicht geokodierte Orte.
     const f = toFeature(
       cdEvent({
         locationObj: { latitude: 0, longitude: 0 },
@@ -52,8 +51,7 @@ describe("toFeature — Koordinaten", () => {
   });
 
   it("nimmt eine echte Koordinate auch dann, wenn nur ein Wert 0 ist", () => {
-    // Nur das Paar 0/0 ist der Nullpunkt — ein einzelner 0-Wert wäre eine
-    // gültige Position (Nullmeridian) und darf nicht mit verworfen werden.
+    // Ein einzelner 0-Wert ist eine gültige Position.
     const f = toFeature(cdEvent({ locationObj: { latitude: 54.2, longitude: 0 } }), 2725);
     expect(f.geometry.coordinates).toEqual([0, 54.2]);
     expect(f.properties.coordSource).toBe("event");
@@ -98,8 +96,7 @@ describe("toFeature — Koordinaten", () => {
   });
 
   it("lässt bestimmte Titel auch eine gepflegte Koordinate überstimmen", () => {
-    // Auf dem Gelände der Familienlagune tragen alle Termine dieselbe Adresse,
-    // finden aber an verschiedenen Stellen statt.
+    // Familienlagune: eine Adresse, verschiedene Orte.
     const f = toFeature(
       cdEvent({
         title: "Willkommen in der Kirchenkiste!",
@@ -127,10 +124,7 @@ describe("toFeature — „Überstimmt ChurchDesk\" aus der Orts-Verwaltung", ()
   });
 
   it("lässt sich für einen Code-Eintrag abwählen", () => {
-    // Der Admin nimmt bei „Willkommen in der Kirchenkiste" das Häkchen
-    // „Überstimmt ChurchDesk" heraus. Die Oberfläche zeigte das als übernommen,
-    // der Feed fiel aber still auf die Code-Tabelle zurück — die ChurchDesk-
-    // Koordinate blieb überstimmt.
+    // Ohne Häkchen darf auch die Code-Tabelle nicht überstimmen.
     loadOverrides();
     setOverrides({
       ...KEINE_OVERRIDES,
@@ -148,8 +142,7 @@ describe("toFeature — „Überstimmt ChurchDesk\" aus der Orts-Verwaltung", ()
   });
 
   it("greift ohne Ortsangabe trotzdem als Titel-Zuordnung", () => {
-    // Abgewählt heißt: keine gepflegte Koordinate überstimmen — nicht: die
-    // Zuordnung ganz vergessen. Ohne Ort und Koordinate gilt sie weiterhin.
+    // Abgewählt überstimmt nichts, die Zuordnung ohne Ort gilt weiter.
     loadOverrides();
     setOverrides({
       ...KEINE_OVERRIDES,
@@ -211,8 +204,6 @@ describe("toFeature — Eigenschaften", () => {
     expect(p.descriptionHtml).toBe("<p>Lang</p>");
     expect(p.price).toBe("5 €");
     expect(p.contributor).toBe("Kantorei");
-    // "Konzert" und "Konzerte" sind dieselbe Kategorie in zwei Gemeinden —
-    // der Feed traegt den kanonischen Namen (s. kanonischeKategorie).
     expect(p.categories).toEqual([{ id: 7, title: "Konzerte", color: 3 }]);
     expect(p.parish).toBe("Büsum");
     expect(p.kirchspiel).toBe("West");
@@ -225,9 +216,7 @@ describe("toFeature — Eigenschaften", () => {
   });
 
   it("liefert Beginn und Ende immer in UTC, egal wie ChurchDesk sie schreibt", () => {
-    // ChurchDesk hat die Schreibweise schon gewechselt (heute „Z" mit
-    // Millisekunden). Die App vergleicht gemerkte Zeiten mit dem Feed; eine
-    // neue Schreibweise desselben Zeitpunkts darf dort nicht ankommen.
+    // Die App vergleicht gemerkte Zeiten per String.
     const mitOffset = toFeature(
       cdEvent({ startDate: "2026-06-15T10:00:00+02:00", endDate: "2026-06-15T12:00:00+02:00" }),
       2725
@@ -256,8 +245,7 @@ describe("toFeature — Eigenschaften", () => {
   });
 
   it("setzt parishes nur bei Mehrfachzuordnung", () => {
-    // Ein Kirchspiel-weiter Termin gehört allen Gemeinden — der Gemeindefilter
-    // in der App muss ihn über jede davon finden.
+    // Der Gemeindefilter muss den Termin über jede Gemeinde finden.
     const mehrere = toFeature(
       cdEvent({
         parishes: [
@@ -350,9 +338,7 @@ describe("hasHighlightTag", () => {
 
 describe("Kategorien im Event", () => {
   it("traegt den kanonischen Namen, nicht die Schreibweise der Gemeinde", () => {
-    // Entscheidend: Die App vergleicht Filter-Chip und Event-Kategorie ueber
-    // den Titel-String. Wuerde nur die Kategorienliste zusammengelegt, fande
-    // der Filter "Kinder & Jugend" keine Termine mit "Kinder / Jugendliche".
+    // Die App vergleicht Filter-Chip und Kategorie über den Titel-String.
     const f = toFeature(
       {
         id: 1,

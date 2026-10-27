@@ -10,8 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Die Overrides-Datei liegt in einem eigenen Temp-Verzeichnis, nie im Projekt.
-// DATA_DIR wird beim Import des Moduls gelesen, deshalb vor dem Import setzen.
+// DATA_DIR wird beim Import gelesen, deshalb vorher setzen.
 const DIR = mkdtempSync(join(tmpdir(), "moinkark-locations-"));
 const FILE = join(DIR, "location-overrides.json");
 process.env.DATA_DIR = DIR;
@@ -113,9 +112,7 @@ describe("Validierung", () => {
   });
 
   it("lehnt Schlüssel aus der Prototypkette ab, statt sie still zu verlieren", () => {
-    // JSON.parse legt „__proto__" als eigene Eigenschaft an — genau so kommt ein
-    // Admin-PUT herein. Beim Kopieren in ein Objektliteral würde der Schlüssel
-    // dessen Prototyp umbiegen und nie in der Datei landen.
+    // So kommt ein Admin-PUT herein; im Objektliteral bäge der Schlüssel den Prototyp um.
     const raw = JSON.parse('{"locations":{"__proto__":{"lat":54.1,"lng":9.1}}}');
     expect(() => setOverrides(raw)).toThrow("Unzulässiger Ortsname „__proto__\".");
     expect(() => setOverrides({ ...EMPTY, locations: { Constructor: { lat: 54.1, lng: 9.1 } } })).toThrow(
@@ -126,8 +123,7 @@ describe("Validierung", () => {
   });
 
   it("liefert den Titel-Eintrag samt Vorrang-Flag, nicht nur die Koordinate", () => {
-    // Der Feed braucht das Flag: Ein Eintrag mit `force: false` muss den
-    // Code-Vorrang aufheben können — dafür muss er als Eintrag sichtbar sein.
+    // `force: false` muss als Eintrag sichtbar sein, um den Code-Vorrang aufzuheben.
     setOverrides({
       ...EMPTY,
       titles: [{ prefix: "Abendsegen", coords: { lat: 54.1336, lng: 8.8385 }, force: false }],
@@ -154,13 +150,11 @@ describe("Datenverlust-Schutz bei unlesbarer Datei", () => {
     chmodSync(FILE, 0o000);
     expect(() => readFileSync(FILE, "utf8")).toThrow(/EACCES/);
 
-    // Volume-Rechte weg (schon einmal so passiert): Laden schlägt fehl, der
-    // Stand im Speicher ist leer — die Admin-Oberfläche zeigt nur die Code-Tabellen.
+    // Unlesbare Datei: der Stand im Speicher ist leer.
     loadOverrides();
     expect(getOverrides()).toEqual(EMPTY);
 
-    // Der nächste „Speichern"-Klick darf den leeren Stand NICHT über die Datei
-    // schreiben, in der die echten Korrekturen liegen.
+    // Speichern darf den leeren Stand nicht über die Datei schreiben.
     expect(() => setOverrides(EMPTY)).toThrow(/beim Start nicht gelesen werden/);
 
     chmodSync(FILE, 0o644);

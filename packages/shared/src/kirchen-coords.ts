@@ -1,6 +1,4 @@
-// Fallback-Koordinaten für die ~10 % Events ohne event.locationObj.
-// Generiert aus echten ChurchDesk-locationObj-Daten (häufigste Koordinate je Gemeinde/Org),
-// daher real und stabil — Kirchenstandorte ändern sich nicht.
+// Fallback-Koordinaten für Events ohne locationObj, aus den häufigsten ChurchDesk-Koordinaten je Gemeinde.
 
 import { normalizeKey as normalize } from "./types";
 
@@ -9,12 +7,7 @@ export interface LatLng {
   lng: number;
 }
 
-/**
- * Titel-basierte Koordinaten-Korrektur: Präfix-Match auf dem normalisierten
- * Titel. `force` überstimmt auch eine gepflegte ChurchDesk-Koordinate — in der
- * statischen Tabelle unten steckt das in TITLE_OVERRIDES, die über /admin
- * gepflegten Einträge tragen das Flag direkt am Eintrag.
- */
+/** Titel-Korrektur per Präfix; `force` überstimmt auch eine gepflegte ChurchDesk-Koordinate. */
 export interface TitleCoordFix {
   prefix: string;
   coords: LatLng;
@@ -37,26 +30,18 @@ const PARISH_COORDS: Record<string, LatLng> = {
   Heide: { lat: 54.195713, lng: 9.09261 },
   "Kirche Wesseln": { lat: 54.210174, lng: 9.0756 },
   Wesseln: { lat: 54.210174, lng: 9.0756 },
-  // Ohne diese Einträge fielen Events, die nur eine Gemeinde (parish) und keinen
-  // Ortsnamen tragen, auf den gröberen Org-Punkt zurück. Werte wie in
-  // LOCATION_COORD_FIXES (dort bereits geprüft).
+  // Sonst fallen Events nur mit Gemeinde auf den gröberen Org-Punkt zurück.
   "Lohe-Rickelshof": { lat: 54.1873944, lng: 9.0706326 },
   Pahlen: { lat: 54.2628322, lng: 9.2956512 },
   Delve: { lat: 54.3033433, lng: 9.2539684 },
-  // Helgoland gehört laut Kirchspiel-Zuordnung zu „West", hatte hier aber keinen
-  // Punkt — Termine landeten dadurch ~65 km entfernt auf dem Büsumer Org-Pin.
+  // Helgoland, sonst ~65 km entfernt auf dem Büsumer Pin.
   Helgoland: { lat: 54.178889, lng: 7.886389 },
-  // Kirchenkreis-Termine (Freizeiten, Fortbildungen, überörtliche Angebote) haben
-  // oft gar keinen Ort in Dithmarschen — Schweden, Bispingen, wechselnde Häuser.
-  // Sie werden bewusst am Kirchenkreis-Sitz Meldorf angesiedelt: So bleiben sie in
-  // Karte UND Liste sichtbar und damit buchbar, statt an einem willkürlichen Punkt
-  // südlich der Stadt zu hängen.
+  // Kirchenkreis-Termine ohne Ort in Dithmarschen bewusst in Meldorf, damit sie sichtbar bleiben.
   "Kirchenkreis Dithmarschen": { lat: 54.090562, lng: 9.074945 },
   Lunden: { lat: 54.333612, lng: 9.024191 },
   Marne: { lat: 53.95351, lng: 9.012812 },
   Meldorf: { lat: 54.090562, lng: 9.074945 },
-  // St. Jacobi. Fehlte hier — ohne Eintrag fiel Neuenkirchen auf die orgId 2729
-  // (Kirchspiel West) zurück und landete rund 10 km entfernt in Büsum.
+  // St. Jacobi, sonst fällt Neuenkirchen auf Kirchspiel West in Büsum zurück.
   Neuenkirchen: { lat: 54.23672, lng: 8.9898787 },
   Schlichting: { lat: 54.313782, lng: 9.091838 },
   "St. Annen": { lat: 54.352585, lng: 9.074589 },
@@ -78,11 +63,9 @@ export const ORG_COORDS: Record<number, LatLng> = {
   2715: { lat: 54.045977, lng: 9.115475 },
   2718: { lat: 54.165051, lng: 8.997713 },
   2720: { lat: 53.898038, lng: 9.141931 },
-  // Christuskirche Lohe-Rickelshof (deckungsgleich mit LOCATION_COORD_FIXES);
-  // der frühere Schätzpunkt lag ~1,6 km nördlich davon.
+  // Christuskirche Lohe-Rickelshof, wie in LOCATION_COORD_FIXES.
   2722: { lat: 54.1873944, lng: 9.0706326 },
-  // Kirche Pahlen (s. LOCATION_COORD_FIXES). Der frühere „grobe Region"-Punkt
-  // lag rund 10 km von allen zugehörigen Orten entfernt.
+  // Kirche Pahlen, wie in LOCATION_COORD_FIXES.
   2723: { lat: 54.2628322, lng: 9.2956512 },
   2724: { lat: 54.218911, lng: 9.274758 },
   2725: { lat: 54.284324, lng: 9.168123 },
@@ -96,33 +79,14 @@ export const ORG_COORDS: Record<number, LatLng> = {
 /** Geografisches Zentrum Dithmarschen — letzter Notnagel. */
 export const DITHMARSCHEN_CENTER: LatLng = { lat: 54.12, lng: 9.05 };
 
-/**
- * Korrekturen für Orte, die ChurchDesk auf eine falsche Koordinate geokodiert.
- *
- * Hintergrund: ChurchDesk geokodiert über die eingetragene ADRESSE. Sind Kirche und
- * Pastorat/Gemeindehaus unter derselben Anschrift gepflegt (Wesselburen: beides
- * „Marktstr. 2"), bekommen beide exakt dieselbe Koordinate — ein Pin liegt dann
- * unsichtbar unter dem anderen, egal wie weit man zoomt. Der Gottesdienst in der
- * Kirche war dadurch auf der Karte nicht auffindbar.
- *
- * Schlüssel = locationName (normalisiert), Wert = tatsächliche Position.
- * Quelle der Koordinaten: OpenStreetMap (Gebäude-Geometrie).
- *
- * Diese Tabelle greift VOR der ChurchDesk-Koordinate — sie ist die Wahrheit für
- * die hier genannten Orte. Neue Fälle einfach ergänzen.
- */
+/** Korrekturen falsch geokodierter Orte (Schlüssel locationName, Quelle OSM); sie gehen vor ChurchDesk. */
 export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // Kirche liegt 63 m südöstlich des Pastorats (beide „Marktstr. 2" in ChurchDesk).
   "wesselburen | st. bartholomäus": { lat: 54.2120945, lng: 8.9225438 },
-  // ChurchDesk liefert für diese Termine gar keine Koordinaten. Der Fallback über
-  // PARISH_COORDS greift zwar, aber nur solange „Neuenkirchen" als parish gesetzt
-  // ist — hier zusätzlich am Ortsnamen festmachen.
+  // Ohne Koordinate in ChurchDesk, hier zusätzlich am Ortsnamen festgemacht.
   "neuenkirchen | st. jacobi": { lat: 54.23672, lng: 8.9898787 },
 
-  // --- Meldorf: Orte OHNE Ort-Objekt in ChurchDesk ---------------------------
-  // Der Ortsname steht dort nur im Freitextfeld, es gibt keine Koordinate. Alle
-  // neun Orte landeten deshalb über den Gemeinde-Fallback auf demselben Punkt
-  // (Meldorfer Dom) — quer über den Kreis verteilte Termine auf einer Nadel.
+  // --- Meldorf: Orte ohne Ort-Objekt, sonst alle auf dem Dom ---
   "ev. gemeinschaft, bütjestraße 8, meldorf": { lat: 54.0919128, lng: 9.0730915 },
   "friedrich-holm-weg 1, meldorf": { lat: 54.0905292, lng: 9.0854063 }, // Altenhilfezentrum
   "meldorf, brüttstraße 6": { lat: 54.0879819, lng: 9.0769762 }, // Tagespflege „Mook we gern"
@@ -132,9 +96,7 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   "gemeindehaus epenwöhrden": { lat: 54.1084099, lng: 9.051996 },
   "sarzbüttel, an der blockhütte": { lat: 54.1167, lng: 9.18333 }, // Ortsmitte (Blockhütte nicht in OSM)
 
-  // --- Tellingstedt: drei verschiedene Kirchen auf einem Punkt ----------------
-  // Alle drei ohne Koordinate in ChurchDesk → Gemeinde-Fallback Tellingstedt.
-  // Wrohm liegt ~7 km östlich, Albersdorf ~9 km südlich.
+  // --- Tellingstedt: drei Kirchen ohne Koordinate ---
   "friedenskirche wrohm": { lat: 54.2123552, lng: 9.3790302 },
   // Beide Schreibweisen aus ChurchDesk auf denselben geprüften Punkt.
   "st. martins-kirche": { lat: 54.219352, lng: 9.2752847 },
@@ -145,18 +107,12 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // --- Albersdorf: Fremdorte über den Gemeinde-Fallback -----------------------
   "schafstedt grundschule": { lat: 54.0770405, lng: 9.3001471 },
 
-  // --- Hennstedt -------------------------------------------------------------
-  // Turnhalle am Schulgelände (Eider-Nordsee-Schule), lag vorher auf dem
-  // Kirchenpunkt. Koordinate vom Nutzer geprüft.
+  // --- Hennstedt: Turnhalle am Schulgelände ---
   "kleine turnhalle, hennstedt": { lat: 54.2874327, lng: 9.1630927 },
 
-  // --- Weitere Orte ohne Ort-Objekt in ChurchDesk (vom Nutzer eingemessen) ----
-  // Christuskirche, Kirchenallee 14. Der bisherige Punkt war im Code nur als
-  // „nahe Heide, kein eigenes Event-Sample" geschätzt.
+  // --- Weitere Orte ohne Ort-Objekt, eingemessen ---
   "lohe-rickelshof, kirche": { lat: 54.1873944, lng: 9.0706326 },
-  // Watt'n Meer School, Ekenesch 15 Wesselburen. Nur DIESER eine Einschulungs-
-  // gottesdienst ist in der Schule — die anderen sind in St. Bartholomäus bzw.
-  // St. Jacobi (s. TITLE_COORD_FIXES unten).
+  // Nur dieser Einschulungsgottesdienst ist in der Schule.
   "schulhof watt´n meer school, wesselburen": { lat: 54.2119931, lng: 8.9166402 },
   // Trauercafé „Salzblüte", An d. Mühle 2, Büsum.
   salzblüte: { lat: 54.1352669, lng: 8.8667353 },
@@ -165,67 +121,40 @@ export const LOCATION_COORD_FIXES: Record<string, LatLng> = {
   // Andacht bei Boies im Garten, Osterhof 19 (Nordermeldorf/Thalingburen).
   "osterhof 19": { lat: 54.106539, lng: 9.037766 },
 
-  // --- Pahlen und Delve: bisher EIN grober Geest-Punkt für vier Orte ---------
-  // ORG_COORDS[2723] war mit „grobe Region" kommentiert und lag ~10 km neben
-  // allen vier Orten. Hier die tatsächlichen Kirchen bzw. Ortsmitten.
+  // --- Pahlen und Delve: echte Kirchen und Ortsmitten statt eines Regionspunkts ---
   pahlen: { lat: 54.2628322, lng: 9.2956512 }, // Kirche, vom Nutzer geprüft
   delve: { lat: 54.3033433, lng: 9.2539684 }, // St. Marien
   "dörpling, wronbarg": { lat: 54.2601522, lng: 9.3042373 },
   tellingstedt: { lat: 54.219352, lng: 9.2752847 }, // St. Martin, vom Nutzer geprüft
 };
 
-/**
- * Zuordnung über den TITEL — Notnagel für Termine, die in ChurchDesk weder ein
- * Ort-Objekt noch einen Ortsnamen haben. Ohne das landen sie auf dem
- * Gemeindepunkt (Urlauberseelsorge Büsum: 31 Termine auf einer Nadel).
- *
- * Greift NUR, wenn kein Ortsname vorhanden ist — eine gepflegte Ortsangabe hat
- * immer Vorrang. Der Vergleich ist ein Präfix-Match auf dem normalisierten Titel,
- * damit Varianten wie „Kirchenkiste" / „Kirchenkiste!" beide erfasst werden.
- */
+/** Zuordnung über den Titel, nur ohne Ortsnamen, per Präfix auf dem normalisierten Titel. */
 export const TITLE_COORD_FIXES: TitleCoordFix[] = [
-  // Die Kirchenkiste steht auf der „Watt'n Insel" in der Familienlagune. ChurchDesk
-  // setzt für alle Termine dort die Gelände-Adresse (Nordseestraße 79X) — die
-  // Kiste selbst steht aber an einer bestimmten Stelle. Diese Koordinate ist die
-  // genauere (vom Nutzer eingemessen) und gilt für ALLE Kirchenkiste-Termine,
-  // auch die mit gepflegtem Ortsnamen (s. TITLE_OVERRIDES unten).
+  // Kirchenkiste auf der Watt'n Insel, eingemessen; gilt für alle Kirchenkiste-Termine (TITLE_OVERRIDES).
   { prefix: "willkommen in der kirchenkiste", coords: { lat: 54.1334736, lng: 8.8382318 } },
   // Treffpunkt ist die Fischerkirche St. Clemens.
   { prefix: "pilgern in büsum", coords: { lat: 54.1296131, lng: 8.861221 } },
-  // Nicht bei der Kirchenkiste, sondern bei den Salzwiesen ganz im Westen der
-  // Watt'n Insel („Nördlicher Aufgang zur Lagune", s. Beschreibung im Termin).
+  // Salzwiesen im Westen der Watt'n Insel.
   { prefix: "abendsegen bei sonnenuntergang", coords: { lat: 54.13673, lng: 8.8351529 } },
 
-  // Termine ohne Ort-Objekt, deren Ort nur im Titel steht:
-  // Trauercafé in der „Salzblüte", An d. Mühle 2, Büsum.
+  // Trauercafé in der „Salzblüte“, Büsum.
   { prefix: "kaffee, licht & leben", coords: { lat: 54.1352669, lng: 8.8667353 } },
   // Marktandacht auf dem Rathausplatz Meldorf.
   { prefix: "marktandacht auf dem rathausplatz", coords: { lat: 54.0893979, lng: 9.0738847 } },
   // Andacht bei Boies im Garten, Osterhof 19.
   { prefix: "andacht bei boies im garten", coords: { lat: 54.106539, lng: 9.037766 } },
-  // Nur die DaZ-Klassen feiern in der Schule (Ekenesch 15). Die beiden anderen
-  // Einschulungsgottesdienste sind in St. Bartholomäus bzw. St. Jacobi — die
-  // laufen ueber die Gemeinde-Fallbacks korrekt und brauchen keinen Eintrag.
+  // Nur die DaZ-Klassen feiern in der Schule.
   { prefix: "einschulungsgottesdienst daz-klassen", coords: { lat: 54.2119931, lng: 8.9166402 } },
-  // Der Wesselburener Einschulungsgottesdienst ist in St. Bartholomäus. Ohne
-  // Eintrag landet er über den Gemeinde-Fallback am Gemeindehaus (200 m daneben).
+  // St. Bartholomäus, sonst landet er 200 m daneben am Gemeindehaus.
   {
     prefix: "einschulungsgottesdienst watt´n meer school wesselburen",
     coords: { lat: 54.2120945, lng: 8.9225438 },
   },
-  // „Kirche bewegt!" mit der Landjugend und dem SSV — auf dem Sportplatz
-  // Hennstedt (OSM: benannte Sportanlage, ~500 m westlich der Turnhalle).
+  // Sportplatz Hennstedt.
   { prefix: "spendenlauf", coords: { lat: 54.2879255, lng: 9.1559349 } },
 ];
 
-/**
- * Titel-Präfixe, deren Koordinate auch eine gepflegte ChurchDesk-Angabe ÜBERSTIMMT.
- *
- * Normalerweise gewinnt die Ortsangabe aus ChurchDesk. Hier ist es umgekehrt: Auf
- * dem Gelände der Familienlagune tragen alle Termine dieselbe Adresse, obwohl sie
- * an verschiedenen Stellen stattfinden (Kirchenkiste vs. Salzwiesen im Westen).
- * Für die hier genannten Reihen ist die eingemessene Koordinate die verlässlichere.
- */
+/** Titel-Präfixe, die auch eine gepflegte ChurchDesk-Adresse überstimmen, weil das Gelände eine Adresse für alle Orte hat. */
 export const TITLE_OVERRIDES = [
   "willkommen in der kirchenkiste",
   "abendsegen bei sonnenuntergang",
@@ -238,10 +167,7 @@ export function coordFixForTitle(title: string | undefined): LatLng | undefined 
   return TITLE_COORD_FIXES.find((e) => t.startsWith(e.prefix))?.coords;
 }
 
-/**
- * Titel-Zuordnung, die auch eine gepflegte ChurchDesk-Koordinate überstimmt.
- * Nur für Reihen aus TITLE_OVERRIDES — sonst undefined.
- */
+/** Titel-Zuordnung für Reihen aus TITLE_OVERRIDES, sonst undefined. */
 export function coordOverrideForTitle(title: string | undefined): LatLng | undefined {
   if (!title) return undefined;
   const t = normalize(title);
@@ -249,15 +175,11 @@ export function coordOverrideForTitle(title: string | undefined): LatLng | undef
   return TITLE_COORD_FIXES.find((e) => t.startsWith(e.prefix))?.coords;
 }
 
-/**
- * Liefert eine korrigierte Koordinate für einen Ort — oder undefined, wenn der
- * Ort nicht in der Korrekturtabelle steht (dann gilt die ChurchDesk-Angabe).
- */
+/** Korrigierte Koordinate eines Orts oder undefined. */
 export function coordFixFor(locationName: string | undefined): LatLng | undefined {
   if (!locationName) return undefined;
   const key = normalize(locationName);
-  // Nur eigene Einträge: „constructor" träfe sonst Object.prototype und das
-  // Feature bekäme [null, null] als Koordinate.
+  // Nur eigene Einträge, „constructor“ träfe sonst Object.prototype.
   return Object.hasOwn(LOCATION_COORD_FIXES, key) ? LOCATION_COORD_FIXES[key] : undefined;
 }
 

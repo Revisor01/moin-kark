@@ -16,8 +16,7 @@ import {
 
 describe("cardOuterHeight", () => {
   it("entspricht bei 100 % Systemschrift der bisherigen Karte inklusive Rahmen", () => {
-    // 104 px Inhalt + 2 × 1 px Rahmen — das war die tatsächliche Höhe, mit der
-    // getItemLayout vorher NICHT gerechnet hat (dort standen 104).
+    // 104 px Inhalt + 2 × 1 px Rahmen.
     expect(CARD_OUTER_HEIGHT).toBe(106);
     expect(cardOuterHeight(1)).toBe(106);
     expect(cardOuterHeight()).toBe(106);

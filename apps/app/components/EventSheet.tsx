@@ -34,13 +34,7 @@ interface Props {
   onToggleSave: (id: number) => void;
 }
 
-/**
- * Entfernt interne Redaktions-Marker (z.B. „KAT: …", „URL: …", „INFO: …"),
- * die am Zeilenanfang stehen — die verwirren in der öffentlichen Ansicht.
- */
-// Nur die tatsächlich in ChurchDesk gebräuchlichen Redaktions-Marker. Vorher
-// entfernte ein Muster „≥2 Großbuchstaben + Doppelpunkt" JEDE passende Zeile —
-// damit verschwand auch echter Inhalt wie „ACHTUNG: Einlass ab 19 Uhr".
+/** Entfernt die in ChurchDesk gebräuchlichen Redaktions-Marker am Zeilenanfang, nicht jede Großbuchstaben-Zeile. */
 const MARKER_LINE = /^\s*(KAT|URL|INFO|TAG|TAGS|LINK|BILD|FOTO|INTERN)\s*:/i;
 
 function stripMarkers(text: string): string {
@@ -60,8 +54,7 @@ function htmlToText(html?: string): string {
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
-    // Numerische Entities auflösen (ChurchDesk liefert reichlich &#8211; und
-    // &#8220;) — die blieben sonst wörtlich in der Beschreibung stehen.
+    // ChurchDesk liefert numerische Entities wie &#8211;.
     .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
     .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
     .replace(/&(quot|apos|lsquo|rsquo|ldquo|rdquo|ndash|mdash|hellip|euro|szlig);/gi, (_, name) => {
@@ -82,11 +75,7 @@ function htmlToText(html?: string): string {
   return stripMarkers(text);
 }
 
-/**
- * Bereitet das Preis-Feld auf. ChurchDesk liefert es uneinheitlich:
- * „10,00 € / Monat" (hat schon €), „Eintritt frei …" (Text), oder „15" (nackte Zahl).
- * → „€" NUR an reine Zahlen anhängen, sonst unverändert lassen (kein „€€"/„frei €").
- */
+/** Hängt „€“ nur an nackte Zahlen. */
 function formatPrice(raw?: string): string {
   const v = raw?.trim();
   if (!v) return "";
@@ -97,39 +86,29 @@ function formatPrice(raw?: string): string {
 
 const IS_WEB = Platform.OS === "web";
 
-// Maße für die Abschätzung, ob die Beschreibung genug Platz hat (müssen grob zu
-// den Styles unten passen — kleine Abweichungen sind unkritisch, es geht nur um
-// die Entscheidung „fixer Kopf" vs. „alles scrollt").
+// Grobe Maße zur Entscheidung „fixer Kopf“ oder „alles scrollt“.
 const HERO_HEIGHT = sizes.heroHeight; // styles.hero
 const HEAD_BASE = 130; // Padding + Zeit + Titel + Badges + Trenner
 const META_ROW = 24; // eine Meta-Zeile inkl. Abstand
 const FOOTER_BASE = 86; // Maps-Button + Padding (ohne Safe Area)
-// Darunter lohnt der fixe Kopf nicht mehr: weniger als ~6 Textzeilen im
-// Scrollfenster liest sich schlechter, als das ganze Sheet zu scrollen.
+// Unter etwa 6 Zeilen scrollt besser das ganze Sheet.
 const DESC_MIN_HEIGHT = 132;
 
 export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggleSave }: Props) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
-  // Feste Sheet-Höhe (statt maxHeight%) — nur so bekommt die ScrollView einen
-  // klar begrenzten Raum und scrollt zuverlässig intern bis zum Maps-Button.
+  // Feste Höhe, nur so scrollt die ScrollView zuverlässig bis zum Maps-Button.
   const sheetHeight = Math.min(winH * 0.88, winH - insets.top - spacing.xl);
 
-  // Swipe-down zum Schließen — über dem GANZEN Sheet, nicht nur am oberen Rand.
-  // Damit das Scrollen frei bleibt, läuft die Pan-Geste simultan zur ScrollView
-  // (simultaneousWithExternalGesture) und greift nur, wenn die ScrollView schon
-  // ganz oben steht (atTop). Sonst wischt man beim Runterscrollen versehentlich zu.
+  // Swipe zum Schließen simultan zur ScrollView, aber nur ganz oben.
   const translateY = useSharedValue(0);
   const scrollRef = useRef<ScrollView>(null);
-  // Scroll-Offset als Shared Value: der Gesture-Callback läuft auf dem UI-Thread
-  // und kann keinen React-State lesen.
+  // Shared Value, weil der Gesture-Callback auf dem UI-Thread läuft.
   const atTop = useSharedValue(true);
-  // translateY NICHT im close zurücksetzen → kein Aufblitzen (Sheet bliebe sonst 1 Frame oben sichtbar).
-  // Beim Öffnen eines neuen Events wieder auf 0 (s. Effect unten).
+  // Im close nicht zurücksetzen, sonst blitzt das Sheet einen Frame auf.
   const swipeDown = Gesture.Pan()
     .simultaneousWithExternalGesture(scrollRef)
-    // Erst ab klarer Vertikalbewegung übernehmen, damit ein Tippen auf Herz/Buttons
-    // und kurze Scroll-Impulse nicht als Swipe gelten.
+    // Erst bei klarer Vertikalbewegung, damit Tipps nicht als Swipe gelten.
     .activeOffsetY(12)
     .failOffsetY(-12)
     .onUpdate((e) => {
@@ -151,23 +130,13 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   };
   const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
 
-  // Neues Event geöffnet → Sheet von oben einsetzen (translateY zurück auf 0).
-  // atTop ebenfalls zurücksetzen: das frische Sheet startet immer ungescrollt,
-  // sonst bliebe der Wert vom vorher gescrollten Event stehen und der Swipe
-  // zum Schließen würde beim nächsten Event nicht greifen.
-  //
-  // Hängt an der ID, nicht am Feature-Objekt: Wenn der Cache durch frische
-  // Netzdaten ersetzt wird, sind alle Features neue Referenzen — dasselbe Event
-  // sähe sonst wie ein neues aus und die Beschreibung spränge beim Lesen nach oben.
+  // An der ID statt am Objekt, sonst wirkt nach einem Refetch jedes Event neu und der Text springt.
   const featureId = feature?.properties.id ?? null;
   useEffect(() => {
     if (featureId !== null) {
       translateY.value = 0;
       atTop.value = true;
-      // Auch die ScrollView zurücksetzen. Wird bei OFFENEM Sheet direkt ein
-      // anderes Event gewählt (Tap auf eine Mitteilung), bliebe sonst der alte
-      // Scroll-Offset stehen: die Beschreibung begänne mittendrin, während
-      // atTop bereits true meldet.
+      // Auch die ScrollView zurücksetzen, sonst beginnt ein direkt gewähltes Event mittendrin.
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
   }, [featureId, translateY, atTop]);
@@ -184,25 +153,19 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   const [lng, lat] = feature.geometry.coordinates;
   const price = formatPrice(p.price);
 
-  // Mehrfach zugeordnete Events: alle Gemeinden ausschreiben („Kirchspiel Eider:
-  // Hennstedt, Weddingstedt … und Hemme") — „Kirchspiel" allein ist für viele
-  // kein vertrauter Begriff, die Gemeindenamen sind es.
+  // Alle Gemeinden ausschreiben, „Kirchspiel“ allein kennen viele nicht.
   const parishes = eventParishes(p);
   const multiParish = parishes.length > 1;
   const gemeindeValue = parishesLabel(p);
 
-  // Höhe des fixen Kopfbereichs abschätzen: Bild + Kopfsektion (Zeit, Titel, Badges,
-  // Trenner) + eine Zeile je Meta-Angabe. Danach entscheidet sich, ob für die
-  // Beschreibung genug Platz bleibt. Die Gemeindeliste bei Mehrfachzuordnung
-  // umbricht auf ~2 Zeilen — sie ersetzt die Zeilen Gemeinde + Kirchspiel.
+  // Höhe des fixen Kopfes grob schätzen.
   const metaCount =
     (multiParish ? 2 : (p.parish ? 1 : 0) + 1) + (p.locationName ? 1 : 0) + (address ? 1 : 0) +
     (p.contributor ? 1 : 0) + (price ? 1 : 0);
   const headerEstimate = HERO_HEIGHT + HEAD_BASE + metaCount * META_ROW;
   const footerHeight = FOOTER_BASE + insets.bottom;
   const descSpace = sheetHeight - headerEstimate - footerHeight;
-  // Zu wenig Raum für den Text → lieber das ganze Sheet scrollen lassen, sonst
-  // wären die letzten Zeilen praktisch unerreichbar (der Fehler aus v1.1.1).
+  // Zu wenig Raum: alles scrollen, sonst sind die letzten Zeilen unerreichbar.
   const scrollAll = !!desc && descSpace < DESC_MIN_HEIGHT;
 
   // Kopfbereich (Bild + Grabber + Kopfsektion).
@@ -419,8 +382,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: sizes.sheetMaxWidth,
     overflow: "hidden", // clippt das Hero-Bild auf die obere Rundung (kein weißer Strich)
-    // Höhe wird inline gesetzt (feste Höhe → ScrollView scrollt zuverlässig).
-    // Kein Rahmen/Schatten nötig: der dunkle Backdrop setzt das Sheet schon klar ab.
   },
   grabber: {
     position: "absolute",
@@ -431,14 +392,9 @@ const styles = StyleSheet.create({
     backgroundColor: overlays.onImage,
     zIndex: 2,
   },
-  // Nur die Beschreibung scrollt — nimmt den Restplatz zwischen fixer Kopf- und Fußsektion.
-  // Die ScrollView füllt den Restraum über dem fixen Maps-Button.
   descScroll: { flex: 1 },
-  // Bereich zwischen fixem Kopf und Footer; minHeight:0 ist nötig, damit die
-  // ScrollView darin überhaupt scrollt statt sich aufzublähen.
+  // minHeight:0, sonst bläht sich die ScrollView auf statt zu scrollen.
   descArea: { flex: 1, minHeight: 0 },
-  // Nur-Beschreibung-Modus: hier braucht der Text sein eigenes Seitenpadding
-  // nicht doppelt (styles.desc bringt es mit), unten etwas Luft zum Footer.
   descOnlyInner: { paddingBottom: spacing.md },
   // Web-Hinweis unter den Meta-Angaben, sobald das Event gemerkt ist.
   savedNote: {
@@ -449,8 +405,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   savedNoteText: { ...text.label, color: colors.muted },
-  // Bild und Kopfsektion bringen ihr eigenes Padding mit → hier nur unten Luft,
-  // damit die letzte Textzeile nicht am Footer klebt.
   descScrollInner: { paddingBottom: spacing.xl },
   descDivider: {
     height: 1,

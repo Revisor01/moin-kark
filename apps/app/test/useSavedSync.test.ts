@@ -49,10 +49,7 @@ beforeEach(() => {
 
 describe("useSavedSync", () => {
   it("gleicht erst gegen frische Netzdaten ab — nicht gegen den Zwischenspeicher", async () => {
-    // Der gemeldete Fehler: Beim Start liegen Merkliste, Präferenz und der
-    // Zwischenspeicher der letzten Sitzung lange vor der Netzantwort vor. Der
-    // Abgleich lief gegen den alten Stand (alt == alt → nichts zu melden), die
-    // Netzantwort mit dem verschobenen Termin löste keinen zweiten Lauf aus.
+    // Der Abgleich muss nach der Netzantwort erneut laufen.
     const T_ALT = inDays(3);
     const T_NEU = inDays(5);
     seedSnapshot({ 1: { startUtc: T_ALT, title: "Gottesdienst", orgId: 5 } });
@@ -163,8 +160,7 @@ describe("useSavedSync", () => {
   });
 
   it("plant die Erinnerung eines gemerkten Termins nach, wenn sie fehlt", async () => {
-    // Geräte, die den Teilausfall-Fehler schon erlitten haben: Herz gesetzt,
-    // Snapshot-Eintrag und Erinnerung aber weg. Der Abgleich holt das nach.
+    // Geräte mit verlorenem Snapshot und Erinnerung holen beides nach.
     const f = feature({ id: 1, orgId: 5, startUtc: inDays(3), title: "Konzert" });
 
     const hook = await renderHook(

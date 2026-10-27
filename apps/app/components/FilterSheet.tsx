@@ -52,8 +52,7 @@ interface Props {
   rangeFrom?: string;
   rangeTo?: string;
   onRange: (von?: string, bis?: string) => void;
-  // readonly, weil KIRCHSPIELE in @moinkark/shared ein `as const`-Tupel ist —
-  // sonst braucht die Aufrufseite einen Cast, nur um Literale zu übergeben.
+  // readonly, weil KIRCHSPIELE ein `as const`-Tupel ist.
   kirchspiele: readonly string[];
   activeKirchspiel: string | null;
   onKirchspiel: (k: string | null) => void;
@@ -96,8 +95,7 @@ function Chip({
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      // Chips sind 38 pt hoch; die 4 pt Zuschlag oben und unten bringen das
-      // Tippziel auf die empfohlenen 44 pt — passt in den 8-pt-Abstand.
+      // 38 pt plus 2 × 4 pt ergibt das empfohlene 44-pt-Tippziel.
       hitSlop={{ top: 4, bottom: 4 }}
       style={[styles.chip, active && activeBg]}
     >
@@ -137,8 +135,7 @@ export default function FilterSheet({
 }: Props) {
   // Vor dem frühen Return: Hooks müssen in jedem Render laufen.
   const insets = useSafeAreaInsets();
-  // Welcher Picker ist offen? Auf iOS bleibt er stehen, auf Android schliesst
-  // ihn das System selbst — deshalb in beiden Faellen nach der Wahl zumachen.
+  // Android schließt den Picker selbst, iOS nicht, also in beiden Fällen schließen.
   const [pickerFuer, setPickerFuer] = useState<"von" | "bis" | null>(null);
   if (!visible) return null;
 
@@ -236,8 +233,6 @@ export default function FilterSheet({
                   locale="de-DE"
                   themeVariant="light"
                   onChange={(ev, gewaehlt) => {
-                    // Android schließt selbst und meldet auch den Abbruch;
-                    // auf iOS macht das Modal zu, sobald ein Tag feststeht.
                     if (ev.type !== "set" || !gewaehlt) {
                       setPickerFuer(null);
                       return;
@@ -283,8 +278,7 @@ export default function FilterSheet({
               <Chip
                 key={c}
                 label={c}
-                // trim() wie im Filter (s. matchesCategory): ein Titel mit
-                // Randleerzeichen matchte sonst nie und der Chip blieb inaktiv.
+                // trim() wie in matchesCategory, sonst bleibt der Chip inaktiv.
                 active={activeCategory === c.trim().toLowerCase()}
                 color={colorForCategory(c)}
                 onPress={() => onCategory(c.trim().toLowerCase())}

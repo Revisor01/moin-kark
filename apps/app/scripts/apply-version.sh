@@ -1,22 +1,5 @@
 #!/usr/bin/env bash
-# apply-version.sh — schreibt Version und Build-Nummer aus app.json ins
-# iOS-Projekt und prueft das Ergebnis nach.
-#
-# Quelle der Wahrheit: apps/app/app.json
-#   expo.version            -> CFBundleShortVersionString / MARKETING_VERSION
-#   expo.ios.buildNumber    -> CFBundleVersion / CURRENT_PROJECT_VERSION
-#
-# `expo prebuild` schreibt beide Werte nur in die Info.plist. Die pbxproj
-# (MARKETING_VERSION, CURRENT_PROJECT_VERSION) bleibt auf dem Vorlagenstand
-# „1.0 / 1" stehen. Folgenlos ist das nur, solange die Info.plist literale
-# Werte traegt (Expo-Standard) — sobald jemand auf $(MARKETING_VERSION)
-# umstellt, landet still die falsche Version im Store. Deshalb setzt dieses
-# Skript BEIDE Orte und liest sie danach gegen.
-#
-# `agvtool new-marketing-version` hilft hier NICHT: Es meldet Erfolg, schreibt
-# aber bei hartkodierter Info.plist nicht in die pbxproj. Daher sed + PlistBuddy.
-#
-# Aufruf (aus apps/app/):  ./scripts/apply-version.sh
+# Schreibt Version und Build-Nummer aus app.json in Info.plist und pbxproj und liest gegen. Aufruf aus apps/app/: ./scripts/apply-version.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,9 +23,7 @@ if [ -z "$VERSION" ] || [ -z "$IOS_BUILD" ]; then
   exit 1
 fi
 
-# Format pruefen, bevor irgendwas geschrieben wird: Apple lehnt eine
-# CFBundleShortVersionString ausserhalb von x.y(.z) beim Upload ab — und zwar
-# erst nach dem kompletten CI-Build.
+# Apple lehnt Versionen ausserhalb x.y(.z) erst nach dem ganzen Build ab.
 if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
   echo "FEHLER: version '$VERSION' ist kein gueltiges x.y bzw. x.y.z." >&2
   exit 1

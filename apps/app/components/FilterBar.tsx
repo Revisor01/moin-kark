@@ -15,10 +15,7 @@ interface Props {
 }
 
 
-/**
- * Schwebende Steuerleiste ÜBER der Karte. Buttons im Stil des Herz-Icons:
- * weißer Kreis + feine Umrandung + farbiges Icon. Jede Funktion eine eigene Icon-Farbe.
- */
+/** Schwebende Steuerleiste über der Karte. */
 export default function FilterBar({
   onOpenFilters,
   activeCount,

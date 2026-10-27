@@ -25,9 +25,7 @@ function feature(id: number, coords: [number, number], startUtc: string): EventF
   };
 }
 
-// Drei Termine übereinander in Wesselburen, einer in Büsum. Die Reihenfolge im
-// Array ist absichtlich NICHT chronologisch — genau das ist der Fall, in dem
-// `features[0]` daneben griffe.
+// Bewusst nicht chronologisch, sonst träfe `features[0]` zufällig richtig.
 const FEATURES = [
   feature(3, WESSELBUREN, "2026-09-20T10:00:00Z"),
   feature(1, WESSELBUREN, "2026-09-15T08:00:00Z"),
@@ -41,8 +39,7 @@ describe("pickNearestAtSpot", () => {
   });
 
   it("lässt die gemeldeten Treffer außen vor, sobald an der Koordinate Events liegen", () => {
-    // Die Karte meldet nur den obersten Pin (3) — trotzdem gewinnt 1, weil er
-    // an derselben Stelle früher stattfindet.
+    // Gemeldet wird nur 3, trotzdem gewinnt der frühere Termin 1.
     expect(pickNearestAtSpot(FEATURES, WESSELBUREN, [3, 2])).toBe(1);
   });
 

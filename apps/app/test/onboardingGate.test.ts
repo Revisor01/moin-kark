@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-// Wie in share.test.ts: react-native und expo-store-review werden ersetzt,
-// sonst zieht der Import von `share` beides herein. Geprüft wird die
-// Link-Erkennung, nicht das System.
+// react-native und expo-store-review ersetzt; geprüft wird die Link-Erkennung.
 vi.mock("react-native", () => ({
   Share: { share: async () => ({ action: "sharedAction" }) },
   Linking: { canOpenURL: async () => true, openURL: async () => {} },
@@ -27,10 +25,7 @@ describe("shouldShowOnboarding (Begrüßung beim ersten Start)", () => {
   });
 
   it("überspringt sie bei einem geteilten Termin-Link", () => {
-    // Der Kern: Wer über einen geteilten Link kommt, will den Termin sehen.
-    // Bisher lag die Begrüßung darüber — im Browser traf das jeden neuen
-    // Besucher, weil dort nie ein Merker gesetzt war. Der Termin stand
-    // unsichtbar dahinter und der Link wirkte kaputt.
+    // Wer über einen Link kommt, will den Termin sehen.
     expect(shouldShowOnboarding({ seen: false, hasDeepLink: true })).toBe(false);
   });
 
@@ -40,9 +35,7 @@ describe("shouldShowOnboarding (Begrüßung beim ersten Start)", () => {
 });
 
 describe("Deeplink-Erkennung für die Begrüßung", () => {
-  // Genau der Ausdruck aus app/index.tsx: Ein Termin-Link kommt über zwei Wege
-  // herein, und beide müssen die Begrüßung unterdrücken. Bricht einer, fällt
-  // ein neuer Besucher wieder hinter das Overlay.
+  // Der Ausdruck aus app/index.tsx: beide Link-Wege müssen die Begrüßung unterdrücken.
   const hasDeepLink = (url: string | null, param?: string) =>
     (url != null && eventIdFromUrl(url) !== null) ||
     (typeof param === "string" && /^\d+$/.test(param));
@@ -56,8 +49,7 @@ describe("Deeplink-Erkennung für die Begrüßung", () => {
   });
 
   it("erkennt den aus der Router-Route gereichten Parameter", () => {
-    // app/event/[id].tsx schickt die ID als Router-Parameter an die Karte —
-    // dort ist `useURL` bereits die Karten-URL ohne Termin.
+    // Dort ist `useURL` schon die Karten-URL ohne Termin.
     expect(hasDeepLink("https://karte.moin-kark.de/", "50987060")).toBe(true);
   });
 

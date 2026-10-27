@@ -1,13 +1,11 @@
-// Dünner ChurchDesk-REST-Client (NUR Lesen). Pagination über itemsNumber=100.
-// Referenz: kk-termine/web/churchdesk_api.py (Auth-/Pagination-Verhalten).
+// ChurchDesk-REST-Client, nur lesend.
 
 import { berlinDayKey } from "@moinkark/shared";
 import type { OrgConfig } from "./orgs.js";
 
 const BASE = "https://api2.churchdesk.com/api/v3.0.0";
 const PAGE_SIZE = 100;
-// Ohne eigenes Timeout hängt ein Request am undici-Default (~5 min) — ein einziges
-// hängendes ChurchDesk blockiert dann jeden Cold-Start und Refresh-Durchlauf.
+// Sonst gilt der undici-Default von etwa 5 Minuten.
 const CHUNK_TIMEOUT_MS = 15_000;
 
 /** Rohes ChurchDesk-Event (nur die Felder, die wir nutzen). */
@@ -38,24 +36,12 @@ export interface CdEvent {
   image?: { [key: string]: unknown; title?: string; copyright?: string } | null;
 }
 
-/**
- * Kalendertag in Europe/Berlin als YYYY-MM-DD — Grenze des Abfragefensters.
- *
- * Bewusst NICHT toISOString(): das liefert immer UTC. Zwischen Mitternacht und
- * 01:00 (Winter) bzw. 02:00 (Sommer) Berliner Zeit ist das UTC-Datum noch der
- * Vortag — das Fenster hätte nachts beim Vortag begonnen und bereits gelaufene
- * Events eingeschlossen. Das TZ=Europe/Berlin des Containers ändert daran nichts.
- * Die Logik selbst liegt in packages/shared (berlinDayKey), damit API und App
- * denselben Tag meinen.
- */
+/** Berliner Kalendertag als YYYY-MM-DD; nicht toISOString(), das wäre nachts noch der Vortag. */
 export function fmtDate(d: Date): string {
   return berlinDayKey(d);
 }
 
-/**
- * Holt einen einzelnen Zeit-Chunk (max. PAGE_SIZE Events).
- * Die public partnerToken-API liefert ausschließlich öffentliche Events.
- */
+/** Holt einen Zeit-Chunk (höchstens PAGE_SIZE öffentliche Events). */
 async function fetchChunk(
   org: OrgConfig,
   from: Date,
@@ -70,8 +56,7 @@ async function fetchChunk(
   url.searchParams.set("itemsNumber", String(PAGE_SIZE));
 
   const res = await fetch(url, {
-    // Das Chunk-Timeout gilt IMMER. Ein übergebenes Signal kommt zusätzlich dazu —
-    // sonst entfiele mit einem externen Signal still die 15-s-Grenze.
+    // Das Chunk-Timeout gilt immer, ein übergebenes Signal kommt dazu.
     signal: signal
       ? AbortSignal.any([signal, AbortSignal.timeout(CHUNK_TIMEOUT_MS)])
       : AbortSignal.timeout(CHUNK_TIMEOUT_MS),
@@ -86,13 +71,7 @@ async function fetchChunk(
 
 const DAY = 86400_000;
 
-/**
- * Holt alle öffentlichen Events einer Org im Zeitfenster.
- *
- * ChurchDesks `pageNumber` funktioniert NICHT (liefert immer dieselbe erste Seite),
- * daher paginieren wir über die ZEIT: Wir holen in Chunks und halbieren ein Fenster,
- * sobald es ans 100er-Limit stößt — so gehen keine Events verloren.
- */
+/** Alle öffentlichen Events einer Org; paginiert über die Zeit, weil `pageNumber` nicht funktioniert. */
 export async function fetchOrgEvents(
   org: OrgConfig,
   from: Date,
@@ -105,20 +84,16 @@ export async function fetchOrgEvents(
   async function collect(a: Date, b: Date, depth: number): Promise<void> {
     const items = await fetchChunk(org, a, b, signal);
     for (const e of items) byId.set(e.id, e);
-    // Wenn das Fenster „voll" war, könnten Events fehlen → aufteilen.
-    // Stoppe bei sehr kleinen Fenstern (≤2 Tage) oder zu tiefer Rekursion.
+    // Volles Fenster teilen, bis höchstens 2 Tage oder zu tiefe Rekursion.
     const spanDays = (b.getTime() - a.getTime()) / DAY;
     if (items.length >= PAGE_SIZE) {
       if (spanDays > 2 && depth < 8) {
         const mid = new Date(a.getTime() + (b.getTime() - a.getTime()) / 2);
         await collect(a, mid, depth + 1);
-        // Überlappend ab `mid` (nicht mid+1 Tag): Sollte ChurchDesk `endDate`
-        // exklusiv auslegen, gingen die Events des Mid-Tages sonst verloren.
-        // Doppelte fängt `byId` ohnehin ab.
+        // Überlappend ab `mid`, falls ChurchDesk `endDate` exklusiv auslegt.
         await collect(mid, b, depth + 1);
       } else {
-        // Fenster voll, aber nicht weiter teilbar → hier können Events fehlen.
-        // Nicht still verschlucken, sonst fällt eine Lücke nie auf.
+        // Nicht still verschlucken, sonst fällt die Lücke nie auf.
         console.warn(
           `[churchdesk] Org ${org.id}: ${fmtDate(a)}–${fmtDate(b)} am ${PAGE_SIZE}er-Limit, ` +
             `nicht weiter teilbar (${spanDays.toFixed(1)} Tage, Tiefe ${depth}) — möglicherweise unvollständig.`

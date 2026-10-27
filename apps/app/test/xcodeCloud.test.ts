@@ -4,11 +4,7 @@ import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-/**
- * Xcode Cloud baut den iOS-Release (26.10.2026). Das Skript nach dem Klonen
- * muss die Schritte des früheren GitHub-Release gehen und darf nur im Klon auf
- * automatisches Signieren umstellen.
- */
+/** Xcode Cloud baut den iOS-Release und stellt nur im Klon auf automatisches Signieren um. */
 const APP = join(__dirname, "..");
 const SKRIPT = join(APP, "ios/ci_scripts/ci_post_clone.sh");
 const text = readFileSync(SKRIPT, "utf8");
@@ -41,14 +37,12 @@ describe("Xcode-Cloud-Skript", () => {
     expect([...stellen].sort((a, b) => a - b)).toEqual(stellen);
   });
 
-  // Ab SDK 57 raeumt `expo prebuild` ohne --no-clean ios/ ab und erzeugt es
-  // neu; dann waeren SceneDelegate, Signier-Zeilen und Package.resolved weg.
+  // Ohne --no-clean räumt prebuild ab SDK 57 ios/ ab.
   it("ruft prebuild mit --no-clean auf", () => {
     expect(text).toContain("npx expo prebuild --platform ios --no-install --no-clean");
   });
 
-  // Xcode Cloud schaltet die automatische Paketaufloesung ab (Build 88,
-  // 27.10.2026: „a resolved file is required"); die Datei muss im Repo liegen.
+  // Xcode Cloud löst Pakete nicht selbst auf, die Datei muss im Repo liegen.
   it("Package.resolved liegt im Repo und nennt die MapLibre-Version des Projekts", () => {
     const resolved = JSON.parse(readFileSync(join(APP, "ios/MoinKark.xcworkspace/xcshareddata/swiftpm/Package.resolved"), "utf8"));
     const pin = resolved.pins.find((p: { identity: string }) => p.identity === "maplibre-gl-native-distribution");
@@ -70,8 +64,7 @@ describe("Xcode-Cloud-Skript", () => {
     }
   });
 
-  // Build 89 (27.10.2026) scheiterte unter Xcode 27.1 an der Skriptphase von
-  // ExpoModulesJSI; SDK 56 hat keine Fassung mit der Korrektur aus 57.0.5.
+  // SDK 56 hat keine ExpoModulesJSI-Fassung mit der Korrektur aus 57.0.5.
   it("prueft Xcode und expo-modules-jsi gleich nach npm ci", () => {
     expect(text.indexOf("const [xcode, jsi]")).toBeGreaterThan(text.indexOf("npm ci"));
     expect(text.indexOf("const [xcode, jsi]")).toBeLessThan(text.indexOf("npx expo prebuild"));

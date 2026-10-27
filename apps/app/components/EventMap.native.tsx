@@ -1,5 +1,4 @@
-// Native Karte (iOS/Android) mit MapLibre RN v11. Gleicher Style, Fog of War,
-// Outline, Cluster + Pins, Standort-Marker, Bounds-Callback, Fly-to wie im Web.
+// Native Karte mit MapLibre RN v11, gleicher Style und Ablauf wie im Web.
 import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
@@ -39,28 +38,20 @@ export default function EventMap({
   const cameraRef = useRef<CameraRef>(null);
   const sourceRef = useRef<GeoJSONSourceRef>(null);
 
-  // Memoisiert wie in der Web-Variante: ohne das entstünde bei JEDEM Render ein
-  // neues Objekt, und MapLibre setzte die GeoJSON-Source jedes Mal neu.
+  // Memoisiert, sonst setzte MapLibre die Source bei jedem Render neu.
   const data: EventFeatureCollection = useMemo(
     () => ({ type: "FeatureCollection", features }),
     [features]
   );
 
-  // Standort in einer Ref mitführen: der Fly-to-Effect darf NUR am Token hängen.
-  // Vorher stand userLocation in den Dependencies — und weil useLocation per
-  // watchPositionAsync alle 25 m eine neue Position liefert, ist die Karte beim
-  // freien Navigieren immer wieder auf den eigenen Punkt zurückgesprungen.
+  // Ref, damit der Fly-to nur am Token hängt und nicht alle 25 m zurückspringt.
   const locationRef = useRef(userLocation);
   locationRef.current = userLocation;
 
   useEffect(() => {
     const loc = locationRef.current;
     if (!flyToUserToken || !loc) return;
-    // Das Listen-Sheet verdeckt den unteren Kartenteil → Position NICHT in die Mitte der
-    // Gesamtkarte, sondern in die Mitte des SICHTBAREN oberen Bereichs setzen. Dazu das
-    // Kartenzentrum nach Süden verschieben (Position erscheint dadurch weiter oben).
-    // Offset ≈ Bruchteil der sichtbaren lat-Spanne bei Zoom 11.5. 0.055 war zu groß
-    // (Position landete oberhalb des Sichtfelds) → auf ~0.03 reduziert.
+    // Zentrum nach Süden versetzt (etwa 0.03), weil das Sheet den unteren Teil verdeckt.
     const LAT_OFFSET = 0.03;
     cameraRef.current?.flyTo({
       center: [loc.lng, loc.lat - LAT_OFFSET],
@@ -79,10 +70,7 @@ export default function EventMap({
     });
   }, [flyToOverviewToken]);
 
-  // Zeitstempel des letzten Pin-Taps. MapLibre reicht Pin-Taps mit `features` an
-  // die Karte weiter, sodass onMapPress sie erkennt — sollte eine Plattform das
-  // einmal ohne `features` tun, verhindert dieses Fenster trotzdem, dass die
-  // gerade getroffene Auswahl sofort wieder verworfen wird.
+  // Zeitfenster nach einem Pin-Tap, falls eine Plattform ihn ohne `features` weiterreicht.
   const lastPinPressRef = useRef(0);
 
   const onSourcePress = async (e: any) => {
@@ -92,9 +80,7 @@ export default function EventMap({
     const feat = hits[0];
     if (!feat) return;
     if (feat.properties?.point_count) {
-      // Cluster → exakt so weit reinzoomen, dass er sich in die nächste Ebene
-      // aufteilt (Sub-Cluster oder Einzel-Spots). Tippt man dann auf einen der
-      // kleineren, splittet er weiter — bis zum einzelnen Event.
+      // Genau so weit zoomen, dass der Cluster zerfällt.
       const coords = feat.geometry?.coordinates;
       const clusterId = feat.properties?.cluster_id;
       if (!coords) return;
@@ -111,11 +97,7 @@ export default function EventMap({
       cameraRef.current?.flyTo({ center: coords, zoom, duration: 450 });
       return;
     }
-    // Mehrere Events am GLEICHEN Ort (Kirche mit Gottesdienst, Orgelkonzert, …)
-    // liegen als deckungsgleiche Pins übereinander. features[0] ist dabei
-    // willkürlich — beim Tippen kam so das Orgelkonzert nächste Woche statt des
-    // Gottesdienstes in einer Stunde. Darum den zeitlich NÄCHSTEN Termin wählen
-    // (Logik in lib/nearestEvent.ts, geteilt mit der Web-Karte).
+    // Deckungsgleiche Pins: den zeitlich nächsten Termin nehmen (lib/nearestEvent.ts).
     const id = pickNearestAtSpot(
       features,
       feat.geometry?.coordinates,
@@ -124,14 +106,7 @@ export default function EventMap({
     if (id != null) onSelect(id);
   };
 
-  /**
-   * Tap auf die freie Karte (kein Pin) → Auswahl aufheben, wie im Web.
-   *
-   * MapLibre reicht Pin-Taps zusätzlich an die Karte weiter, dann aber MIT
-   * `features` (s. Doku zu Map.onPress). Nur wenn diese Liste leer ist, wurde
-   * wirklich daneben getippt — sonst hätte jeder Pin-Tap die gerade getroffene
-   * Auswahl sofort wieder verworfen.
-   */
+  /** Tap daneben hebt die Auswahl auf; Pin-Taps kommen mit `features` und zählen nicht. */
   const onMapPress = (e: any) => {
     const hits: any[] = e?.nativeEvent?.features ?? e?.features ?? [];
     if (hits.length > 0) return;
@@ -141,8 +116,7 @@ export default function EventMap({
 
   const onRegionDidChange = (e: any) => {
     if (!onBoundsChange) return;
-    // MapLibre RN v11.3: ViewStateChangeEvent mit bounds = [west, south, east, north].
-    // Je nach RN-Bridge liegt es unter nativeEvent oder direkt am Event → beide prüfen.
+    // bounds liegt je nach Bridge unter nativeEvent oder am Event.
     const b = e?.nativeEvent?.bounds ?? e?.bounds;
     if (b && b.length === 4) {
       const [west, south, east, north] = b;
@@ -150,9 +124,7 @@ export default function EventMap({
     }
   };
 
-  // Nur bei neuer Koordinate ein neues Objekt — sonst setzte MapLibre die
-  // Standort-Source bei JEDEM Render neu (jede Minute, jeder Sheet-Snap, jede
-  // Kartenbewegung), obwohl sich der Punkt nicht bewegt hatte.
+  // Nur bei neuer Koordinate ein neues Objekt, sonst setzt MapLibre die Source dauernd neu.
   const userLat = userLocation?.lat;
   const userLng = userLocation?.lng;
   const userPointFC: EventFeatureCollection | any = useMemo(

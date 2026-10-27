@@ -3,14 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/**
- * Die Platzhalter-Motive liegen in zwei Zuschnitten vor, weil Liste und
- * Detailansicht gegensätzliche Formate haben. Wird ein Motiv ausgetauscht und
- * dabei das Seitenverhältnis verfehlt, fällt das auf dem Gerät erst auf, wenn
- * jemand hinsieht: In der Liste blieb vom Panorama (2,36:1) im fast
- * quadratischen Rahmen nur ein Streifen übrig — bei Hennstedt die Turmspitze,
- * das Kirchenschiff lag außerhalb.
- */
+/** Zwei Zuschnitte je Motiv; ein falsches Seitenverhältnis fiele erst auf dem Gerät auf. */
 const ASSETS = join(__dirname, "..", "assets");
 const MOTIVE = [
   "deich",
@@ -63,8 +56,7 @@ describe("Platzhalter-Motive", () => {
   });
 
   it.skipIf(!hatSips)("sind in der Listen-Fassung nahezu quadratisch", () => {
-    // Rahmen in EventCard: 96 pt breit, ~98 pt hoch → 0,98. Toleranz 0,1, damit
-    // ein leicht anderer Zuschnitt nicht scheitert, ein Panorama (2,36) aber schon.
+    // Rahmen 96 × ~98 pt, Toleranz 0,1.
     for (const m of MOTIVE) {
       const v = seitenverhaeltnis(join(ASSETS, `ph-${m}.jpg`));
       expect(v, `ph-${m}.jpg ist ${v.toFixed(2)}:1 statt ~0,98:1`).toBeGreaterThan(0.88);
@@ -82,13 +74,7 @@ describe("Platzhalter-Motive", () => {
 });
 
 describe("Zuordnung Gemeinde → Motiv", () => {
-  // Die Schlüssel müssen exakt den Werten entsprechen, die aus ChurchDesk
-  // kommen (kleingeschrieben). Zwei Fälle greifen sonst still daneben und
-  // niemand merkt es, weil dann einfach ein Landschaftsmotiv erscheint:
-  //   - „KG Heide" trägt das Präfix; ein Schlüssel „heide" träfe nie zu.
-  //   - Bei St. Michaelisdonn schwankt die STADT zwischen „Sankt" und „St.",
-  //     der Kirchspiel-Name nicht. Weil `parish` zuerst geprüft wird, genügt
-  //     der eine Eintrag — solange er exakt so geschrieben ist.
+  // Schlüssel exakt wie aus ChurchDesk, sonst erscheint still ein Landschaftsmotiv.
   const schluessel = [
     "büsum",
     "meldorf",
@@ -110,15 +96,11 @@ describe("Zuordnung Gemeinde → Motiv", () => {
     "kg hemmingstedt",
   ];
 
-  // `placeholders.ts` lässt sich hier nicht importieren: `require()` auf ein
-  // JPG kann nur der Metro-Bundler, nicht Vitest. Deshalb wie beim Bildrahmen
-  // unten gegen den Quelltext prüfen.
+  // Gegen den Quelltext, weil Vitest kein `require()` auf JPGs kann.
   const quelle = readFileSync(join(__dirname, "..", "lib", "placeholders.ts"), "utf8");
 
   it("kennt jede Gemeinde in beiden Zuschnitten", () => {
     for (const k of schluessel) {
-      // In der Objektliteral-Schreibweise steht der Schlüssel mit Punkt oder
-      // Leerzeichen in Anführungszeichen, ein einfacher ohne.
       const muster = new RegExp(`(^|[{,\\s])"?${k.replace(".", "\\.")}"?:`, "gu");
       const treffer = quelle.match(muster)?.length ?? 0;
       expect(treffer, `„${k}" steht ${treffer}× statt 2× (Liste + Detail)`).toBe(2);
@@ -134,8 +116,7 @@ describe("Zuordnung Gemeinde → Motiv", () => {
   });
 
   it("schreibt Schlüssel klein — sonst greift der Abgleich nie", () => {
-    // placeholderFor() vergleicht gegen name.trim().toLowerCase(); ein Schlüssel
-    // mit Großbuchstaben träfe niemals zu und fiele still auf Deich/Kohl zurück.
+    // Großbuchstaben träfen nie, placeholderFor() vergleicht kleingeschrieben.
     for (const k of schluessel) {
       expect(k, `„${k}" ist nicht kleingeschrieben`).toBe(k.toLowerCase());
     }
@@ -144,11 +125,7 @@ describe("Zuordnung Gemeinde → Motiv", () => {
 
 describe("Bildrahmen der Listenkarte", () => {
   it("setzt eine feste Bildhöhe statt alignSelf:stretch", () => {
-    // Der Fehler, den das verhindert: Mit `alignSelf: "stretch"` und ohne Höhe
-    // zog das Bild die Zelle im Web auf seine NATÜRLICHE Höhe (381 px). Die
-    // Karte schnitt bei 106 px ab — sichtbar war nur das obere Viertel, bei
-    // Hennstedt Himmel und Turmspitze. Im Browser gemessen: Rahmen 96×381
-    // statt 96×106.
+    // Ohne feste Höhe zog das Bild die Zelle im Web auf 381 px.
     const quelle = readFileSync(join(__dirname, "..", "components", "EventCard.tsx"), "utf8");
     const thumb = /thumb:\s*\{([^}]*)\}/.exec(quelle)?.[1] ?? "";
     expect(thumb, "thumb darf kein alignSelf:stretch haben").not.toMatch(/alignSelf/);

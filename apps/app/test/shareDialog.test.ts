@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Was die App dem System-Dialog uebergibt, entscheidet ueber die Linkvorschau:
-// iOS kennt ein eigenes Feld `url` und behandelt `message` als reinen Text.
-// Steht der Link nur im Text, erkennt iMessage ihn nicht als Link — keine
-// Vorschau mit Bild, und ein Tipp darauf oeffnet nicht die App, sondern gar
-// nichts. Android kennt kein `url`; dort MUSS der Link im Text stehen.
+// iOS braucht den Link in `url`, Android im Text.
 interface ShareArg {
   url?: string;
   /** Share.share von react-native. */
@@ -42,8 +38,7 @@ describe("shareEvent — was beim System-Dialog ankommt", () => {
   it("uebergibt auf iOS den Link im Feld url", async () => {
     await shareEvent(event, "Sa., 11. Okt., 18:00");
     const arg = shareSpy.mock.calls[0][0];
-    // Der Kern: ohne `url` behandelt iOS den Link als Text — keine Vorschau,
-    // kein Universal Link.
+    // Ohne `url` behandelt iOS den Link als Text.
     expect(arg.url).toBe(LINK);
   });
 
@@ -75,15 +70,10 @@ describe("shareEvent — was beim System-Dialog ankommt", () => {
 });
 
 describe("shareEvent im Browser", () => {
-  // Der Browser ruft navigator.share DIREKT auf, nicht ueber Share.share von
-  // react-native-web. Grund: navigator.share verlangt eine "transient user
-  // activation" und muss im Klick-Ereignis selbst laufen; der Umweg kostet sie,
-  // und Safari auf dem iPhone lehnte mit NotAllowedError ab -- der Knopf tat
-  // scheinbar nichts.
+  // navigator.share direkt im Klick, sonst lehnt Safari mit NotAllowedError ab.
   function browserMit(share?: (d: ShareArg) => Promise<void>) {
     const kopiert: string[] = [];
-    // `navigator` hat in dieser Umgebung nur einen Getter — direkte Zuweisung
-    // wirft. defineProperty ersetzt ihn fuer den Test.
+    // `navigator` hat hier nur einen Getter.
     Object.defineProperty(globalThis, "navigator", {
       value: { share, clipboard: { writeText: async (t: string) => void kopiert.push(t) } },
       configurable: true,
@@ -101,8 +91,7 @@ describe("shareEvent im Browser", () => {
 
     expect(gesehen).toHaveLength(1);
     expect(gesehen[0].url).toBe(LINK);
-    // Der Link darf NICHT zusaetzlich im Text stehen, sonst erscheint er
-    // doppelt; Titel und Zeit stehen in der Vorschau.
+    // Nicht zusätzlich im Text, sonst doppelt.
     expect(gesehen[0].text ?? "").not.toContain("https://");
     expect(gesehen[0].text).toContain("Moin Kark");
   });

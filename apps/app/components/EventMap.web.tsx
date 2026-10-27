@@ -28,12 +28,7 @@ import { DITHMARSCHEN_MASK, DITHMARSCHEN_OUTLINE } from "../lib/dithmarschen-bou
 import { pickNearestAtSpot } from "../lib/nearestEvent";
 import type { EventMapProps } from "./EventMap";
 
-// MapLibre ab 6.0 bestimmt die URL seines Web-Workers aus `import.meta.url`.
-// Metro löst das zu einem Pfad auf, unter dem die Datei im Export nicht liegt —
-// der Worker startet dann nie, und ohne ihn dekodiert MapLibre keine
-// Vektorkacheln: Die Karte bliebe leer, ohne eine Fehlermeldung zu erzeugen.
-// `npm run sync:map-worker` legt die Datei nach public/, von wo sie unter der
-// Host-Wurzel ausgeliefert wird.
+// Metro löst die Worker-URL falsch auf und die Karte bliebe leer; npm run sync:map-worker legt ihn nach public/.
 setWorkerUrl("/maplibre-gl-worker.mjs");
 
 export default function EventMap({
@@ -63,8 +58,7 @@ export default function EventMap({
     });
   }, [onBoundsChange]);
 
-  // Standort in einer Ref mitführen — der Effect darf NUR am Token hängen, sonst
-  // zieht jede neue Position (Live-Tracking) die Karte zurück auf den eigenen Punkt.
+  // Ref, sonst zieht jede neue Position die Karte zurück.
   const locationRef = useRef(userLocation);
   locationRef.current = userLocation;
 
@@ -113,9 +107,7 @@ export default function EventMap({
         });
         return;
       }
-      // Mehrere Events am gleichen Ort liegen deckungsgleich übereinander —
-      // feats[0] wäre Zufall. Den zeitlich nächsten Termin wählen (Logik in
-      // lib/nearestEvent.ts, geteilt mit der nativen Karte).
+      // Deckungsgleiche Pins: den zeitlich nächsten Termin nehmen (lib/nearestEvent.ts).
       const id = pickNearestAtSpot(
         features,
         (f.geometry as any).coordinates,

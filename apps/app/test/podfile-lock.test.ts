@@ -3,15 +3,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-// Wächter für ios/Podfile.lock: Hebt ein Update ein natives Paket, muss der
-// Lock mitziehen. Sonst bricht der iOS-Build erst in der CI bei `pod install`
-// ab („could not find compatible versions“) — so geschehen bei Build 87 nach
-// dem Expo-Patch 56.0.23. Nachziehen in apps/app/ios mit
-//   pod update <die gemeldeten Pods> --no-repo-update
-//
-// Geprüft werden die Pods, die aus node_modules kommen. Die von React Native
-// selbst zählen nicht mit: Deren Pod-Versionen folgen eigenen Regeln (Yoga
-// steht auf 0.0.0).
+// Hebt ein Update ein natives Paket, muss Podfile.lock mitziehen: in apps/app/ios `pod update <Pods> --no-repo-update`.
 
 const iosDir = fileURLToPath(new URL("../ios/", import.meta.url));
 const lock = `\n${readFileSync(resolve(iosDir, "Podfile.lock"), "utf8")}`;

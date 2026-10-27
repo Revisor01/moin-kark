@@ -3,8 +3,7 @@ import { eventParishes, orgName, parishesLabel, resolveKirchspiel } from "../src
 
 describe("resolveKirchspiel", () => {
   it("ordnet über den Gemeindenamen zu, auch wenn die orgId etwas anderes sagt", () => {
-    // Die Gemeinde ist die feinere Quelle: Ein Termin der Org „Kirchspiel West"
-    // (2729), der an Meldorf hängt, gehört nach Mitte-Süd.
+    // Die Gemeinde ist die feinere Quelle als die Org.
     expect(resolveKirchspiel("Meldorf", 2729)).toBe("Mitte-Süd");
   });
 
@@ -24,8 +23,7 @@ describe("resolveKirchspiel", () => {
   });
 
   it("fällt bei Gemeindenamen aus der Prototypkette auf die orgId zurück", () => {
-    // „constructor" traf bisher Object.prototype.constructor — das Kirchspiel
-    // wurde eine Funktion und fehlte dann im JSON, obwohl es Pflichtfeld ist.
+    // „constructor“ traf Object.prototype.constructor.
     expect(resolveKirchspiel("constructor", 2729)).toBe("West");
     expect(resolveKirchspiel("__proto__", 2725)).toBe("Eider");
   });
@@ -48,8 +46,7 @@ describe("resolveKirchspiel", () => {
 
 describe("eventParishes", () => {
   it("liefert alle Gemeinden bei Mehrfachzuordnung", () => {
-    // Kirchspiel-weite Termine (Sommerkirche) hängen an allen Gemeinden — der
-    // Gemeindefilter muss den Termin über jede davon finden.
+    // Der Gemeindefilter muss den Termin über jede Gemeinde finden.
     expect(eventParishes({ parish: "Hennstedt", parishes: ["Hennstedt", "Lunden", "Hemme"] })).toEqual([
       "Hennstedt",
       "Lunden",

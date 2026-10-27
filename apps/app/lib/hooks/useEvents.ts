@@ -16,8 +16,6 @@ function berlinDay(): string {
 }
 
 export function useEvents() {
-  // Persistierter Cache aus AsyncStorage: liegt er vor, zeigen wir ihn SOFORT
-  // (kein Spinner) während React Query im Hintergrund frische Daten holt.
   const [cached, setCached] = useState<EventFeatureCollection | null>(null);
   const [cacheChecked, setCacheChecked] = useState(false);
 
@@ -31,12 +29,7 @@ export function useEvents() {
   const query = useQuery({
     queryKey: ["events"],
     queryFn: fetchEvents,
-    // Events IMMER gegen den Server prüfen, auch wenn Cache-Daten vorliegen.
-    // Redaktionelle Änderungen (Highlight gesetzt, Titel korrigiert, Termin
-    // abgesagt) müssen zeitnah ankommen — mit staleTime galten frisch gesetzte
-    // Highlights als „noch frisch genug" und tauchten erst Minuten später auf.
-    // Der persistierte Cache verhindert dabei den Spinner: er wird sofort
-    // angezeigt und still ersetzt, sobald die Netz-Antwort da ist.
+    // Immer gegen den Server prüfen, sonst kommen frische Highlights erst Minuten später an.
     staleTime: 0,
   });
 
@@ -45,10 +38,7 @@ export function useEvents() {
     if (query.isSuccess && query.data) saveCachedEvents(query.data);
   }, [query.isSuccess, query.dataUpdatedAt]);
 
-  // Zurück aus dem Hintergrund → neu laden, wenn sich der (Berlin-)Tag geändert hat.
-  // Ohne das startet die App am Sonntagmorgen mit dem Stand von gestern Abend: der
-  // Gottesdienst von heute fehlt, stattdessen steht ein Termin nächste Woche oben.
-  // refetchOnMount greift hier NICHT — beim Wechsel aus dem Hintergrund mountet nichts neu.
+  // Bei Tageswechsel aus dem Hintergrund neu laden; refetchOnMount greift dort nicht.
   const refetch = query.refetch;
   const dayRef = useRef(berlinDay());
   useEffect(() => {
@@ -63,11 +53,7 @@ export function useEvents() {
     return () => sub.remove();
   }, [refetch]);
 
-  // Stille Änderungs-Abfrage alle 5 Minuten: /version.json ist ein paar Bytes
-  // groß (Hash über den Datenbestand). Nur wenn er sich ändert, wird das volle
-  // GeoJSON (~700 KB) nachgeladen. So sind redaktionelle Korrekturen zeitnah da,
-  // ohne die Geräte im Minutentakt den ganzen Feed ziehen zu lassen.
-  // Läuft nur im Vordergrund — im Hintergrund gibt es nichts anzuzeigen.
+  // Alle 5 Minuten /version.json, das volle GeoJSON nur bei Änderung; nur im Vordergrund.
   const versionRef = useRef<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -95,11 +81,9 @@ export function useEvents() {
 
   // Echte Daten haben Vorrang; bis sie da sind, zeigen wir den Cache.
   const data = query.data ?? cached ?? undefined;
-  // Spinner nur, wenn weder frische Daten noch Cache vorliegen
-  // (und der Cache-Check schon gelaufen ist, damit kein Aufblitzen entsteht).
+  // Spinner nur ohne Daten und ohne Cache, nach dem Cache-Check.
   const isLoading = !data && (!cacheChecked || query.isLoading);
-  // Fehlerseite NUR, wenn wir wirklich nichts zeigen können. Schlägt der
-  // Netz-Fetch fehl, wir haben aber Cache-Daten → still anzeigen statt „Nanu".
+  // Fehlerseite nur, wenn gar nichts anzuzeigen ist.
   const isError = query.isError && !data;
 
   return { ...query, data, isLoading, isError };

@@ -31,10 +31,7 @@ export default function RootLayout() {
     if (error) console.warn("Schriften konnten nicht geladen werden, Systemschrift wird genutzt:", error);
   }, [error]);
 
-  // Nur warten, solange die Schriften noch unterwegs sind. Schlägt das Laden
-  // fehl (im Web ein realistischer Fall: Netz/Cache), bleibt `loaded` für
-  // immer false — dann lieber mit der Systemschrift rendern als eine leere
-  // Fläche zeigen, aus der es keinen Weg zurück gibt.
+  // Scheitert das Laden, lieber Systemschrift als eine leere Fläche.
   if (!loaded && !error) {
     return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }

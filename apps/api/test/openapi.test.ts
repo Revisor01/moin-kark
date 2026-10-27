@@ -6,11 +6,7 @@ import { EXCLUDED_CATEGORIES } from "../src/aggregate.js";
 import { KIRCHSPIELE } from "@moinkark/shared";
 import { META_FIELDS } from "./meta-fields.js";
 
-/**
- * Die OpenAPI-Datei ist ein Vertrag gegenüber den Apps auf den Geräten — sie
- * darf nicht von dem abweichen, was die Schnittstelle tatsächlich liefert.
- * Diese Tests halten die Doku an den Code gebunden.
- */
+/** Die OpenAPI-Datei ist ein Vertrag mit den Apps auf den Geräten. */
 const doc = parse(
   readFileSync(fileURLToPath(new URL("../../../docs/openapi.yaml", import.meta.url)), "utf8")
 ) as any;

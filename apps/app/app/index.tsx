@@ -52,11 +52,7 @@ import { colors, glyph, mapColors, radius, sizes, spacing, text } from "../lib/t
 
 const WIDE_BREAKPOINT = 900;
 
-/**
- * Erinnerungs-Stufe → Messwert. Als vollständige Tabelle, nicht als
- * Bedingungskette: Kommt eine Stufe dazu, meldet der Typecheck die Lücke,
- * statt sie still dem letzten Zweig zuzuschlagen.
- */
+/** Erinnerungs-Stufe → Messwert als Tabelle, damit der Typecheck neue Stufen meldet. */
 const VORLAUF: Record<ReminderPref, string> = {
   off: "aus",
   evening: "vorabend",
@@ -76,11 +72,7 @@ export default function Home() {
   const { isSaved, toggle: rawToggleSave, saved, removeMany, loaded: savedLoaded } = useSavedEvents();
   const { pref: reminderPref, setPref: setReminderPref, loaded: reminderLoaded } = useReminderPref();
 
-  // Standort-Anfrage: NICHT sofort beim Start. Beim allerersten Öffnen liegt das
-  // Onboarding auf dem Bildschirm — der System-Dialog schöbe sich darüber, bevor
-  // die App erklärt hat, wozu der Standort dient (schlechte Zustimmungsquote und
-  // ein bekannter Stolperstein im App-Review). Darum erst, wenn das Onboarding
-  // weg ist bzw. gar nicht gezeigt wird (s. ONBOARDING_KEY-Effekt / dismissOnboarding).
+  // Erst nach dem Onboarding fragen, sonst schiebt sich der Systemdialog vor die Erklärung.
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -90,17 +82,12 @@ export default function Home() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
-  // Anteil des Listen-Sheets, der unterhalb der Bildschirmkante geparkt ist
-  // (Sheet hat feste Höhe und wird per translateY geschoben). Die Liste braucht
-  // genau diesen Wert als Endabstand, sonst bleibt ihr Schluss unerreichbar.
+  // Unter der Kante geparkter Sheet-Anteil, die Liste braucht ihn als Endabstand.
   const [sheetHiddenPx, setSheetHiddenPx] = useState(0);
   const [didInitialZoom, setDidInitialZoom] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Kam die App über einen geteilten Termin-Link? Die Prüfung steht bewusst VOR
-  // dem Onboarding-Effekt: Die Begrüßung liegt als Overlay über allem, auch über
-  // dem geöffneten Termin (s. shouldShowOnboarding). Beide Quellen wie unten bei
-  // `pendingEventId` — Karten-URL und der aus app/event/[id].tsx gereichte Pfad.
+  // Vor dem Onboarding-Effekt, weil die Begrüßung auch über einem geöffneten Termin liegt.
   const incomingUrl = useURL();
   const { event: eventParam } = useLocalSearchParams<{ event?: string }>();
   const hasDeepLink =
@@ -118,9 +105,7 @@ export default function Home() {
       .catch(() => {});
   }, [requestLocation, hasDeepLink]);
 
-  // Ein Seitenaufruf beim Start: Umami zaehlt Besucher und Sitzungen NUR
-  // darueber — mit ausschliesslich benannten Ereignissen staende im Dashboard
-  // „0 Besucher".
+  // Ohne Seitenaufruf zählt Umami keine Besucher.
   useEffect(() => {
     trackScreen("start");
   }, []);
@@ -134,10 +119,7 @@ export default function Home() {
 
   const allFeatures = data?.features ?? [];
 
-  // Merken + lokale Erinnerung planen/abbrechen.
-  // useCallback: geht als Prop an jede Listenkarte — eine bei jedem Render neue
-  // Funktion hebelte dort das memo aus, und alle sichtbaren Karten renderten
-  // bei jeder Positionsmeldung und jedem Minutentakt neu.
+  // useCallback, sonst rendern alle Karten bei jeder Positionsmeldung neu.
   const toggleSave = useCallback(
     async (id: number) => {
       const wasSaved = isSaved(id);
@@ -161,9 +143,7 @@ export default function Home() {
     rescheduleAll(savedFeatures, p).catch(() => {});
   };
 
-  // „Zu meinem Standort"-Button: Position holen + hinfliegen. Liegt der Standort außerhalb
-  // Dithmarschens (ferner Tester/Reviewer, Urlauber von weit weg), NICHT ins Leere fliegen —
-  // sonst filtert die Karten-Bounds die Event-Liste auf 0. Stattdessen auf die Übersicht.
+  // Außerhalb Dithmarschens auf die Übersicht, sonst filtert der Ausschnitt die Liste auf 0.
   const onJumpToLocation = async () => {
     const loc = location ?? (await requestLocation());
     if (!loc) return;
@@ -171,24 +151,14 @@ export default function Home() {
     else setOverviewToken((t) => t + 1);
   };
 
-  // Start-Ansicht: Sobald der Standort da ist, einmal dorthin zoomen.
-  //
-  // Vorher hing das an zwei Bedingungen, die es in der Praxis oft verhinderten:
-  // Es musste ein Termin ≤ 8 km entfernt liegen (in dünn besetzten Wochen traf
-  // das selbst in der eigenen Gemeinde nicht zu), und der Effekt lief nur, wenn
-  // die Termine schon geladen waren — traf der Standort später ein, war
-  // `didInitialZoom` längst gesetzt und die Karte blieb auf der Übersicht.
-  // Jetzt entscheidet allein, ob der Standort in Dithmarschen liegt; außerhalb
-  // bleibt die Übersicht, sonst flöge die Karte ins Leere und der
-  // Kartenausschnitt filterte die Liste auf null.
+  // Einmal zum Standort zoomen, nur innerhalb Dithmarschens.
   useEffect(() => {
     if (didInitialZoom || !location) return;
     if (isInDithmarschen(location)) setFlyToken((t) => t + 1);
     setDidInitialZoom(true);
   }, [location, didInitialZoom]);
 
-  // Abgleich gemerkter Events gegen frische Netzdaten (entfällt / verschoben →
-  // lokale Mitteilung, Erinnerungen nachziehen). Läuft bei jeder neuen Netzantwort.
+  // Gemerkte Events gegen frische Daten abgleichen und Erinnerungen nachziehen.
   useSavedSync({
     features: allFeatures,
     meta: data?.meta,
@@ -200,12 +170,7 @@ export default function Home() {
     reminderLoaded,
   });
 
-  // Tap auf eine Mitteilung → zugehöriges Event öffnen (falls es noch existiert).
-  // useLastNotificationResponse statt eines reinen Listeners: Bei Kaltstart über
-  // eine Mitteilung trifft die Antwort ein, BEVOR Home gemountet ist — der
-  // Listener verpasste sie, die App startete nur auf der Karte. Der Hook liest
-  // beim Mount die zuletzt gespeicherte Antwort und hört danach weiter zu
-  // (s. expo-notifications 56, useLastNotificationResponse).
+  // useLastNotificationResponse, weil ein Listener die Antwort beim Kaltstart verpasst.
   const lastNotificationResponse = useLastNotificationTap();
   useEffect(() => {
     if (!lastNotificationResponse) return;
@@ -214,26 +179,18 @@ export default function Home() {
       setSelectedId(id);
       track("termin-geoeffnet", { quelle: "mitteilung" });
     }
-    // Verbraucht: sonst öffnete dieselbe Antwort das Event bei einem späteren
-    // Neu-Mount erneut, und ein zweiter Tipp auf dieselbe Mitteilung gälte als
-    // unverändert.
+    // Verbraucht, sonst öffnet ein späterer Mount das Event erneut.
     clearLastNotificationTap();
   }, [lastNotificationResponse]);
 
-  // Geteilter Link (`…/?event=<id>`). `incomingUrl` und `eventParam` stehen
-  // oben beim Onboarding — useURL liefert auch die Start-URL beim Kaltstart,
-  // nicht nur spätere Aufrufe (dieselbe Falle wie oben bei den Mitteilungen).
-  // Die ID wird erst gesetzt, wenn der Feed da ist und den Termin kennt; sonst
-  // zeigte das Sheet auf ein Event, das es nicht gibt.
+  // ID erst setzen, wenn der Feed den Termin kennt.
   const [pendingEventId, setPendingEventId] = useState<number | null>(null);
   useEffect(() => {
     if (!incomingUrl) return;
     const id = eventIdFromUrl(incomingUrl);
     if (id !== null) setPendingEventId(id);
   }, [incomingUrl]);
-  // Zweiter Weg: aus app/event/[id].tsx weitergereicht. Faengt die App den
-  // Universal Link ab, sieht sie den Pfad /event/<id> statt einer Karten-URL —
-  // useURL allein greift dort nicht.
+  // Universal Links kommen als /event/<id>, da greift useURL nicht.
   useEffect(() => {
     if (typeof eventParam !== "string" || !/^\d+$/.test(eventParam)) return;
     setPendingEventId(Number(eventParam));
@@ -241,8 +198,7 @@ export default function Home() {
   useEffect(() => {
     if (pendingEventId === null || allFeatures.length === 0) return;
     const known = allFeatures.some((f) => f.properties.id === pendingEventId);
-    // Unbekannte ID (abgesagt, vorbei, Tippfehler): still verwerfen, die Karte
-    // bleibt stehen. Ein Fehlerdialog hülfe hier niemandem weiter.
+    // Unbekannte ID still verwerfen.
     if (known) {
       setSelectedId(pendingEventId);
       track("termin-geoeffnet", { quelle: "link" });
@@ -250,13 +206,7 @@ export default function Home() {
     setPendingEventId(null);
   }, [pendingEventId, allFeatures]);
 
-  // Android-Zurücktaste: offene Sheets schließen statt die App in den
-  // Hintergrund zu schicken. Reihenfolge s. lib/backNavigation.
-  //
-  // Nur Android: Im Web wirft `BackHandler.addEventListener` („not supported"),
-  // auf iOS gibt es keine Hardware-Taste. Der Effekt läuft trotzdem auf jeder
-  // Plattform — nur der Inhalt ist plattformabhängig, damit die Hook-Reihenfolge
-  // gleich bleibt.
+  // Effekt auf allen Plattformen, damit die Hook-Reihenfolge gleich bleibt; nur Android hat die Taste.
   useEffect(() => {
     if (Platform.OS !== "android") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -273,9 +223,7 @@ export default function Home() {
     return () => sub.remove();
   }, [selectedId, filtersOpen, profileOpen]);
 
-  // Das Listen-Sheet verdeckt den unteren Teil der Karte. Die Liste soll sich aber NUR auf den
-  // SICHTBAREN Ausschnitt (über dem Sheet) beziehen → unteren Bounds-Anteil abschneiden.
-  // 0.28 ≈ Sheet im Standard-Snap (MID, ~184px bei ~660px Kartenhöhe). Web hat kein Sheet → volle Bounds.
+  // Die Liste folgt nur dem sichtbaren Teil über dem Sheet (etwa 0.28 der Höhe).
   const visibleBounds = useMemo<Bounds | null>(() => {
     if (!bounds || isWide) return bounds;
     const span = bounds.north - bounds.south;
@@ -283,19 +231,14 @@ export default function Home() {
     return { ...bounds, south: bounds.south + span * frac };
   }, [bounds, isWide, mapAreaHeight]);
 
-  // Zeitscheibe für die Filter. Ohne die bliebe `now` auf dem Wert des letzten
-  // Memo-Durchlaufs stehen: eine über Stunden offene App (Tablet auf dem Tisch)
-  // zeigte abgelaufene Termine weiter an, weil reines Verstreichen von Zeit
-  // sonst keinen Recompute auslöst. Eine Minute ist fein genug und billig.
+  // Minutentakt, sonst zeigte eine lange offene App abgelaufene Termine.
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     const iv = setInterval(() => setNowTick(Date.now()), 60_000);
     return () => clearInterval(iv);
   }, []);
 
-  // Bewusst OHNE `location` in den Dependencies: der Standort geht in keinen
-  // Filter ein. Stünde er hier, liefe bei laufendem GPS-Watch (alle 25 m / 5 s)
-  // ständig ein voller Filter- und Sortierdurchlauf samt Neu-Rendern der Liste.
+  // Ohne `location`, sonst filterte jeder GPS-Schritt neu.
   const filtered = useMemo(
     () => sortByStart(applyFilters(allFeatures, filters, { now: new Date(nowTick), bounds: visibleBounds })),
     [allFeatures, filters, visibleBounds, nowTick]
@@ -310,13 +253,11 @@ export default function Home() {
     [allFeatures, saved]
   );
 
-  // Counter zeigt nur künftige Likes. Solange die Daten noch nicht da sind,
-  // fällt er auf die rohe Set-Größe zurück (besser als 0).
+  // Bis die Daten da sind, die rohe Set-Größe.
   const savedCount = allFeatures.length > 0 ? savedFeatures.length : saved.size;
 
 
-  // Karten-Pins folgen denselben Filtern, aber NICHT dem Viewport (sonst verschwinden Pins
-  // beim Zoomen). Nur die Liste folgt dem Ausschnitt.
+  // Pins folgen nicht dem Ausschnitt, sonst verschwinden sie beim Zoomen.
   const mapFeatures = useMemo(
     () => applyFilters(allFeatures, filters, { now: new Date(nowTick) }),
     [allFeatures, filters, nowTick]
@@ -333,9 +274,7 @@ export default function Home() {
     return KIRCHSPIELE.filter((k) => present.has(k));
   }, [allFeatures]);
 
-  // Gemeinden des gewählten Kirchspiels (alphabetisch). Leer = keine Gemeinde-Reihe.
-  // Mehrfach zugeordnete Events steuern ALLE ihre Gemeinden bei — sonst fehlte
-  // z.B. Weddingstedt, wenn dort nur Kirchspiel-weite Termine stattfinden.
+  // Mehrfach zugeordnete Events bringen alle ihre Gemeinden mit.
   const gemeindeOptions = useMemo(() => {
     if (!filters.kirchspiel) return [];
     const set = new Set<string>();

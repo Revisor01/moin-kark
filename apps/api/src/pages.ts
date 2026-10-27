@@ -1,8 +1,4 @@
-// Server-gerenderte Mini-Seiten der API: öffentlicher Status-Monitor (/status)
-// und die Admin-Oberfläche für Orts-Korrekturen (/admin). Bewusst ohne Build-Step
-// und ohne externe Assets — beides sind Betriebs-Werkzeuge, keine Produkt-UI.
-// Farben, Abstände und Radien kommen als CSS-Variablen aus dem geteilten Theme
-// (packages/shared/src/theme.ts) — derselben Quelle wie App und Landingpage.
+// Server-gerenderte Betriebsseiten /status und /admin, ohne Build-Step und externe Assets.
 
 import { themeCss } from "@moinkark/shared";
 
@@ -27,8 +23,6 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// Betriebsseiten laufen in der Systemschrift (keine Webfonts, keine externen
-// Assets); Größen und Abstände folgen der Leiter aus dem Theme.
 const BASE_CSS = `${themeCss()}
   *{box-sizing:border-box}
   body{margin:0;background:var(--background);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:var(--space-xl)}
@@ -219,29 +213,21 @@ function addCat(name) {
   $("catTable").appendChild(tr);
 }
 
-// Code-Stand für den Speichern-Vergleich: Zeilen, die exakt dem Code entsprechen,
-// werden NICHT als Override gespeichert (sonst würden veraltete Kopien spätere
-// Code-Updates maskieren).
+// Zeilen gleich dem Code nicht speichern, sonst maskieren veraltete Kopien spätere Code-Updates.
 let STATIC_LOC = {}, STATIC_TITLES = {};
 const norm = (s) => s.trim().replace(/\\s+/g, " ").toLowerCase();
 
 function render(data) {
-  // Idempotent: bei erneutem Login (z.B. gespeicherter Token + manueller Klick)
-  // nicht doppelt anhängen.
   for (const id of ["locTable", "titleTable", "catTable"])
     while ($(id).rows.length > 1) $(id).deleteRow(1);
   STATIC_LOC = {}; STATIC_TITLES = {};
 
-  // Konnte die Overrides-Datei beim Start nicht gelesen werden, zeigt die Tabelle
-  // nur den Code-Stand — Speichern ist dann serverseitig gesperrt, sonst würde
-  // dieser leere Stand die echten Korrekturen überschreiben. Vor dem ersten Klick
-  // sichtbar machen, nicht erst als Fehler nach dem Speichern.
+  // Sperre vor dem ersten Klick zeigen, nicht erst als Fehler.
   const warn = $("loadWarn");
   warn.style.display = data.loadError ? "block" : "none";
   warn.textContent = data.loadError ? "Speichern gesperrt: " + data.loadError : "";
 
-  // Zusammengeführte Sicht: Code-Einträge zuerst, Laufzeit-Overrides überschreiben
-  // bzw. ergänzen sie — genau die Vorrang-Logik des Servers.
+  // Code zuerst, Laufzeit-Overrides darüber, wie im Server.
   const loc = new Map();
   for (const [name, c] of Object.entries(data.static.locations)) {
     STATIC_LOC[norm(name)] = { lat: c.lat, lng: c.lng };
@@ -282,12 +268,7 @@ function render(data) {
 
 function num(input) { return Number(String(input.value).replace(",", ".")); }
 
-/**
- * Prüft ein Koordinatenpaar, bevor es zum Server geht. Wichtig: ein leeres Feld
- * ergäbe über Number("") eine 0 — ein vergessenes Feld würde den Ort sonst
- * klaglos auf 0/0 (Golf von Guinea) schieben. Der Server lehnt das inzwischen
- * ebenfalls ab; hier steht es, damit die Meldung am Feld erklärbar bleibt.
- */
+/** Prüft ein Koordinatenpaar, weil Number("") 0 ergibt und den Ort auf 0/0 schöbe. */
 function coordsOrThrow(label, latInput, lngInput) {
   const latRaw = String(latInput.value).trim();
   const lngRaw = String(lngInput.value).trim();
@@ -321,8 +302,7 @@ function collect() {
     const [name] = [...tr.querySelectorAll("input")];
     if (name.value.trim()) categories.push(name.value.trim());
   }
-  // Admin-Highlights: alle angehakten Events plus die gerade nicht im Feed
-  // sichtbaren IDs (sonst würden sie beim Speichern still verloren gehen).
+  // Nicht sichtbare IDs mitschicken, sonst gehen sie beim Speichern verloren.
   const highlights = [...UNKNOWN_HL];
   for (const cb of document.querySelectorAll(".hlBox"))
     if (cb.checked) highlights.push(Number(cb.dataset.id));
@@ -414,22 +394,7 @@ if (TOKEN) { $("token").value = TOKEN; login(); }
 </body></html>`;
 }
 
-/**
- * Link-Vorschau für einen einzelnen Termin (`/event/:id`).
- *
- * Geteilte Links zeigen auf die Web-Karte; die ist eine Single-Page-App und
- * liefert Crawlern nur ein leeres Grundgerüst — WhatsApp & Co. zeigten deshalb
- * nur die nackte URL. Diese Seite trägt die Metadaten des Termins und schickt
- * Menschen per Weiterleitung weiter auf die Karte.
- */
-/**
- * Strukturierte Daten sicher einbetten.
- *
- * JSON.stringify allein genuegt NICHT: Titel und Ortsnamen kommen aus
- * ChurchDesk, und ein `</script>` darin bricht den Block auf — der Rest des
- * Titels landet dann als Markup im Dokument. Die drei Zeichen unten sind die,
- * die der HTML-Parser in einem Skriptblock beachtet.
- */
+/** Bettet strukturierte Daten ein; JSON.stringify allein lässt `</script>` aus ChurchDesk durch. */
 function jsonLd(obj: unknown): string {
   return JSON.stringify(obj)
     .replace(/</g, "\\u003c")
@@ -447,13 +412,9 @@ const THEME_COLOR = "#FCF3E4";
 export function eventPreviewPage(p: EventPreview): string {
   const url = `https://karte.moin-kark.de/?event=${p.id}`;
   const bild = p.imageUrl ?? STANDARDBILD;
-  // Die gemeldete Hoehe muss zum ausgelieferten Bild passen: Der ChurchDesk-
-  // Flyer ist 1200x676, das Standardmotiv 1200x630. Fest verdrahtet stimmte sie
-  // nur fuer den Flyer — bei den knapp 60 % der Termine ohne Bild wich das
-  // gemeldete Seitenverhaeltnis ab.
+  // Höhe passend zum Bild: Flyer 1200x676, Standardmotiv 1200x630.
   const bildHoehe = p.imageUrl ? 676 : 630;
-  // Claim am Ende: In der Linkvorschau steht sonst nur der Termin, und niemand
-  // sieht, woher er kommt.
+  // Claim am Ende, damit man in der Vorschau sieht, woher der Termin kommt.
   const beschreibung = [p.time, p.place].filter(Boolean).join(" · ") + ` · ${CLAIM}`;
   return `<!doctype html><html lang="de"><head>
 <meta charset="utf-8">

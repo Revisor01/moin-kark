@@ -32,11 +32,7 @@ interface Props {
   onToggleSave: (id: number) => void;
 }
 
-/**
- * Nur auf iOS gibt es überhaupt eine Wahl: Android hat keine Apple-Karten-App,
- * und im Web öffnet openInMaps ohnehin immer Google Maps im Browser. Wo nur eine
- * Möglichkeit bleibt, entfällt der Abschnitt ganz (statt eines wirkungslosen Schalters).
- */
+/** Nur iOS hat eine Wahl zwischen Karten-Apps, sonst entfällt der Abschnitt. */
 const MAPS_CHOICES: MapsApp[] = Platform.OS === "ios" ? ["apple", "google"] : [];
 
 export default function ProfileSheet({
@@ -132,8 +128,7 @@ export default function ProfileSheet({
                   style={[styles.segmentBtn, reminderPref === val && styles.segmentBtnActive]}
                   onPress={() => onReminderPref(val)}
                   activeOpacity={0.8}
-                  // Rolle + Zustand: VoiceOver las „Vorabend“ bisher als reinen
-                  // Text, und welche Option aktiv ist, war nicht hörbar.
+                  // Rolle und Zustand für VoiceOver.
                   accessibilityRole="button"
                   accessibilityState={{ selected: reminderPref === val }}
                 >
@@ -347,8 +342,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   actionButtonText: { ...text.bodyStrong, color: colors.onColor, textAlign: "center" },
-  // Der zweite Knopf tritt zurück: Empfehlen ist der Hauptweg, Bewerten der
-  // seltenere — zwei gleich laute Knöpfe nebeneinander konkurrieren sonst.
+  // Bewerten tritt hinter Empfehlen zurück.
   actionButtonGhost: {
     backgroundColor: "transparent",
     borderWidth: 1,
@@ -397,8 +391,6 @@ const styles = StyleSheet.create({
   geistBlessing: { ...text.caption, fontStyle: "italic", color: colors.faint },
   attr: { ...text.caption, color: colors.faint, textAlign: "center" },
   link: { color: colors.primary, textDecorationLine: "underline" },
-  // Eigene Zeile unter der Attributionszeile — der Inline-„link"-Stil bringt
-  // weder Größe noch Ausrichtung mit und stünde hier zu groß und linksbündig.
   privacyLink: {
     ...text.caption,
     color: colors.primary,

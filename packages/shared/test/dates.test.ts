@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { berlinDayKey } from "../src/dates";
 
-/**
- * Der Berliner Kalendertag ist die empfindlichste Stelle der API: Aus ihm wird
- * das ChurchDesk-Abfragefenster gebildet, in der App hängen Tageswechsel-Refetch
- * und „heute/morgen" daran. Die Fälle hier sind dieselben, die vorher an
- * `fmtDate` in der API festgenagelt waren — Winter, Sommer, beide Umstellungen.
- */
+/** Berliner Kalendertag in Winter, Sommer und an beiden Umstellungen. */
 describe("berlinDayKey", () => {
   it("liefert das Datum als YYYY-MM-DD", () => {
     expect(berlinDayKey(new Date("2026-06-15T12:00:00Z"))).toBe("2026-06-15");
@@ -23,8 +18,7 @@ describe("berlinDayKey", () => {
   });
 
   it("wechselt den Tag erst um Mitternacht Berliner Zeit, nicht um Mitternacht UTC", () => {
-    // 23:30 Berliner Ortszeit im Sommer — UTC steht da schon auf 21:30 desselben
-    // Tages, der Berliner Tag darf aber noch nicht weitergesprungen sein.
+    // 23:30 Berlin im Sommer, der Berliner Tag darf noch nicht weiter sein.
     expect(berlinDayKey(new Date("2026-06-15T21:30:00Z"))).toBe("2026-06-15");
     // Eine Stunde später ist es in Berlin der Folgetag, in UTC noch nicht.
     expect(berlinDayKey(new Date("2026-06-15T22:30:00Z"))).toBe("2026-06-16");
@@ -49,8 +43,7 @@ describe("berlinDayKey", () => {
   });
 
   it("hängt nicht an der TZ-Umgebungsvariable des Prozesses", () => {
-    // Der Container läuft mit TZ=Europe/Berlin, Tests und CI oft mit UTC.
-    // Beide müssen dasselbe liefern.
+    // Container mit TZ=Europe/Berlin, CI mit UTC: beide gleich.
     expect(berlinDayKey(new Date("2026-06-14T22:30:00Z"))).toBe("2026-06-15");
   });
 });

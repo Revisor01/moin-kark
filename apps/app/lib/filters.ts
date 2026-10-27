@@ -4,8 +4,7 @@ import { eventParishes, type EventFeature, type LatLng } from "@moinkark/shared"
 
 export type DateFilter = "all" | "today" | "week" | "weekend" | "range";
 
-// LatLng kommt aus dem geteilten Paket (dieselbe Form wie in der API) und wird
-// hier nur weitergereicht, damit bestehende Importe aus ./filters weiter gelten.
+// Nur weitergereicht, damit Importe aus ./filters gelten.
 export type { LatLng };
 
 export interface Filters {
@@ -51,12 +50,7 @@ export interface Bounds {
   north: number;
 }
 
-/**
- * Liegt ein Punkt (grob) im Kreis Dithmarschen? Bounding-Box aus theme.DITHMARSCHEN.bounds
- * (SW [8.3, 53.8] → NE [9.6, 54.5]), etwas gepuffert. Für ferne Standorte (Reviewer aus
- * USA/Indien, Urlauber von weit weg) → „Zu meinem Standort" fällt dann auf die Übersicht zurück,
- * statt ins Leere zu fliegen und die (Bounds-gefilterte) Liste zu leeren.
- */
+/** Ob ein Punkt grob in Dithmarschen liegt; sonst fällt „Zu meinem Standort“ auf die Übersicht zurück. */
 export function isInDithmarschen(loc: LatLng): boolean {
   return loc.lat >= 53.7 && loc.lat <= 54.6 && loc.lng >= 8.2 && loc.lng <= 9.7;
 }
@@ -68,11 +62,7 @@ function inBounds(f: EventFeature, b: Bounds): boolean {
 
 const BERLIN_TZ = "Europe/Berlin";
 
-/**
- * Intl.DateTimeFormat ist teuer im Bau (Locale-Daten laden) und billig im
- * Gebrauch. Die Formatter entstehen deshalb einmal je Modul, beim ersten
- * Zugriff — vorher baute jede Listenkarte bei jedem Render vier neue.
- */
+/** Formatter einmal je Modul, weil der Bau teuer ist. */
 function once<T>(make: () => T): () => T {
   let value: T | undefined;
   return () => (value ??= make());
@@ -124,19 +114,12 @@ function sameDay(a: { y: number; m: number; d: number }, b: { y: number; m: numb
   return a.y === b.y && a.m === b.m && a.d === b.d;
 }
 
-/**
- * Beginn (00:00 Berliner Zeit) des Kalendertags, in den `d` fällt — als UTC-ms.
- *
- * Der Offset wird aus dem Zeitpunkt selbst ermittelt, damit Sommer- und
- * Winterzeit stimmen; ein fester Wert läge ein halbes Jahr lang daneben.
- */
+/** Beginn des Berliner Kalendertags von `d` in UTC-ms, mit dem Offset des Zeitpunkts. */
 function startOfBerlinDay(d: Date): number {
   const p = berlinParts(d.toISOString());
   // Kandidat: der Kalendertag um 00:00, zunächst als UTC gelesen.
   const asUtc = Date.UTC(p.y, p.m - 1, p.d);
-  // Berliner Offset zu diesem Zeitpunkt bestimmen (+1 h Winter, +2 h Sommer):
-  // longOffset liefert ihn als "GMT+02:00" — robuster als ein Reparsen von
-  // toLocaleString, das sonst in der Zeitzone des Geräts gelesen würde.
+  // longOffset statt toLocaleString-Reparse, das in der Gerätezeitzone liefe.
   const tzName = berlinOffsetFmt()
     .formatToParts(new Date(asUtc))
     .find((part) => part.type === "timeZoneName")?.value;
@@ -148,13 +131,7 @@ function startOfBerlinDay(d: Date): number {
   return asUtc - offsetMs;
 }
 
-/**
- * Beginn des Berliner Kalendertags `YYYY-MM-DD` als UTC-ms.
- *
- * Geht über `startOfBerlinDay`, damit Sommer- und Winterzeit stimmen: Die
- * Mittagszeit des Tages liegt in beiden Fällen sicher im richtigen Tag, egal
- * ob der Offset +1 oder +2 Stunden beträgt.
- */
+/** Beginn des Berliner Kalendertags `YYYY-MM-DD` in UTC-ms. */
 function berlinDayStart(tag: string): number | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(tag);
   if (!m) return null;
@@ -162,18 +139,9 @@ function berlinDayStart(tag: string): number | null {
   return startOfBerlinDay(mittags);
 }
 
-/**
- * Liegt der Termin im selbst gewählten Zeitraum?
- *
- * Beide Grenzen sind Kalendertage und zählen ganz: vom ersten Tag 00:00 bis
- * zum letzten Tag 23:59:59 Berliner Zeit. Eine verkehrt herum eingegebene
- * Spanne wird gedreht — wer erst das Ende tippt, soll nicht vor einer leeren
- * Liste sitzen. Fehlt eine Grenze, filtert der Zeitraum nicht (halbfertige
- * Eingabe darf die Liste nicht leeren).
- */
+/** Ob der Termin im gewählten Zeitraum liegt; verkehrte Spannen werden gedreht, eine fehlende Grenze filtert nicht. */
 function matchesRange(startUtc: string, von?: string, bis?: string): boolean {
-  // Ein einzelnes Datum meint genau diesen Tag, nicht „ab dann alles" — sonst
-  // müsste man denselben Tag zweimal eintragen, um ihn allein zu sehen.
+  // Ein einzelnes Datum meint genau diesen Tag.
   const vonTag = von ?? bis;
   const bisTag = bis ?? von;
   if (!vonTag || !bisTag) return true;
@@ -201,11 +169,7 @@ function matchesDate(
   if (filter === "today") return sameDay(ev, today);
 
   if (filter === "weekend") {
-    // Genau EIN Wochenende: das laufende (wenn heute Sa/So ist) bzw. das nächste.
-    //
-    // Vorher galt nur „Sa/So innerhalb von 7 Tagen" — an einem Samstagabend fiel
-    // damit auch der übernächste Samstag ins Fenster, und die Liste mischte zwei
-    // Wochenenden.
+    // Genau ein Wochenende, das laufende oder das nächste.
     if (ev.dow !== 6 && ev.dow !== 0) return false;
     // Tage bis zum Samstag dieses Wochenendes (heute, falls Sa/So).
     const daysToSat = today.dow === 0 ? -1 : (6 - today.dow) % 7;
@@ -264,8 +228,7 @@ export function applyFilters(
     }
     if (!matchesCategory(f, filters.category)) return false;
     if (filters.kirchspiel && f.properties.kirchspiel !== filters.kirchspiel) return false;
-    // Mehrfach zugeordnete Events (z.B. Kirchspiel-weite Sommerkirche) zählen zu
-    // JEDER ihrer Gemeinden — nicht nur zur ersten.
+    // Mehrfach zugeordnete Events zählen zu jeder ihrer Gemeinden.
     if (filters.parish && !eventParishes(f.properties).includes(filters.parish)) return false;
     if (ctx.bounds && !inBounds(f, ctx.bounds)) return false;
     return true;
@@ -289,9 +252,7 @@ export function formatEventTime(startUtc: string, endUtc?: string, allDay?: bool
   const startTime = timeFmt.format(start);
   if (showEnd && endUtc) {
     const end = new Date(endUtc);
-    // Endzeit nur zeigen, wenn am selben Tag. Vergleich über Jahr/Monat/Tag —
-    // der frühere Vergleich nur des Monatstags hielt z.B. 21.08. → 21.09.
-    // fälschlich für eintägig.
+    // Über Jahr, Monat und Tag, nur der Monatstag hielt 21.08. → 21.09. für eintägig.
     const sameDayEnd = sameDay(berlinParts(startUtc), berlinParts(endUtc));
     if (sameDayEnd) return `${datePart} · ${startTime}–${timeFmt.format(end)} Uhr`;
   }

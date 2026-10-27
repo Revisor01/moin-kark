@@ -1,7 +1,4 @@
-// React-Native-Seite des Themes. Die Werte kommen aus @moinkark/shared
-// (packages/shared/src/theme.ts) — DORT ändern, nicht hier. Diese Datei
-// re-exportiert die Tokens und baut daraus nur, was React Native konkret
-// braucht: Schriftschnitt-Namen, Schatten mit `elevation`, fertige Textstufen.
+// React-Native-Seite des Themes; Werte in packages/shared/src/theme.ts ändern, nicht hier.
 
 import {
   colors,
@@ -27,9 +24,7 @@ export {
   withAlpha,
 } from "@moinkark/shared";
 
-// Bricolage Grotesque = charaktervolle Display-Grotesk für Headlines + Titel.
-// DM Sans = ruhiger, gut lesbarer Body für Fließtext und UI.
-// Die Namen sind die Schnitte aus @expo-google-fonts (s. app/_layout.tsx).
+// Schnitte aus @expo-google-fonts (s. app/_layout.tsx).
 export const fonts = {
   display: "BricolageGrotesque_600SemiBold",
   displayBold: "BricolageGrotesque_700Bold",
@@ -49,11 +44,7 @@ function step(name: TypeStep, weight?: 400 | 500 | 600 | 700): TextStyle {
   return { fontFamily: fontFor(t.family, weight ?? t.weight), fontSize: t.size, lineHeight: t.lineHeight };
 }
 
-/**
- * Fertige Textstufen fürs StyleSheet — Größe und Zeilenhöhe kommen aus der
- * Leiter, body/label/caption zusätzlich als Medium (500) und Strong (600).
- * Eigene fontSize/lineHeight in Komponenten sind seitdem ein Verstoß.
- */
+/** Fertige Textstufen; eigene fontSize/lineHeight in Komponenten sind nicht vorgesehen. */
 export const text = {
   display: step("display"),
   heading: step("heading"),

@@ -1,6 +1,4 @@
-// Leichter Persistenz-Cache für die Events-Query (ohne zusätzliche TanStack-Pakete).
-// Beim App-Start gibt es so SOFORT die zuletzt geladenen Events (kein Spinner);
-// im Hintergrund lädt React Query frische Daten und ersetzt sie still.
+// Persistenz-Cache der Events, damit der Start ohne Spinner den letzten Stand zeigt.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { EventFeatureCollection } from "@moinkark/shared";
 import { isPast } from "./filters";
@@ -12,8 +10,7 @@ interface Cached {
   data: EventFeatureCollection;
 }
 
-// Nach einer Woche ist der Bestand so lückenhaft (neue Termine fehlen, Serien
-// ausgedünnt), dass der Fehlerscreen ehrlicher ist als eine fast leere Karte.
+// Nach einer Woche ist der Fehlerscreen ehrlicher als eine fast leere Karte.
 const MAX_AGE_MS = 7 * 86400_000;
 
 export async function loadCachedEvents(): Promise<EventFeatureCollection | null> {
@@ -23,11 +20,7 @@ export async function loadCachedEvents(): Promise<EventFeatureCollection | null>
     const c = JSON.parse(raw) as Cached;
     if (!c?.data) return null;
 
-    // Auch ein Stand von gestern ist als Offline-Start besser als der Fehlerscreen
-    // („Wer morgens im Funkloch öffnet, sieht sonst gar nichts"). Der isPast-Filter
-    // darunter wirft bereits Gelaufenes raus — auch die Vorwochen-Instanzen
-    // wöchentlicher Serien, die früher der Grund für den harten Tageswechsel-
-    // Verwurf waren. Sobald Netz da ist, ersetzt React Query den Stand still.
+    // Auch ein Stand von gestern ist offline besser als der Fehlerscreen; isPast wirft Gelaufenes raus.
     if (Date.now() - c.ts > MAX_AGE_MS) return null;
 
     // Bereits beendete Termine rauswerfen, damit der Cache nicht Vergangenes anzeigt.

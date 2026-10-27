@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-// Wächter für die Store-Releases. Hintergrund: `expo prebuild --clean` schreibt
-// android/app/build.gradle neu und signiert das Release dann mit dem Debug-Key
-// — das fällt sonst erst beim Play-Upload auf. Und die Version darf nur eine
-// Quelle haben (app.json), sonst laufen Store und Repo auseinander.
+// prebuild --clean signiert das Release mit dem Debug-Key, und die Version hat nur eine Quelle (app.json).
 
 const appDir = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative: string) => readFileSync(new URL(relative, `file://${appDir}`), "utf8");
@@ -66,9 +63,7 @@ describe("Android-Release-Signing in build.gradle", () => {
   });
 
   it("signiert nur den Debug-Build mit dem Debug-Key", () => {
-    // Kommentarzeilen zählen nicht — nur Code. Genau einmal: im buildType
-    // `debug`. Ein zweites Vorkommen wäre der von prebuild --clean
-    // zurückgesetzte Release-Block.
+    // Nur Code zählt; ein zweites Vorkommen wäre der zurückgesetzte Release-Block.
     const code = buildGradle
       .split("\n")
       .filter((line) => !line.trim().startsWith("//"))
@@ -88,12 +83,7 @@ describe("Android-Release-Signing in build.gradle", () => {
 });
 
 describe("iOS-Signing in der pbxproj", () => {
-  // Der Release-Block der App muss MANUELL signieren. Mit `Automatic` nimmt
-  // Xcode nicht das Distribution-Zertifikat aus dem Keychain, sondern legt
-  // sich ueber die ASC-API ein Development-Zertifikat an — gemessen an den
-  // Builds 69, 70 und 71, die alle mit "Apple Development: Created via API"
-  // signiert wurden. Das fuellt das kontoweite Zertifikatslimit, an dem
-  // saemtliche Apps des Kontos haengen.
+  // Manuell signieren, sonst legt Xcode über die ASC-API Development-Zertifikate an und füllt das Kontolimit.
   const appRelease = blockFor("Release", "de.godsapp.kkdithkarte");
 
   it("signiert das Release manuell mit der Distribution-Identitaet", () => {
@@ -109,15 +99,10 @@ describe("iOS-Signing in der pbxproj", () => {
   });
 });
 
-/**
- * Schneidet den Konfigurationsblock (Debug/Release) des App-Ziels aus der
- * pbxproj. Die Datei enthaelt mehrere gleichnamige Bloecke — auch fuer das
- * Projekt selbst —, deshalb wird am Bundle-Bezeichner unterschieden.
- */
+/** Konfigurationsblock des App-Ziels, unterschieden am Bundle-Bezeichner. */
 function blockFor(name: "Debug" | "Release", bundleId: string): string {
   const section = pbxproj.split("/* Begin XCBuildConfiguration section */")[1] ?? pbxproj;
-  // Bloecke beginnen mit „<id> /* Debug|Release */ = {" — daran trennen, nicht
-  // am Ende: Die schliessende Klammer sieht innen wie aussen gleich aus.
+  // Am Blockanfang trennen, die schließende Klammer sieht innen wie außen gleich aus.
   const treffer = section
     .split(/^\t\t[0-9A-F]{24} \/\* (?:Debug|Release) \*\/ = \{$/m)
     .filter((b) => b.includes(`name = ${name};`) && b.includes(`PRODUCT_BUNDLE_IDENTIFIER = ${bundleId};`));
@@ -129,8 +114,7 @@ function blockFor(name: "Debug" | "Release", bundleId: string): string {
 
 describe("Release-Notes für Google Play", () => {
   it("bleiben unter der 500-Zeichen-Grenze", () => {
-    // Darüber laufen Upload und Track-Zuweisung durch, und erst der Commit
-    // scheitert mit einem irreführenden 403.
+    // Sonst scheitert erst der Commit mit einem irreführenden 403.
     const notes = read("release-notes-de.txt").trim();
     expect(notes.length).toBeGreaterThan(0);
     expect(notes.length).toBeLessThanOrEqual(500);
@@ -138,10 +122,7 @@ describe("Release-Notes für Google Play", () => {
 });
 
 describe("Nur iPhone, kein iPad", () => {
-  // Bewusste Entscheidung: Die App wird nicht fuer Tablets ausgeliefert.
-  // Wichtig fuers Einreichen — solange iPad deklariert ist, VERLANGT Apple
-  // auch iPad-Screenshots, und `expo prebuild` schreibt die pbxproj aus
-  // app.json neu. Beide Orte muessen zusammenpassen.
+  // Keine Tablets, sonst verlangt Apple iPad-Screenshots.
   it("meldet in app.json keine Tablet-Unterstuetzung", () => {
     const ios = appJson.expo.ios as { supportsTablet?: boolean };
     expect(ios.supportsTablet).toBe(false);
@@ -157,11 +138,7 @@ describe("Nur iPhone, kein iPad", () => {
 });
 
 describe("Privacy-Angaben fuer den App Store", () => {
-  // Apple verlangt eine Angabe zu "Product Interaction", sobald Nutzung
-  // gemessen wird -- auch ohne Cookies und ohne Werbe-IDs. "Keine Einwilligung
-  // noetig" (Datenschutzrecht) und "keine Angabe noetig" (Apple-Regel) sind
-  // zwei verschiedene Fragen. Diese Datei und lib/analytics.ts muessen
-  // zusammenpassen.
+  // Apple verlangt die Angabe „Product Interaction“, sobald gemessen wird; muss zu lib/analytics.ts passen.
   const privacy = read("ios/MoinKark/PrivacyInfo.xcprivacy");
   const analytics = read("lib/analytics.ts");
 
@@ -172,8 +149,7 @@ describe("Privacy-Angaben fuer den App Store", () => {
   });
 
   it("erklaert die Messung als nicht personenbezogen und ohne Tracking", () => {
-    // Beide false -- sonst verlangt Apple zusaetzlich den Tracking-Dialog
-    // (App Tracking Transparency), den die App bewusst nicht zeigt.
+    // Sonst verlangt Apple den Tracking-Dialog.
     expect(privacy).toMatch(/NSPrivacyCollectedDataTypeLinked<\/key>\s*<false\/>/);
     expect(privacy).toMatch(/NSPrivacyCollectedDataTypeTracking<\/key>\s*<false\/>/);
     expect(privacy).toMatch(/NSPrivacyTracking<\/key>\s*<false\/>/);
@@ -188,10 +164,7 @@ describe("Privacy-Angaben fuer den App Store", () => {
 });
 
 describe("R8 im Android-Release", () => {
-  // Ohne R8 laeuft der Code unverschleiert und unverkleinert im Store --
-  // die Play Console meldete 1 % Verschleierung und keine Optimierung.
-  // `expo prebuild --clean` schreibt gradle.properties neu, deshalb hier
-  // festgenagelt.
+  // prebuild --clean schreibt gradle.properties neu, deshalb R8 hier festgenagelt.
   const props = read("android/gradle.properties");
   const rules = read("android/app/proguard-rules.pro");
 
@@ -201,8 +174,7 @@ describe("R8 im Android-Release", () => {
   });
 
   it("haelt die Klassen, die nur ueber Reflection gerufen werden", () => {
-    // R8 sieht diese Aufrufe nicht und raeumt sie sonst weg -- der Fehler
-    // faellt erst zur Laufzeit auf, im Release, auf dem Geraet.
+    // R8 räumt sie sonst weg, der Fehler zeigte sich erst im Release.
     for (const muster of [
       "com.facebook.react",
       "com.facebook.hermes",
@@ -215,9 +187,7 @@ describe("R8 im Android-Release", () => {
 });
 
 describe("Mitteilungs-Symbol auf Android", () => {
-  // Ohne eigenes Symbol nimmt Android das App-Icon und zeigt davon nur die
-  // Silhouette -- in der Statusleiste und in der Mitteilung steht dann ein
-  // leerer Fleck statt des Moin-Kark-Pins.
+  // Ohne eigenes Symbol zeigt Android nur die Silhouette des App-Icons.
   const plugins = (JSON.parse(read("app.json")) as { expo: { plugins: unknown[] } }).expo.plugins;
   const manifest = read("android/app/src/main/AndroidManifest.xml");
 
@@ -242,12 +212,7 @@ describe("Mitteilungs-Symbol auf Android", () => {
   });
 });
 
-// Ab dem iOS-27-SDK (Xcode 27) verlangt Apple den UIScene-Lifecycle; ohne ihn
-// stürzt die App beim Start ab (_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption).
-// Der Release-Workflow nimmt das neueste Xcode — fehlt eines der drei Teile,
-// liefert der nächste Build eine App, die auf den Geräten nicht startet.
-// `expo prebuild --clean` schreibt AppDelegate.swift neu und entfernt den
-// SceneDelegate; die Info.plist-Angabe kommt über app.json zurück, die Klasse nicht.
+// Ab dem iOS-27-SDK ist der UIScene-Lifecycle Pflicht; prebuild --clean entfernt den SceneDelegate.
 describe("iOS: UIScene-Lifecycle", () => {
   const appDelegate = read("ios/MoinKark/AppDelegate.swift");
   const scene = (appJson.expo.ios as any).infoPlist?.UIApplicationSceneManifest;
@@ -287,9 +252,7 @@ describe("iOS: UIScene-Lifecycle", () => {
   });
 });
 
-// Xcode 27 baut nur noch ab iOS 15.0. Einzelne Pods bringen ältere Ziele mit
-// (RNCAsyncStorage: 13.4) und brechen den Build ab; `pod install` übernimmt die
-// Ziele aus den Podspecs, deshalb hebt der post_install-Block sie an.
+// Xcode 27 baut erst ab iOS 15.0, der post_install-Block hebt ältere Pod-Ziele an.
 describe("iOS: Mindestziel der Pods", () => {
   const podfile = read("ios/Podfile");
 
@@ -301,8 +264,7 @@ describe("iOS: Mindestziel der Pods", () => {
   });
 });
 
-// Ohne deutsche Grundsprache hält iOS die App für englisch: Datumsauswahl und
-// Systemknöpfe erscheinen englisch, der App Store nennt Englisch (27.10.2026).
+// Ohne deutsche Grundsprache hält iOS die App für englisch.
 describe("iOS: Sprache Deutsch", () => {
   const ios = appJson.expo.ios as any;
   const pbxproj = read("ios/MoinKark.xcodeproj/project.pbxproj");

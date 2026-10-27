@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-// Wie in den übrigen Tests: react-native wird ersetzt, hier reicht der
-// Share-Dialog als Attrappe — geprüft wird die Textbildung, nicht das System.
+// react-native ersetzt; geprüft wird die Textbildung.
 vi.mock("react-native", () => ({
   Share: { share: async () => ({ action: "sharedAction" }) },
   Linking: { canOpenURL: async () => true, openURL: async () => {} },
@@ -40,14 +39,12 @@ describe("eventIdFromUrl", () => {
   });
 
   it("liest die ID aus dem Vorschau-Link der API", () => {
-    // Geteilt wird api.moin-kark.de/event/<id>; faengt die App den Link direkt
-    // ab, kommt genau diese Form an — ohne Query-Parameter.
+    // So kommt der Link an, wenn die App ihn abfängt.
     expect(eventIdFromUrl("https://moin-kark.de/event/4711")).toBe(4711);
   });
 
   it("liest die ID aus dem eigenen Schema (kkdith://)", () => {
-    // Universal Links landen als https in der App, das eigene Schema bleibt
-    // der Rückfallweg — beide müssen dieselbe ID liefern.
+    // https und eigenes Schema liefern dieselbe ID.
     expect(eventIdFromUrl("kkdith://?event=4711")).toBe(4711);
   });
 
@@ -87,10 +84,7 @@ describe("eventIdFromUrl", () => {
 });
 
 describe("eventShareMessage", () => {
-  // Titel, Zeit und Ort stehen bewusst NICHT mehr im Text: iMessage und
-  // WhatsApp zeigen die Linkvorschau nur, wenn die Nachricht im Wesentlichen
-  // aus dem Link besteht. Mit Text davor blieb das Bild weg — dieselben
-  // Angaben stehen ohnehin in der Vorschau (og:title/og:description).
+  // Nur Link und Signatur, sonst lassen Messenger die Vorschau weg.
   it("stellt den Link voran, damit die Vorschau lädt", () => {
     const msg = eventShareMessage({ ...base }, "Sa., 11. Okt., 18:00");
     expect(msg).toBe("https://moin-kark.de/event/4711\n\nMoin Kark — Kirche. In deiner Nähe.");
@@ -103,8 +97,6 @@ describe("eventShareMessage", () => {
   });
 
   it("baut denselben Text unabhängig von Ort und Gemeinde", () => {
-    // Ort und Gemeinde kommen aus der Vorschau, nicht mehr aus dem Text — der
-    // Aufbau darf davon nicht mehr abhängen.
     const ohneOrt = eventShareMessage({ ...base, locationName: undefined }, "Sa., 11. Okt., 18:00");
     const ohneBeides = eventShareMessage(
       { ...base, locationName: undefined, parish: undefined },
@@ -118,9 +110,7 @@ describe("eventShareMessage", () => {
 
 describe("Deep-Link-Pfade, die die App kennen muss", () => {
   it("liest die ID aus dem Pfad, den der Universal Link liefert", () => {
-    // Faengt die App https://moin-kark.de/event/4711 ab, bekommt der Router
-    // den Pfad /event/4711 — dafuer braucht es app/event/[id].tsx, sonst zeigt
-    // Expo Router "Unmatched Route", bevor der Deep-Link-Code laeuft.
+    // Ohne app/event/[id].tsx zeigt Expo Router "Unmatched Route".
     expect(eventIdFromUrl("https://moin-kark.de/event/4711")).toBe(4711);
     expect(eventIdFromUrl("/event/4711")).toBe(4711);
   });

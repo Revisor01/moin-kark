@@ -1,7 +1,4 @@
-// Zur Laufzeit pflegbare Orts-Korrekturen — Ergänzung zu den statischen Tabellen
-// in packages/shared (kirchen-coords.ts). Die statischen Tabellen bleiben die im
-// Code versionierte Basis; was hier über /admin gepflegt wird, hat Vorrang und
-// überlebt Neustarts als JSON-Datei im DATA_DIR-Volume.
+// Über /admin gepflegte Ortskorrekturen; sie haben Vorrang vor packages/shared und liegen in DATA_DIR.
 
 import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,11 +11,7 @@ export interface TitleFix {
   force?: boolean;
 }
 
-/**
- * Eingabefehler des Admins (ungültige Koordinate, leerer Name) — im Gegensatz
- * zu Schreibfehlern auf Platte. Die Route antwortet darauf mit 400 und dem
- * Grund; alles andere ist ein Serverzustand und geht nicht im Wortlaut nach außen.
- */
+/** Eingabefehler des Admins, beantwortet mit 400 und Grund. */
 export class InvalidOverridesError extends Error {
   override name = "InvalidOverridesError";
 }
@@ -39,30 +32,14 @@ const FILE = join(DATA_DIR, "location-overrides.json");
 
 let overrides: LocationOverrides = { locations: {}, titles: [], categories: [], highlights: [] };
 
-/**
- * Ob der Stand im Speicher die Datei auf Platte wirklich abbildet.
- *
- * "unloaded": loadOverrides() lief noch nicht. "loaded": Datei gelesen oder
- * nicht vorhanden (leerer Stand ist dann korrekt). "failed": Datei existiert,
- * ließ sich aber nicht lesen oder parsen — der Speicher-Stand ist leer, die
- * Datei nicht. Solange das so ist, darf nicht geschrieben werden: Ein
- * Admin-PUT würde sonst den leeren Stand über die echten Korrekturen schreiben.
- */
+/** Ladezustand; bei "failed" ist Schreiben gesperrt, sonst überschriebe der leere Stand die Datei. */
 let loadState: "unloaded" | "loaded" | "failed" = "unloaded";
 let loadError = "";
 
-/**
- * Dieselbe Normalisierung wie die statischen Tabellen in @moinkark/shared —
- * bewusst importiert statt nachgebaut: An ihr hängt, ob eine über /admin
- * gepflegte Korrektur den Ort überhaupt trifft.
- */
+/** Dieselbe Normalisierung wie in @moinkark/shared, sonst trifft eine Korrektur den Ort nicht. */
 const normalizeName = normalizeKey;
 
-/**
- * Ortsnamen, die als Schlüssel eines Objektliterals die Prototypkette treffen.
- * „__proto__" würde beim Kopieren den Prototyp von `locations` umbiegen und nie
- * in der Datei landen; „constructor"/„prototype" sind keine echten Orte.
- */
+/** Namen, die als Objektschlüssel die Prototypkette träfen. */
 const RESERVED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 function isLatLng(v: unknown): v is LatLng {
@@ -77,8 +54,7 @@ function isLatLng(v: unknown): v is LatLng {
     c.lat <= 90 &&
     c.lng >= -180 &&
     c.lng <= 180 &&
-    // 0/0 (Golf von Guinea) ist keine echte Korrektur, sondern ein leer gelassenes
-    // Formularfeld — genauso wie bei ChurchDesk-Daten (s. geojson.ts) aussortieren.
+    // 0/0 ist ein leer gelassenes Feld.
     !(c.lat === 0 && c.lng === 0)
   );
 }
@@ -118,19 +94,7 @@ function sanitize(raw: unknown): LocationOverrides {
   return { locations, titles, categories, highlights };
 }
 
-/**
- * Beim Start einmal von Platte laden. Fehlende Datei ist der Normalfall (leerer Stand).
- *
- * Ist die Datei da, aber nicht lesbar (Volume-Rechte nach einem Deploy — schon
- * passiert) oder nicht parsebar, läuft die API trotzdem an, nur ohne die
- * Korrekturen: Der öffentliche Feed für die Apps im Store hängt an dieser Datei
- * nicht, und ein Start-Abbruch würde wegen einer Admin-Datei alle Geräte ohne
- * Termine lassen. Der Preis ist ein Feed mit fehlenden Korrekturen — sichtbar,
- * aber nicht kaputt. Was NICHT passieren darf: dass dieser leere Stand beim
- * nächsten Speichern über die Datei geschrieben wird. Deshalb merkt sich
- * loadState den Fehler und setOverrides() verweigert, bis ein Neustart die Datei
- * erfolgreich gelesen hat.
- */
+/** Lädt einmal beim Start; eine unlesbare Datei startet ohne Korrekturen und sperrt das Speichern. */
 export function loadOverrides(): void {
   try {
     overrides = sanitize(JSON.parse(readFileSync(FILE, "utf8")));
@@ -164,10 +128,7 @@ export function getOverrides(): LocationOverrides {
   return overrides;
 }
 
-/**
- * Warum Speichern gerade nicht möglich ist — oder null, wenn alles in Ordnung
- * ist. Für /admin, damit der Zustand vor dem ersten Klick sichtbar ist.
- */
+/** Grund, warum Speichern gesperrt ist, sonst null. */
 export function overridesLoadError(): string | null {
   if (loadState === "loaded") return null;
   if (loadState === "unloaded") return "Korrekturen wurden noch nicht von Platte geladen.";
@@ -205,13 +166,7 @@ export function dynamicCoordFixFor(locationName: string | undefined): LatLng | u
   return Object.hasOwn(overrides.locations, key) ? overrides.locations[key] : undefined;
 }
 
-/**
- * Der über /admin gepflegte Titel-Eintrag — als ganzer Eintrag, nicht nur die
- * Koordinate: Sein `force` ist maßgeblich. Ein Eintrag mit `force: false` hebt
- * damit auch den Vorrang eines gleichnamigen Code-Eintrags (TITLE_OVERRIDES)
- * auf; lieferte diese Funktion nur bei `force` etwas, fiele der Feed still auf
- * die Code-Tabelle zurück und das abgewählte Häkchen wäre wirkungslos.
- */
+/** Der ganze /admin-Titel-Eintrag, weil sein `force: false` auch den Code-Vorrang aufheben muss. */
 export function dynamicTitleFixFor(title: string | undefined): TitleFix | undefined {
   if (!title) return undefined;
   const t = normalizeName(title);

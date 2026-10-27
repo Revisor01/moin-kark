@@ -40,8 +40,7 @@ describe("SwrCache", () => {
   });
 
   it("behält den alten Wert, wenn der Hintergrund-Nachlader scheitert", async () => {
-    // ChurchDesk-Ausfall: Der Feed darf nicht leer werden, sonst ersetzen alle
-    // Geräte ihren lokalen Bestand mit nichts.
+    // Sonst ersetzen alle Geräte ihren Bestand durch nichts.
     vi.useFakeTimers();
     try {
       const loader = vi
@@ -79,8 +78,7 @@ describe("SwrCache", () => {
   });
 
   it("wartet bei refreshAfterChange einen laufenden Ladevorgang ab", async () => {
-    // Der laufende Durchlauf startete vor der Admin-Änderung und kennt sie nicht;
-    // sein Ergebnis darf den frischen Stand nicht überschreiben.
+    // Der laufende Durchlauf kennt die Admin-Änderung nicht.
     const reihenfolge: string[] = [];
     let ersterFertig!: (v: string) => void;
     const loader = vi
@@ -110,8 +108,7 @@ describe("SwrCache", () => {
   });
 
   it("liefert mit peekLatest den jüngsten Stand über alle Schlüssel", async () => {
-    // Direkt nach Mitternacht gibt es den heutigen Schlüssel noch nicht — für
-    // /healthz und /status zählt der Stand von gestern Abend.
+    // Nach Mitternacht zählt für /healthz der Stand von gestern Abend.
     const cache = new SwrCache<string>({ ttlMs: 60_000 });
     expect(cache.peekLatest()).toBeUndefined();
     await cache.get("gestern", () => Promise.resolve("A"));
@@ -121,8 +118,7 @@ describe("SwrCache", () => {
   });
 
   it("fällt bei neuem Schlüssel auf den jüngsten alten Stand zurück, statt zu scheitern", async () => {
-    // Mitternacht: Der Tages-Schlüssel wechselt, der Stand von gestern liegt aber
-    // noch im Speicher. Fällt ChurchDesk gerade aus, darf das kein 500 werden.
+    // Fällt ChurchDesk nach Mitternacht aus, darf das kein 500 werden.
     const cache = new SwrCache<string>({ ttlMs: 60_000 });
     await cache.get("gestern", () => Promise.resolve("A"));
 
@@ -135,8 +131,7 @@ describe("SwrCache", () => {
   });
 
   it("lädt einen neuen Schlüssel im Hintergrund und wechselt danach auf den neuen Stand", async () => {
-    // Die erste Anfrage nach Mitternacht darf nicht auf den vollen 14-Org-Fetch
-    // warten — sie bekommt den Vortagesstand, der neue Tag lädt nebenher.
+    // Die erste Anfrage nach Mitternacht bekommt den Vortagesstand sofort.
     let resolve!: (v: string) => void;
     const cache = new SwrCache<string>({ ttlMs: 60_000 });
     await cache.get("gestern", () => Promise.resolve("A"));
@@ -155,9 +150,7 @@ describe("SwrCache", () => {
   });
 
   it("wartet beim echten Kaltstart weiterhin synchron und reicht den Fehler durch", async () => {
-    // Der Rückfall greift nur, wenn überhaupt ein Stand da ist — ohne Eintrag
-    // bleibt es beim bisherigen Verhalten (Test oben), auch nach einem
-    // gescheiterten Erstversuch unter einem anderen Schlüssel.
+    // Ohne jeden Eintrag kein Rückfall.
     const cache = new SwrCache<string>({ ttlMs: 60_000 });
     await expect(cache.get("gestern", () => Promise.reject(new Error("weg")))).rejects.toThrow("weg");
     await expect(cache.get("heute", () => Promise.reject(new Error("immer noch weg")))).rejects.toThrow(
@@ -166,16 +159,14 @@ describe("SwrCache", () => {
   });
 
   it("wirft alte Schlüssel über dem Deckel weg", async () => {
-    // Das Zeitfenster wandert täglich — ohne Deckel bliebe der Eintrag von
-    // gestern für immer liegen.
+    // Ohne Deckel bliebe der Eintrag von gestern für immer.
     const cache = new SwrCache<string>({ ttlMs: 60_000, maxEntries: 2 });
     for (const k of ["tag1", "tag2", "tag3"]) {
       await cache.get(k, () => Promise.resolve(k));
       await new Promise((r) => setTimeout(r, 2));
     }
     const loader = vi.fn().mockResolvedValue("neu geladen");
-    // tag1 ist verdrängt und wird neu geladen — bis dahin gibt es den jüngsten
-    // Stand (tag3) als Rückfall …
+    // Bis tag1 neu geladen ist, gilt tag3 als Rückfall.
     expect(await cache.get("tag1", loader)).toBe("tag3");
     expect(loader).toHaveBeenCalledTimes(1);
     await vi.waitFor(async () => expect(await cache.get("tag1", loader)).toBe("neu geladen"));

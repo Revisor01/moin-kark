@@ -1,7 +1,5 @@
 #!/bin/bash
-# Xcode Cloud, nach dem Klonen: Abhängigkeiten, natives Projekt aus app.json,
-# Pods und Signierung, mit denselben Schritten wie der iOS-Release auf GitHub.
-# Ohne sie fehlen dem Projekt node_modules, Pods und die aktuelle Version.
+# Xcode Cloud nach dem Klonen: Abhängigkeiten, prebuild, Pods, Signierung wie im GitHub-Release.
 set -euo pipefail
 
 REPO="${CI_PRIMARY_REPOSITORY_PATH:?Nur fuer Xcode Cloud gedacht.}"
@@ -14,9 +12,7 @@ brew install node@26 cocoapods
 export PATH="$(brew --prefix node@26)/bin:$PATH"
 [ "$(node -p 'process.versions.node.split(".")[0]')" = 26 ] || { echo "FEHLER: Node 26 erwartet."; exit 1; }
 
-# Xcode Cloud vergibt die Build-Nummer. Sie kommt in app.json, damit prebuild
-# und apply-version.sh sie wie bisher ueberall eintragen; kleiner als die
-# letzte von Hand gesetzte darf sie nicht sein.
+# Die Cloud-Build-Nummer kommt in app.json; kleiner als die letzte von Hand gesetzte darf sie nicht sein.
 node -e '
 const fs = require("fs"); const datei = process.argv[1]; const neu = Number(process.env.CI_BUILD_NUMBER);
 const app = JSON.parse(fs.readFileSync(datei, "utf8")); const alt = Number(app.expo.ios.buildNumber);
@@ -27,9 +23,7 @@ console.log(`Version ${app.expo.version}, iOS-Build ${neu}`);' "$APP/app.json"
 cd "$REPO"
 npm ci --no-audit --no-fund
 
-# Xcode 27 laesst ExpoModulesJSI vor 57.0.5 Warnungen ausgeben, die der innere
-# Build als "error:" meldet, und Xcode bricht die Skriptphase ab (expo/expo#49120).
-# Diese Pruefung meldet einen Rueckfall auf eine solche Fassung frueh.
+# Vor 57.0.5 bricht Xcode 27 an ExpoModulesJSI-Warnungen ab (expo/expo#49120).
 node -e '
 const [xcode, jsi] = process.argv.slice(1);
 const haupt = Number((/^Xcode (\d+)/.exec(xcode) || [])[1]);
@@ -49,15 +43,12 @@ for versuch in 1 2 3; do
   sleep 20
 done
 
-# Xcode Cloud loest Swift-Pakete nicht selbst auf, sondern nimmt die
-# eingecheckte Package.resolved. Sie muss die MapLibre-Version tragen, die das
-# Projekt nach prebuild verlangt.
+# Xcode Cloud nimmt die eingecheckte Package.resolved, sie muss die MapLibre-Version tragen.
 GEFORDERT=$(awk '/maplibre-gl-native-distribution/{f=1} f&&/version = /{gsub(/[^0-9.]/,"",$3); print $3; exit}' "$PBXPROJ")
 AUFGELOEST=$(node -e 'const p=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).pins.find(x=>x.identity==="maplibre-gl-native-distribution");console.log(p?p.state.version:"")' "$RESOLVED" 2>/dev/null || true)
 [ -n "$GEFORDERT" ] && [ "$GEFORDERT" = "$AUFGELOEST" ] || { echo "FEHLER: Package.resolved nennt MapLibre ${AUFGELOEST:-nichts}, das Projekt verlangt ${GEFORDERT:-nichts}. Lokal im Workspace die Pakete aufloesen und Package.resolved committen."; exit 1; }
 
-# Xcode Cloud signiert selbst und braucht dafuer automatisches Signieren; die
-# Release-Konfiguration ist fest auf Profil und Distribution-Zertifikat gestellt.
+# Xcode Cloud signiert selbst und braucht automatisches Signieren.
 for zeile in 'CODE_SIGN_STYLE = Manual;' 'CODE_SIGN_IDENTITY = "Apple Distribution";' 'PROVISIONING_PROFILE_SPECIFIER = "Moin Kark AppStore CI";'; do
   [ "$(grep -cF "$zeile" "$PBXPROJ")" = 1 ] || { echo "FEHLER: '$zeile' steht nicht genau einmal in project.pbxproj."; exit 1; }
 done

@@ -1,5 +1,4 @@
-// Wandelt ein rohes ChurchDesk-Event in ein GeoJSON-Feature um.
-// Übernimmt alle relevanten Felder voll aus der API.
+// Wandelt ein ChurchDesk-Event in ein GeoJSON-Feature.
 
 import {
   coordFixFor,
@@ -15,11 +14,7 @@ import {
 import type { CdEvent } from "./churchdesk.js";
 import { dynamicCoordFixFor, dynamicTitleFixFor, isDynamicHighlight } from "./locations.js";
 
-/**
- * Erkennt das redaktionelle „KAT: …, Highlight, …"-Tag in Summary/Beschreibung.
- * Gemeinden markieren so einzelne Events zur besonderen Hervorhebung (z.B. Wesselburen).
- * Robust gegen HTML (<p>KAT: Blog</p>) und Komma-Listen (KAT: Highlight, Blog, …).
- */
+/** Erkennt das redaktionelle „KAT: …, Highlight, …“-Tag, auch in HTML und Komma-Listen. */
 export function hasHighlightTag(summary?: string, description?: string): boolean {
   const text = `${summary ?? ""}\n${description ?? ""}`
     .replace(/<[^>]+>/g, "\n") // HTML-Tags zu Zeilenumbrüchen
@@ -62,33 +57,20 @@ function pickImage(img: CdEvent["image"]): EventImage | undefined {
   };
 }
 
-/**
- * ChurchDesk-Zeit als UTC in fester Schreibweise (`2026-06-15T08:00:00.000Z`).
- *
- * ChurchDesk hat die Schreibweise schon gewechselt; derselbe Zeitpunkt kann als
- * „Z" mit oder ohne Millisekunden oder mit Offset („+02:00") kommen. Die Apps
- * vergleichen gemerkte Zeiten mit dem Feed; eine neue Schreibweise
- * desselben Zeitpunkts darf dort nicht ankommen — auch nicht bei Fassungen,
- * die schon auf den Geräten laufen. Unlesbares bleibt, wie es ist: lieber ein
- * Termin mit roher Angabe als ein fehlender.
- */
+/** ChurchDesk-Zeit in fester UTC-Schreibweise, weil die Apps gemerkte Zeiten per String vergleichen. */
 function utcIso(raw: string): string {
   const t = Date.parse(raw);
   return Number.isFinite(t) ? new Date(t).toISOString() : raw;
 }
 
 export function toFeature(event: CdEvent, orgId: number): EventFeature {
-  // Ein Event kann in ChurchDesk MEHREREN Gemeinden gehören (Kirchspiel-weite
-  // Termine wie die Sommerkirche hängen an allen sechs Eider-Gemeinden). Die
-  // erste bleibt als `parish` (Kurzform/Koordinaten-Fallback), die volle Liste
-  // geht als `parishes` mit — Filter und Anzeige in der App brauchen alle.
+  // Kirchspielweite Termine gehören mehreren Gemeinden, die App braucht alle.
   const allParishes = (event.parishes ?? [])
     .map((p) => p.title)
     .filter((t): t is string => !!t);
   const parish = allParishes[0];
   const lo = event.locationObj;
-  // 0/0 ist der „Nullpunkt" (Golf von Guinea) — ChurchDesk liefert das bei nicht
-  // geokodierten Orten. Als „keine echten Koordinaten" behandeln → Fallback nutzen.
+  // 0/0 liefert ChurchDesk für nicht geokodierte Orte.
   const hasCoords =
     !!lo &&
     typeof lo.latitude === "number" &&
@@ -97,26 +79,17 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
 
   const locationName = event.locationName || event.location || lo?.name || undefined;
 
-  // Bekannt falsch geokodierte Orte korrigieren (ChurchDesk geokodiert über die
-  // Adresse — Kirche und Pastorat unter derselben Anschrift landen sonst exakt
-  // aufeinander und ein Pin verdeckt den anderen). Die Korrektur hat Vorrang.
-  // Über /admin gepflegte Laufzeit-Korrekturen überstimmen jeweils die statische Tabelle.
+  // Korrekturen haben Vorrang, sonst liegen Kirche und Pastorat unter einer Adresse aufeinander.
   const fix = dynamicCoordFixFor(locationName) ?? coordFixFor(locationName);
 
-  // Über /admin gepflegter Titel-Eintrag — wenn vorhanden, ist er maßgeblich,
-  // samt seinem „Überstimmt ChurchDesk"-Häkchen; die Code-Tabelle gilt nur ohne ihn.
+  // Ein /admin-Eintrag ist maßgeblich, die Code-Tabelle gilt nur ohne ihn.
   const dynTitle = dynamicTitleFixFor(event.title);
 
-  // Kein Ort und keine Koordinate in ChurchDesk → über den Titel zuordnen, bevor
-  // der Gemeindepunkt greift (sonst liegen ganze Serien auf einer Nadel).
+  // Ohne Ort über den Titel zuordnen, sonst liegen ganze Serien auf einer Nadel.
   const titleFix =
     !locationName && !hasCoords ? dynTitle?.coords ?? coordFixForTitle(event.title) : undefined;
 
-  // Wenige Reihen ueberstimmen bewusst auch eine gepflegte ChurchDesk-Koordinate:
-  // Auf dem Gelaende der Familienlagune tragen alle Termine dieselbe Adresse,
-  // finden aber an verschiedenen Stellen statt (Kirchenkiste vs. Salzwiesen).
-  // Ein Laufzeit-Eintrag ohne Häkchen überstimmt NICHTS — auch nicht über die
-  // Code-Tabelle; sonst ließe sich das Häkchen im Admin nie abwählen.
+  // Nur mit Häkchen überstimmt ein Eintrag ChurchDesk, sonst ließe es sich im Admin nie abwählen.
   const titleOverride = dynTitle
     ? dynTitle.force
       ? dynTitle.coords
@@ -147,10 +120,7 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       summary: event.summary || undefined,
       descriptionHtml: event.description || undefined,
       image: pickImage(event.image),
-      // Kanonischer Name statt der Schreibweise der Gemeinde: Die App
-      // vergleicht Filter-Chip und Event-Kategorie über diesen String — würde
-      // nur die Kategorienliste zusammengelegt, fände der Filter die Termine
-      // der abweichenden Schreibweisen nicht.
+      // Kanonischer Name, weil die App Filter-Chip und Kategorie per String vergleicht.
       categories: (event.categories ?? []).map((c) => ({
         id: c.id,
         title: kanonischeKategorie(c.title),

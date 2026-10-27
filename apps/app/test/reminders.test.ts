@@ -25,9 +25,7 @@ beforeEach(() => {
 
 describe("scheduleForEvent", () => {
   it("merkt sich die erste Mitteilung auch, wenn die zweite Planung fehlschlägt", async () => {
-    // Der gemeldete Fehler: Präferenz „Beides", zweite Planung wirft → die Map
-    // wurde nicht gespeichert, die erste Mitteilung war nicht mehr abbrechbar
-    // und feuerte, obwohl der Termin längst entmerkt war.
+    // Wirft die zweite Planung, muss die erste trotzdem abbrechbar bleiben.
     notifications.scheduleNotificationAsync
       .mockResolvedValueOnce("n1")
       .mockRejectedValueOnce(new Error("boom"));

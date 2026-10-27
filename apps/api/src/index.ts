@@ -1,5 +1,4 @@
-// Moin Kark API — Read-Only Aggregator für die Kirchenkreis-Dithmarschen-Eventkarte.
-// Hält die 14 ChurchDesk-Read-Tokens server-seitig, liefert ein dedupliziertes GeoJSON.
+// Moin Kark API: liest 14 ChurchDesk-Orgs serverseitig und liefert ein GeoJSON.
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { pathToFileURL } from "node:url";
@@ -32,20 +31,10 @@ import {
   type StatusData,
 } from "./pages.js";
 
-// Laufzeit-Korrekturen beim Import lesen, nicht erst im serve()-Callback: Sonst
-// bleibt der Ladezustand "unloaded", solange kein Server läuft (Tests, künftige
-// Einbindung als Modul) — und in diesem Zustand ist Speichern gesperrt, obwohl
-// die Datei in Ordnung ist. Der Zustand muss stehen, bevor der erste Request
-// /admin erreicht; der Aufruf ist idempotent und ohne Datei ein No-op.
+// Beim Import laden, sonst bleibt Speichern ohne laufenden Server gesperrt.
 loadOverrides();
 
-/**
- * Zahl aus der Umgebung, mit Rückfall auf den Standard.
- *
- * Ohne die Prüfung würde ein Tippfehler (CACHE_TTL_MS=abc) zu NaN führen: der
- * Cache gälte nie als frisch und setInterval(…, NaN) feuerte im Millisekundentakt
- * gegen ChurchDesk; ein NaN-Fenster ließe zudem jede Anfrage mit 500 scheitern.
- */
+/** Zahl aus der Umgebung mit Standard, weil NaN den Refresh im Millisekundentakt feuern ließe. */
 function envInt(name: string, fallback: number, min = 1): number {
   const raw = process.env[name];
   if (raw == null || raw.trim() === "") return fallback;
@@ -61,12 +50,7 @@ const PORT = envInt("PORT", 8787);
 const TTL_MS = envInt("CACHE_TTL_MS", 20 * 60 * 1000); // 20 min
 const DEFAULT_DAYS = envInt("DEFAULT_WINDOW_DAYS", 60);
 
-/**
- * Mindestlänge des Admin-Tokens. Der Vergleich ist konstantzeitig, aber die
- * Sicherheit hängt allein an der Entropie des Tokens — und ein einstelliger
- * Wert wurde bisher genauso angenommen wie ein langer. Zu kurz ⇒ /admin bleibt
- * aus, als wäre gar keins gesetzt (Warnung im Log statt stiller Annahme).
- */
+/** Mindestlänge des Admin-Tokens; kürzer bleibt /admin aus. */
 const ADMIN_TOKEN_MIN_LENGTH = 24;
 const ADMIN_TOKEN = readAdminToken();
 
@@ -98,22 +82,13 @@ const ALLOWED_ORIGINS = (
 
 const cache = new SwrCache<EventFeatureCollection>({ ttlMs: TTL_MS });
 
-/**
- * Das Zeitfenster ist serverseitig fest: heute + DEFAULT_DAYS. Die frühere
- * `?from=`/`?to=`-Unterstützung ist bewusst entfernt — kein Client nutzte sie,
- * aber jeder beliebige Parameter erzeugte einen eigenen Cache-Eintrag samt
- * kompletter 14-Org-Fetch-Kaskade (Token- und Speicher-Schutz).
- */
+/** Festes Zeitfenster, weil jeder Parameter einen eigenen Cache-Eintrag samt Fetch-Kaskade erzeugte. */
 function currentWindow(): { from: Date; to: Date; key: string } {
   const from = new Date();
-  // Endtag als Berliner Kalenderdatum: heutiger Berliner Tag + DEFAULT_DAYS.
-  // Ein Millisekunden-Offset (DEFAULT_DAYS × 24 h) ergäbe über einen
-  // Zeitumstellungs-Wechsel hinweg kurz nach Mitternacht 59 oder 61 Tage.
-  // Mittag UTC liegt in Berlin immer am selben Kalendertag (13/14 Uhr).
+  // Über den Berliner Kalendertag, sonst ergäbe die Zeitumstellung 59 oder 61 Tage.
   const [y, m, d] = fmtDate(from).split("-").map(Number);
   const to = new Date(Date.UTC(y, m - 1, d + DEFAULT_DAYS, 12));
-  // Schlüssel über den Berliner Kalendertag (wie das Abfragefenster selbst) —
-  // mit UTC würde er kurz nach Mitternacht noch auf den Vortag zeigen.
+  // Berliner Tag, mit UTC zeigte der Key nach Mitternacht noch auf den Vortag.
   const key = `${fmtDate(from)}_${fmtDate(to)}`;
   return { from, to, key };
 }
@@ -125,38 +100,22 @@ function getCollection(): Promise<EventFeatureCollection> {
 
 const app = new Hono();
 
-// Das GeoJSON ist ~700 KB und geht überwiegend an Mobilfunk-Clients; gzip drückt
-// das auf einen Bruchteil. Muss VOR den Routen stehen, um deren Antworten zu sehen.
+// Vor den Routen, damit gzip deren Antworten sieht.
 app.use("*", compress());
 
 app.use(
   "*",
   cors({
-    // Fremde Origins bekommen keinen Allow-Origin-Header (null) statt fälschlich
-    // den ersten erlaubten — der Browser blockt so oder so, aber das ist die
-    // ehrliche Antwort und im Debugging eindeutig.
     origin: (origin) => (ALLOWED_ORIGINS.includes(origin) ? origin : null),
   })
 );
 
-// `revision` = Commit, aus dem das Image gebaut wurde (Build-Argument GIT_SHA).
-// Der Deploy-Workflow prüft daran, ob nach dem Ausrollen wirklich das neue
-// Image antwortet — ein grüner Healthcheck zeigt das nicht.
+// Daran prüft der Deploy, ob wirklich das neue Image antwortet.
 app.get("/", (c) =>
   c.json({ service: "moinkark-api", status: "ok", revision: process.env.GIT_SHA?.trim() || "unknown" })
 );
 
-/**
- * Betriebszustand aus dem jüngsten Datenstand — ohne selbst einen Fetch
- * auszulösen (der Auto-Refresh hält den Cache warm):
- * - ok:       Daten da, alle Orgs haben geantwortet.
- * - degraded: Daten da, aber mind. eine Org fiel beim letzten Refresh aus
- *             (z. B. abgelaufener Einzeltoken — deren Events fehlen still!)
- *             oder hat gar kein Token (beim Redeploy verlorene ENV-Zeile —
- *             deren Events fehlen dauerhaft, ohne je als Ausfall zu zählen).
- * - stale:    letzter erfolgreicher Refresh liegt > 3×TTL zurück (Refresh hängt/scheitert).
- * - starting: noch gar kein Datenstand (Kaltstart).
- */
+/** Betriebszustand ok, degraded, stale oder starting aus dem jüngsten Stand, ohne selbst zu laden. */
 function statusData(): StatusData & { orgsConfigured?: number; orgsMissing?: number } {
   const latest = cache.peekLatest();
   const meta = latest?.value.meta;
@@ -170,8 +129,7 @@ function statusData(): StatusData & { orgsConfigured?: number; orgsMissing?: num
         ? "degraded"
         : "ok";
 
-  // Fallback-Sichtfenster: Welche Orte liegen mangels Koordinate auf dem
-  // Gemeinde-Pin? Gruppiert nach Ortsname (bzw. Gemeinde, wenn keiner gepflegt ist).
+  // Orte ohne Koordinate, die auf dem Gemeinde-Pin landen.
   const groups = new Map<string, FallbackGroup>();
   for (const f of latest.value.features) {
     if (f.properties.coordSource !== "fallback") continue;
@@ -219,18 +177,7 @@ app.get("/healthz", (c) => {
 app.get("/status.json", (c) => c.json(statusData()));
 app.get("/status", (c) => c.html(statusPage(statusData())));
 
-/**
- * Gemeinsamer Rahmen der drei Feed-Routen: Datenstand holen, Kennung als ETag
- * mitgeben und bei passendem If-None-Match mit 304 ohne Inhalt antworten.
- *
- * Zwischen zwei Refreshes ist der Feed byte-identisch — ohne Kennung im Header
- * serialisierte und komprimierte der Server ~700 KB trotzdem für jede Anfrage
- * neu (gemessen 4,4 ms CPU pro Aufruf). Der Fingerprint existiert für
- * /version.json ohnehin; als ETag ist er fertig.
- *
- * Fehler gehen als fester Text nach außen: Die interne Meldung nannte u. a. das
- * Schema der Token-Variablen und Dateipfade — die gehören ins Log.
- */
+/** Rahmen der Feed-Routen mit ETag und 304; Fehler nach außen nur als fester Text. */
 async function feedResponse(
   c: Context,
   body: (fc: EventFeatureCollection) => unknown
@@ -249,11 +196,7 @@ async function feedResponse(
   return c.json(body(fc));
 }
 
-/**
- * ETag von vornherein schwach (W/): Die Compress-Middleware liefert den Feed
- * gzip-kodiert und stufte einen starken ETag ohnehin auf W/ herab — so ist die
- * Kennung auf 200 und 304 dieselbe, und der Client schickt genau sie zurück.
- */
+/** Schwacher ETag, weil Compress ihn sonst herabstuft und 200 und 304 verschiedene trügen. */
 function etagFor(fc: EventFeatureCollection): string {
   return `W/"${fingerprintOf(fc)}"`;
 }
@@ -270,24 +213,10 @@ function etagMatches(header: string | undefined, etag: string): boolean {
 
 app.get("/events.geojson", (c) => feedResponse(c, (fc) => fc));
 
-/**
- * Kurz-Kennung des aktuellen Datenbestands (Hash über alle Events).
- *
- * Die App fragt das alle paar Minuten ab — die Antwort ist ein paar Bytes groß
- * statt ~700 KB. Ändert sich der Hash, lädt sie das GeoJSON neu. So kommen
- * redaktionelle Änderungen (Highlight gesetzt, Titel korrigiert, Termin abgesagt)
- * zeitnah an, ohne dass jedes Gerät im Minutentakt den vollen Feed zieht.
- */
+/** Kurzkennung des Datenstands, damit die App nur bei Änderung den vollen Feed lädt. */
 function fingerprint(fc: EventFeatureCollection): string {
   const h = createHash("sha1");
-  // Alle Felder, die in der App sichtbar sind — auch Beschreibung, Bild und
-  // Kategorien: eine korrigierte Beschreibung muss ankommen, und Kategorien
-  // steuern zusätzlich die Filter-Chips.
-  //
-  // Zeilen werden vor dem Hashen sortiert, weil die Feature-Reihenfolge sonst aus
-  // den ChurchDesk-Antworten stammt. Liefert die API dieselben Events anders
-  // sortiert, änderte sich der Hash ohne inhaltliche Änderung — und jedes Gerät
-  // lüde ~700 KB umsonst.
+  // Alle sichtbaren Felder, sortiert, damit eine andere Reihenfolge keinen neuen Hash ergibt.
   const lines = fc.features.map((f) => {
     const p = f.properties;
     return (
@@ -304,10 +233,7 @@ function fingerprint(fc: EventFeatureCollection): string {
   return h.digest("hex").slice(0, 16);
 }
 
-/**
- * Fingerprint je Datenstand nur einmal rechnen: Der Cache hält dasselbe Objekt
- * bis zum nächsten Refresh, und seit dem ETag braucht ihn jede Feed-Anfrage.
- */
+/** Fingerprint je Datenstand nur einmal rechnen. */
 const fingerprints = new WeakMap<EventFeatureCollection, string>();
 function fingerprintOf(fc: EventFeatureCollection): string {
   let fp = fingerprints.get(fc);
@@ -330,17 +256,7 @@ const STORE_IOS = "https://apps.apple.com/de/app/id6781438884";
 const STORE_ANDROID = "https://play.google.com/store/apps/details?id=de.godsapp.moinkark";
 const STARTSEITE = "https://moin-kark.de/";
 
-/**
- * Waehlt den Store zum Geraet.
- *
- * Reihenfolge ist wichtig: Android-Kennungen tragen ebenfalls "AppleWebKit",
- * und "Mac OS X" steht auch im UA eines iPhones ("like Mac OS X"). Deshalb
- * erst Android pruefen, dann die konkreten Apple-Geraete — nie nach "mac"
- * oder "applewebkit" allein.
- *
- * Alles Unbekannte geht auf die Startseite: Dort stehen beide Knoepfe, und ein
- * Scanner mit eigenem User-Agent landet nicht im falschen Store.
- */
+/** Wählt den Store; erst Android prüfen, weil dessen UA auch „AppleWebKit“ trägt. */
 export function storeFuerGeraet(userAgent: string | undefined): string {
   const ua = (userAgent ?? "").toLowerCase();
   if (ua.includes("android")) return STORE_ANDROID;
@@ -348,10 +264,7 @@ export function storeFuerGeraet(userAgent: string | undefined): string {
   return STARTSEITE;
 }
 
-/**
- * „St. Clemens, Büsum" — aber ohne Dopplung, wenn der Ortsname die Gemeinde
- * schon enthält („Hennstedt, Gemeindehaus, Hennstedt" las sich falsch).
- */
+/** Ort und Gemeinde ohne Dopplung. */
 function ortsangabe(locationName?: string, parish?: string): string {
   if (!locationName) return parish ?? "";
   if (!parish) return locationName;
@@ -359,26 +272,10 @@ function ortsangabe(locationName?: string, parish?: string): string {
   return `${locationName}, ${parish}`;
 }
 
-/**
- * `/app` — das Ziel des QR-Codes auf Plakaten und Flyern.
- *
- * Ein QR-Code ist statischer Text; entscheiden kann nur, was hinter dem Link
- * liegt. 302 statt 301: Die Zuordnung darf sich aendern (neuer Store, andere
- * Startseite), ein dauerhaft gecachter Redirect liesse sich nicht zurueckholen.
- */
+/** Ziel des QR-Codes; 302, damit sich die Zuordnung später ändern lässt. */
 app.get("/app", (c) => c.redirect(storeFuerGeraet(c.req.header("User-Agent")), 302));
 
-/**
- * Zuordnungsdateien für Universal Links (iOS) und App Links (Android).
- *
- * Geteilt wird `api.moin-kark.de/event/<id>` (wegen der Link-Vorschau) — damit
- * eine installierte App diesen Link abfängt statt ihn an den Browser zu geben,
- * müssen die Dateien auf DIESER Domain liegen, nicht nur auf der Karte. Der
- * vHost reicht alles an die API durch, deshalb liefert sie sie selbst aus.
- *
- * `apple-app-site-association` braucht `application/json` und darf keine
- * Endung tragen; eine Weiterleitung würde Apple ebenfalls ablehnen.
- */
+/** Universal Links und App Links; sie müssen auf der API-Domain liegen, weil geteilte Links dorthin zeigen. */
 const APPLE_APP_SITE_ASSOCIATION = {
   applinks: {
     details: [
@@ -390,18 +287,7 @@ const APPLE_APP_SITE_ASSOCIATION = {
   },
 };
 
-/**
- * Fingerprints der Android-Signaturschlüssel.
- *
- * Zwei, mit Absicht: Google signiert die App im Store mit einem eigenen
- * Schlüssel neu (erster Wert, aus Play Console → Setup → App-Signatur), lokal
- * gebaute Testbuilds tragen dagegen den Upload-Schlüssel (zweiter Wert). Fehlt
- * der passende, öffnet Android den geteilten Link im Browser statt in der App;
- * iOS ist davon nicht betroffen.
- *
- * `ANDROID_CERT_SHA256` überschreibt die Liste (kommagetrennt), falls sich ein
- * Schlüssel ändert, ohne dass dafür ein Deploy nötig wird.
- */
+/** Android-Fingerprints: Play-App-Signatur und Upload-Schlüssel; ANDROID_CERT_SHA256 überschreibt. */
 const ANDROID_CERT_FINGERPRINTS = (
   process.env.ANDROID_CERT_SHA256 ??
   "0D:5A:FF:7D:B9:86:BD:14:F5:0E:A7:D9:0D:EB:05:28:A9:B0:52:63:A9:D0:0B:0D:0E:BC:A3:10:C2:E2:6C:32," +
@@ -429,14 +315,7 @@ app.get("/.well-known/assetlinks.json", (c) =>
   ])
 );
 
-/**
- * Hebt ChurchDesk-Bilder auf die Größe an, die Linkvorschauen brauchen.
- *
- * Die Feed-URLs zeigen auf `span4_16-9` — 400×225 Pixel. WhatsApp und Facebook
- * zeigen bei so kleinen Bildern gar keine große Vorschau; `span12_16-9`
- * liefert 1200×676 und damit die übliche Größe. Fremde URLs (falls je welche
- * kommen) bleiben unangetastet.
- */
+/** Hebt ChurchDesk-Bilder auf 1200 px, sonst zeigen Messenger keine große Vorschau. */
 function vorschauBild(url?: string): string | undefined {
   if (!url) return undefined;
   if (!url.includes("edge.churchdesk.com")) return url;
@@ -461,12 +340,7 @@ function previewTime(startUtc: string, allDay?: boolean): string {
   return `${datum}, ${zeit} Uhr`;
 }
 
-/**
- * Link-Vorschau für geteilte Termine. Die Web-Karte ist eine Single-Page-App;
- * Crawler sehen dort nur ein leeres Grundgerüst, ein geteilter Link erschien
- * deshalb ohne Bild und Text. Diese Seite liefert die Metadaten und leitet
- * Menschen sofort auf die Karte weiter.
- */
+/** Link-Vorschau für geteilte Termine, weil Crawler in der SPA nichts sehen. */
 app.get("/event/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isInteger(id) || id <= 0) return c.notFound();
@@ -507,15 +381,7 @@ function tokenOk(header: string | undefined): boolean {
   return timingSafeEqual(given, want);
 }
 
-/**
- * Fehlversuche je Adresse: ab AUTH_FAIL_LIMIT innerhalb des Fensters 429 —
- * auch für das richtige Token, bis das Fenster abläuft. Ohne das ließe sich
- * ein Token unbegrenzt schnell durchprobieren.
- *
- * Die Adresse kommt aus X-Real-IP (setzt der vorgeschaltete Proxy, überschreibt
- * damit, was der Client schickt), sonst aus dem ersten X-Forwarded-For-Eintrag.
- * Ohne beides (lokal, Tests) landen alle in einem Topf — dort gibt es nur einen.
- */
+/** Fehlversuche je Adresse; ab AUTH_FAIL_LIMIT 429, auch für das richtige Token. */
 const AUTH_FAIL_LIMIT = 10;
 const AUTH_FAIL_WINDOW_MS = 60_000;
 const authFailures = new Map<string, { count: number; until: number }>();
@@ -568,9 +434,7 @@ app.use("/admin/api/*", async (c, next) => {
 });
 
 app.get("/admin/api/locations", (c) => {
-  // Aktuelle Feed-Kategorien als Klick-Vorschläge fürs Ausschließen. Bereits
-  // ausgeschlossene tauchen im Feed nicht mehr auf — die Overrides-Liste selbst
-  // bleibt aber sichtbar, darüber lässt sich ein Ausschluss wieder aufheben.
+  // Feed-Kategorien als Vorschläge; Ausschlüsse bleiben in der Liste zum Aufheben.
   const latest = cache.peekLatest();
   return c.json({
     static: {
@@ -584,21 +448,12 @@ app.get("/admin/api/locations", (c) => {
     },
     overrides: getOverrides(),
     feedCategories: latest ? extractCategories(latest.value).map((cat) => cat.title) : [],
-    // Konnte die Overrides-Datei beim Start nicht gelesen werden, ist Speichern
-    // gesperrt (sonst überschriebe der leere Stand die Korrekturen auf Platte).
-    // Die Oberfläche muss das vor dem ersten Klick zeigen, nicht erst danach.
+    // Gesperrtes Speichern vor dem ersten Klick anzeigen.
     loadError: overridesLoadError(),
   });
 });
 
-/**
- * Alle Events des aktuellen Feeds, gruppiert nach Gemeinde — Grundlage für die
- * Highlight-Pflege im Admin. Pro Event steht dabei, ob das Highlight aus dem
- * ChurchDesk-Tag („KAT: Highlight") kommt oder hier im Admin gesetzt wurde.
- * `unknown` sind Admin-Highlights, deren Event gerade nicht im Feed liegt
- * (vorbei, außerhalb des Zeitfensters oder Org ausgefallen) — die UI trägt sie
- * beim Speichern weiter, statt sie still zu verlieren.
- */
+/** Events je Gemeinde für die Highlight-Pflege; `unknown` trägt die UI weiter, statt sie zu verlieren. */
 app.get("/admin/api/highlights", (c) => {
   const latest = cache.peekLatest();
   const overrides = getOverrides();
@@ -642,17 +497,11 @@ app.put("/admin/api/locations", async (c) => {
   }
   try {
     const saved = setOverrides(raw);
-    // Korrekturen sollen sofort sichtbar werden, nicht erst beim nächsten TTL-Tick.
-    // `afterChange`: einen ggf. laufenden Refresh abwarten, der die neuen
-    // Overrides noch nicht kennt — sonst bliebe die Korrektur eine TTL lang aus.
+    // `afterChange`, damit kein laufender Refresh ohne die neuen Overrides gewinnt.
     void warmCache(true);
     return c.json({ ok: true, overrides: saved });
   } catch (e: any) {
-    // Drei Fälle, die Oberfläche und Logs auseinanderhalten müssen:
-    // 400 — Eingabefehler des Admins, mit Grund (der Text ist für ihn gemacht).
-    // 409 — gesperrt, weil die Datei beim Start unlesbar war: Zustand des Servers.
-    // 500 — Schreibfehler (Volume-Rechte, Platte voll): Details nur ins Log,
-    //       die Meldung nennt sonst Dateipfade.
+    // 400 Eingabefehler mit Grund, 409 beim Start gesperrt, 500 Schreibfehler nur ins Log.
     if (e instanceof InvalidOverridesError) return c.json({ error: e.message }, 400);
     if (overridesLoadError() !== null) return c.json({ error: String(e?.message ?? e) }, 409);
     console.error("[/admin/api/locations] Speichern fehlgeschlagen:", e?.message ?? e);
@@ -660,15 +509,7 @@ app.put("/admin/api/locations", async (c) => {
   }
 });
 
-/**
- * Hält den Standard-Zeitraum von selbst warm.
- *
- * Ohne das erneuert sich der Cache nur, wenn jemand die API aufruft — der erste
- * Aufruf nach einer Ruhephase wartet dann auf 14 ChurchDesk-Calls. Mit dem Timer
- * ist immer ein frischer Stand da: Die App bekommt sofort Antwort, und ihre
- * Änderungs-Abfrage (/version.json) sieht redaktionelle Korrekturen von selbst,
- * ohne dass ein Nutzer den Refresh auslösen muss.
- */
+/** Hält den Standard-Zeitraum warm, damit niemand auf 14 ChurchDesk-Calls wartet. */
 function warmCache(afterChange = false): Promise<void> {
   const { from, to, key } = currentWindow();
   const load = () => buildFeatureCollection(from, to);
@@ -682,11 +523,7 @@ function warmCache(afterChange = false): Promise<void> {
 
 export { app };
 
-/**
- * Nur starten, wenn dieses Modul als Programm läuft — nicht beim Import.
- * Tests sprechen `app` direkt über `app.request()` an; ohne die Prüfung würde
- * jeder Testlauf einen echten Server samt ChurchDesk-Refresh hochziehen.
- */
+/** Nur als Programm starten, damit Tests keinen echten Server hochziehen. */
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain)

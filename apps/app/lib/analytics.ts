@@ -1,21 +1,4 @@
-// Nutzungsmessung über die eigene Umami-Installation (t.godsapp.de).
-//
-// Selbst gehostet in Deutschland, ohne Cookies, ohne IP-Speicherung. Gemessen
-// wird, WAS benutzt wird — nie WER. Keine Termin-IDs, keine Titel, keine
-// Ortsnamen, keine Anzahlen: Bei einer Gemeinde mit drei Aktiven ist eine
-// Anzahl bereits identifizierend.
-//
-// Zwei Umami-Eigenheiten, beide am 25.09.2026 gegen t.godsapp.de gemessen:
-//
-//  1. Umami antwortet auf JEDE Anfrage mit HTTP 200, verwirft aber alles, dessen
-//     User-Agent nach `okhttp` aussieht — genau den schickt React Native auf
-//     Android. Gemessen: okhttp verworfen, Dalvik und CFNetwork gespeichert.
-//     Ohne eigenen Header misst man auf Android nichts und merkt es nicht.
-//  2. Umami zählt Besucher NUR über Seitenaufrufe. Ein Seitenaufruf ist
-//     `type:'event'` OHNE `name`; `type:'pageview'` lehnt Umami mit 400 ab.
-//
-// Derselbe eigene User-Agent behebt nebenbei, dass Umami iOS-Anfragen aus
-// React Native sonst als „desktop ohne OS" verbucht.
+// Nutzungsmessung über die eigene Umami-Installation: was benutzt wird, nie wer.
 
 import { Platform } from "react-native";
 
@@ -26,31 +9,14 @@ const WEBSITE = "e393f7f4-b798-4d20-887a-6b0c866d76ca";
 
 const HOSTNAME = "karte.moin-kark.de";
 
-/**
- * Browserartiger User-Agent, damit Umami die Anfrage nicht verwirft (s. oben).
- * Bewusst ehrlich: Der App-Name steht drin, es ist keine Tarnung.
- */
+/** Browserartiger User-Agent, weil Umami okhttp-Anfragen still verwirft (gemessen am 25.09.2026). */
 const USER_AGENT =
   "Mozilla/5.0 (Mobile; MoinKark) AppleWebKit/605.1.15 (KHTML, like Gecko) MoinKark/1.0";
 
-/**
- * Läuft nur im Release — im Entwicklungsbetrieb wird nichts gesendet, sonst
- * verfälschen Testläufe die Zahlen.
- *
- * `__DEV__` setzt der Metro-Bundler; im Vitest-Lauf gibt es das Symbol nicht,
- * deshalb die Prüfung über `globalThis` statt direkt (sonst ReferenceError).
- */
+/** Nur im Release; `__DEV__` über `globalThis`, weil es in Vitest fehlt. */
 const AKTIV = (globalThis as { __DEV__?: boolean }).__DEV__ === false;
 
-/**
- * Erlaubte Ereignisse und je Merkmal die erlaubten Werte.
- *
- * Positivliste statt Regex, mit Absicht: Ein Regex ließe jede
- * Kleinbuchstabenfolge durch — also auch einen Termintitel. Steht ein Wert
- * nicht hier, fällt das Merkmal weg und das Ereignis geht trotzdem raus.
- * Ein unbekannter Ereignisname wird gar nicht gesendet, sonst wäre jeder
- * Tippfehler ein neuer Name im Dashboard.
- */
+/** Erlaubte Ereignisse und Werte als Positivliste, weil ein Regex auch Termintitel durchließe. */
 export const EREIGNISSE = {
   "termin-geoeffnet": { quelle: ["liste", "karte", "gemerkt", "link", "mitteilung"] },
   "termin-gemerkt": { aktion: ["gemerkt", "entfernt"] },
@@ -91,10 +57,7 @@ async function senden(nutzlast: Record<string, unknown>): Promise<void> {
   }
 }
 
-/**
- * Seitenaufruf. Zählt Besucher und Sitzungen; benannte Ereignisse allein
- * ergäben im Dashboard „0 Besucher".
- */
+/** Seitenaufruf; nur darüber zählt Umami Besucher. */
 export async function trackScreen(pfad: string): Promise<void> {
   await senden({
     website: WEBSITE,
@@ -104,12 +67,7 @@ export async function trackScreen(pfad: string): Promise<void> {
   });
 }
 
-/**
- * Benanntes Ereignis.
- *
- * Erst nach der erfolgreichen Aktion aufrufen, nicht beim Tippen: Ein Klick,
- * der in einem Fehler endet, ist keine Nutzung.
- */
+/** Benanntes Ereignis, erst nach der erfolgreichen Aktion senden. */
 export async function track(
   name: Ereignis,
   merkmale: Record<string, unknown> = {}

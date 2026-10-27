@@ -1,9 +1,4 @@
-# Vorlage des Portainer-Stacks `moinkark-api`. Inhalt = Stack-Datei in
-# Portainer; wer das eine ändert, ändert das andere mit.
-#
-# Das Image baut die CI (.github/workflows/api-deploy.yml) und legt es in GHCR ab;
-# der Stack-Webhook zieht `latest` neu.
-# Lokal bauen: `docker build -f apps/api/Dockerfile .` im Monorepo-Root.
+# Vorlage des Stacks `moinkark-api`, mit der Stack-Datei gleich halten. Lokal: docker build -f apps/api/Dockerfile .
 services:
   moinkark-api:
     image: ghcr.io/revisor01/moinkark-api:latest
@@ -41,10 +36,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.moinkark-api.rule=Host(`api.moin-kark.de`)"
-      # Geteilte Termin-Links tragen die Hauptdomain — "api.moin-kark.de"
-      # las sich fuer Empfaenger:innen technisch und wirkte wie ein Fehler.
-      # Nur diese beiden Pfade; alles andere auf moin-kark.de bleibt die
-      # statische Landingpage im Webserver-Docroot.
+      # Geteilte Termin-Links tragen die Hauptdomain; nur diese beiden Pfade gehen an die API.
       - "traefik.http.routers.moinkark-share.rule=Host(`moin-kark.de`) && (PathPrefix(`/event/`) || PathPrefix(`/.well-known/`) || Path(`/app`))"
       - "traefik.http.routers.moinkark-share.service=moinkark-api"
       - "traefik.http.services.moinkark-api.loadbalancer.server.port=8787"

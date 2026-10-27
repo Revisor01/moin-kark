@@ -23,23 +23,11 @@ interface Props {
   /** Untere Safe-Area (Home-Indicator) — Griff muss darüber greifbar bleiben. */
   bottomInset?: number;
   children: React.ReactNode;
-  /**
-   * Meldet nach jedem Einrasten, wie viele Pixel des Sheets UNTER der
-   * Bildschirmkante liegen. Die Liste im Sheet braucht genau diesen Wert als
-   * Endabstand, damit der letzte Eintrag in den sichtbaren Bereich scrollt.
-   */
+  /** Meldet nach dem Einrasten, wie viele Pixel unter der Kante liegen. */
   onHiddenBottomChange?: (px: number) => void;
 }
 
-// Vier feste Stufen (sichtbare Sheet-Höhe von unten gemessen):
-//  1) nur der Griff (über der Safe Area greifbar)
-//  2) Griff + 1 voller Eintrag
-//  3) Griff + 3 volle Einträge (Karte noch gut sichtbar)
-//  4) fast volle Höhe — zum Durchblättern langer Listen
-// Die Kartenmaße für 2) und 3) kommen aus lib/listLayout (eine Quelle für
-// EventCard, EventList und dieses Sheet) und folgen der Systemschrift.
-// Stufe 4 als Anteil der verfügbaren Höhe: Bei vielen Treffern will man lesen,
-// nicht die Karte sehen.
+// Vier Stufen: Griff, ein Eintrag, drei Einträge, fast voll; Maße aus lib/listLayout.
 const SNAP_FULL_FRACTION = 0.92;
 
 const SPRING = { damping: 20, stiffness: 200, mass: 0.6 };
@@ -63,51 +51,28 @@ export default function DraggableListSheet({
     return { small, mid, large, full };
   }, [availableHeight, bottomInset, fontScale]);
 
-  // WICHTIG zur Architektur: Das Sheet hat eine FESTE Höhe (Vollstufe) und wird
-  // per translateY ins Bild geschoben. Die Höhe selbst wird NICHT animiert —
-  // animierte Layout-Höhen (useAnimatedStyle + height) kamen auf iOS nicht
-  // zuverlässig im Yoga-Layout an: Das Sheet blieb inhaltsgroß, die Liste
-  // überzog den ganzen Bildschirm und ihre letzten Einträge lagen dauerhaft
-  // unterhalb der sichtbaren Kante (Web war korrekt, nur Native betroffen).
-  // Transforms laufen dagegen am Layout vorbei und sind auf allen Plattformen
-  // verlässlich — der Standardweg für Bottom-Sheets.
-  // sheetHeight = aktuell sichtbare Höhe des Sheets (von unten gemessen).
-  // Start in Stufe 2 (erster Eintrag lesbar).
+  // Feste Höhe und translateY, weil animierte Höhen auf iOS nicht zuverlässig im Layout ankamen.
   const sheetHeight = useSharedValue(heights.mid);
   const startHeight = useSharedValue(heights.mid);
 
-  // Der unter der Bildschirmkante liegende Sheet-Anteil je Ruhestufe → als
-  // Endabstand an die Liste melden (dort als Scroll-Inhalt, nie als Container-
-  // Padding). Während des Ziehens bleibt der Wert der letzten Ruhestufe stehen;
-  // nach dem Einrasten stimmt er wieder exakt.
+  // Endabstand je Ruhestufe als Scroll-Inhalt, nie als Container-Padding.
   const reportHidden = (visible: number) => {
     onHiddenBottomChange?.(Math.max(0, heights.full - visible));
   };
 
-  // Welche Ruhestufe zuletzt eingerastet ist. Ändert sich die verfügbare Höhe
-  // (iPad-Split-View; die App ist sonst hochkant fixiert), muss die Meldung zu
-  // DIESER Stufe passen — vorher ging pauschal `mid` raus, auch wenn das Sheet
-  // gerade ganz offen stand, und die Liste bekam einen falschen Endabstand.
+  // Bei geänderter Höhe muss die Meldung zur eingerasteten Stufe passen.
   const restStage = useRef<SheetStage>("mid");
-  // Dieselbe Stufe noch einmal als State — nur für den Screenreader-Griff
-  // (Label „Stufe 2 von 4“ muss neu rendern, die Ref tut das nicht).
+  // Als State, weil das Screenreader-Label neu rendern muss.
   const [stage, setStage] = useState<SheetStage>("mid");
   useEffect(() => {
     const visible = heights[restStage.current];
     sheetHeight.value = visible;
     startHeight.value = visible;
     reportHidden(visible);
-    // Absichtlich nur an `heights` gebunden: restStage ist eine Ref, die Höhen
-    // sind Shared Values, reportHidden ändert sich nicht — nichts davon soll den
-    // Effekt erneut auslösen.
+    // Nur `heights`: restStage ist eine Ref, die Höhen sind Shared Values.
   }, [heights]);
 
-  // Reanimated 4.3.x hat beim allerersten Frame einen Race zwischen dem
-  // AnimationFrameBatchinator (DisplayLink) und dem noch nicht registrierten
-  // ShadowNode → EXC_BAD_ACCESS in REANodesManager::performOperations beim Start
-  // (software-mansion/react-native-reanimated#9293 / #9402). Wir halten das Sheet
-  // deshalb einen Frame lang statisch (fester Transform, kein animierter Style),
-  // bis der native View sicher gemountet ist, und lassen erst dann Animationen zu.
+  // Erster Frame statisch wegen eines Reanimated-4.3-Race beim Start (software-mansion/react-native-reanimated#9293).
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setReady(true));
@@ -135,9 +100,7 @@ export default function DraggableListSheet({
     runOnJS(rememberStage)(target);
   };
 
-  // Screenreader (VoiceOver/TalkBack): Der Griff ist als „anpassbar“ gemeldet;
-  // Wischen nach oben/unten schaltet eine Stufe weiter. Läuft auf dem
-  // JS-Thread, deshalb ohne runOnJS direkt zur Stufe springen.
+  // Wischen am Griff schaltet eine Stufe; läuft auf dem JS-Thread, daher ohne runOnJS.
   const onAccessibilityAction = (e: { nativeEvent: { actionName: string } }) => {
     const action = e.nativeEvent.actionName;
     if (action !== "increment" && action !== "decrement") return;
@@ -204,11 +167,7 @@ export default function DraggableListSheet({
   }));
 
   return (
-    // Äußere View: feste Höhe (Vollstufe), geparkt direkt UNTER der sichtbaren
-    // Fläche; translateY schiebt den benötigten Anteil ins Bild. Trägt Schatten,
-    // KEIN overflow:hidden (sonst wird der Schatten weggeclippt).
-    // Vor `ready` fester Transform (kein shared-value-getriebener Style) → umgeht
-    // den Reanimated-Start-Race.
+    // Fest unter der Fläche geparkt, translateY schiebt ins Bild; kein overflow:hidden, sonst fehlt der Schatten.
     <Animated.View
       style={[
         styles.sheetShadow,
@@ -252,12 +211,7 @@ const styles = StyleSheet.create({
     right: 0,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    // Weicher Schatten nach OBEN — setzt das Sheet gegen die Karte ab, ohne als
-    // harte Linie zu lesen (die Rahmenkante ist bewusst entfallen).
-    // Auf Android ist der Schatten eine `elevation`, und die entscheidet dort
-    // auch, wer Touches zuerst bekommt. Der Bereich um das Sheet braucht deshalb
-    // eine eigene Ebene (collapsable={false}, s. app/index.tsx) — sonst fängt
-    // das Sheet verdeckt Wischgesten ab, die Profil oder Filter gelten.
+    // Auf Android entscheidet die elevation auch über Touches, deshalb braucht die Umgebung collapsable={false}.
     ...shadow.sheet,
   },
   sheetInner: {
@@ -265,9 +219,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    // Keine Rahmenlinie: Der warme Sand-Hintergrund setzt das Sheet gegen die
-    // Karte schon deutlich genug ab. Zusammen mit dem Schatten wirkte die
-    // 1.5pt-Kante wie ein dunkler Strich quer über dem Sheet.
+    // Keine Rahmenlinie, mit dem Schatten wirkte sie wie ein Strich.
     overflow: "hidden",
   },
   handleArea: {

@@ -27,8 +27,7 @@ describe("resolveBackPress (Android-Zurücktaste)", () => {
   });
 
   it("ein aus dem Profil geöffneter Termin schließt sich vor dem Profil", () => {
-    // ProfileSheet ruft onClose vor onSelectEvent — sollte das Profil trotzdem
-    // noch offen sein, geht Zurück zuerst an den Termin.
+    // Ist das Profil noch offen, geht Zurück zuerst an den Termin.
     expect(resolveBackPress({ eventOpen: true, filtersOpen: false, profileOpen: true })).toBe(
       "event"
     );

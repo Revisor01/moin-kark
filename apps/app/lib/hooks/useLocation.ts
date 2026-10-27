@@ -19,9 +19,7 @@ const toLatLng = (pos: Location.LocationObject): LatLng => ({
   lng: pos.coords.longitude,
 });
 
-// Dünne React-Hülle um den Controller (s. lib/locationController.ts): Die
-// Ablauflogik lebt dort und ist ohne Gerät testbar; hier werden nur die echten
-// expo-location-Aufrufe hereingereicht und der Zustand in React gespiegelt.
+// Hülle um lib/locationController.ts, das ohne Gerät testbar ist.
 export function useLocation() {
   const [state, setState] = useState<LocationState>({ location: null, status: "idle" });
   const controllerRef = useRef<LocationController | null>(null);
@@ -35,8 +33,7 @@ export function useLocation() {
         return pos ? toLatLng(pos) : null;
       },
       getCurrent: async (options) => {
-        // `timeout` kennt LocationOptions nicht; im Web wird es aber an
-        // navigator.geolocation durchgereicht, nativ ignoriert. Daher der Cast.
+        // `timeout` fehlt in LocationOptions, wirkt aber im Web.
         const pos = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
           ...options,

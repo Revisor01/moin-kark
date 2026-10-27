@@ -36,9 +36,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# Native Projekte sind versioniert (Release-Signing in android/app/build.gradle,
-# Store-Builds per GitHub Actions). Ignoriert wird nur, was Gradle, CocoaPods
-# und Xcode selbst erzeugen.
+# Native Projekte sind versioniert; ignoriert wird nur, was Gradle, CocoaPods und Xcode erzeugen.
 android/.gradle/
 android/build/
 android/app/build/
@@ -49,6 +47,5 @@ ios/build/
 ios/Pods/
 ios/.xcode.env.local
 xcuserdata/
-# Package.resolved bleibt im Repo: Xcode Cloud loest Swift-Pakete nicht selbst
-# auf. Nur die lokale Paketkonfiguration gehoert nicht hinein.
+# Package.resolved bleibt im Repo, weil Xcode Cloud Swift-Pakete nicht selbst auflöst.
 ios/MoinKark.xcworkspace/xcshareddata/swiftpm/configuration/

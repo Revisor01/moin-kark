@@ -4,9 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-// Wächter für .github/dependabot.yml: Was das Expo-SDK festlegt, darf
-// Dependabot nicht über das SDK hinaus heben. Kommt ein SDK-Paket in die App,
-// für das keine Regel greift, schlägt das hier an — nicht erst der Store-Build.
+// Was das Expo-SDK festlegt, darf Dependabot nicht heben.
 
 const path = (rel: string) => fileURLToPath(new URL(`../../../${rel}`, import.meta.url));
 const read = (rel: string) => readFileSync(path(rel), "utf8");
@@ -33,8 +31,7 @@ const matches = (pattern: string, name: string) =>
       .join(".*")}$`
   ).test(name);
 
-// Welche Update-Arten Dependabot für ein Paket auslässt. Regeln mit `versions`
-// zählen nicht — sie sperren nur einzelne Fassungen.
+// Regeln mit `versions` sperren nur einzelne Fassungen und zählen nicht.
 function ignored(name: string): string[] {
   const types = new Set<string>();
   for (const rule of npm.ignore ?? []) {

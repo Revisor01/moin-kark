@@ -1,5 +1,4 @@
-// Geteilte GeoJSON-Typen: vom Proxy erzeugt, von der App gerendert.
-// Single Source of Truth — verhindert Drift zwischen Backend und Frontend.
+// Geteilte GeoJSON-Typen von API und App.
 
 export interface EventCategory {
   id: number;
@@ -15,10 +14,7 @@ export interface EventImage {
   copyright?: string;
 }
 
-/**
- * „event" = Koordinate aus ChurchDesk, „fallback" = aus der Gemeinde-/Org-Tabelle,
- * „fix" = manuell korrigiert (ChurchDesk hatte den Ort falsch geokodiert).
- */
+/** Herkunft der Koordinate: ChurchDesk, Gemeinde-/Org-Tabelle oder Korrektur. */
 export type CoordSource = "event" | "fallback" | "fix";
 
 /** Properties eines Event-Features. Felder kommen voll aus der ChurchDesk-API. */
@@ -40,11 +36,7 @@ export interface EventProps {
   contributor?: string;
   /** Kirchengemeinde (parishes[0].title) — Anzeige-Kurzform und Abwärtskompatibilität. */
   parish?: string;
-  /**
-   * ALLE zugeordneten Kirchengemeinden, wenn das Event in ChurchDesk mehreren
-   * Gemeinden gehört (z.B. Kirchspiel-weite Termine wie die Sommerkirche).
-   * Nur gesetzt bei Mehrfachzuordnung; sonst gilt `parish` allein.
-   */
+  /** Alle Gemeinden bei Mehrfachzuordnung, sonst nicht gesetzt. */
   parishes?: string[];
   /** Abgeleitetes Kirchspiel (aus orgId-Mapping). */
   kirchspiel: string;
@@ -83,11 +75,7 @@ export interface EventFeatureCollection {
     from: string;
     /** Zeitpunkt am letzten Tag des Fensters (s. windowTo). */
     to: string;
-    /**
-     * Erster Kalendertag des Abfragefensters in Europe/Berlin (YYYY-MM-DD).
-     * Termine ab 00:00 Berliner Zeit dieses Tages sind enthalten.
-     * Optional, weil ältere zwischengespeicherte Feeds das Feld nicht tragen.
-     */
+    /** Erster Berliner Kalendertag des Fensters; optional, weil ältere Feeds ihn nicht tragen. */
     windowFrom?: string;
     /** Letzter Kalendertag des Abfragefensters in Europe/Berlin (YYYY-MM-DD). */
     windowTo?: string;
@@ -96,13 +84,7 @@ export interface EventFeatureCollection {
     withFallbackCoords: number;
     orgsOk: number;
     orgsFailed: number;
-    /**
-     * ChurchDesk-Organisations-IDs (= `orgId` der Features), die beim letzten
-     * Refresh nicht geantwortet haben. Deren Termine fehlen im Feed, ohne
-     * abgesagt zu sein — die App darf gemerkte Termine dieser Orgs NICHT als
-     * entfallen behandeln. Leer, wenn alle geantwortet haben.
-     * Optional, weil ältere zwischengespeicherte Feeds das Feld nicht tragen.
-     */
+    /** Orgs ohne Antwort beim letzten Refresh, deren Termine nicht als entfallen gelten; optional für ältere Feeds. */
     orgsFailedIds?: number[];
     /** Organisationen mit gesetztem Token (= abgefragt: orgsOk + orgsFailed). */
     orgsConfigured?: number;
@@ -111,12 +93,7 @@ export interface EventFeatureCollection {
   };
 }
 
-/**
- * Eintrag in `/categories.json`: eine Kategorie über alle Orgs, dedupliziert nach
- * normalisiertem Titel, mit Häufigkeit fürs Sortieren der Filter-Chips.
- * Vertrag zwischen API (extractCategories) und App (fetchCategories) — die
- * Antwort ist ein Array dieser Einträge (s. docs/openapi.yaml, Schema Category).
- */
+/** Eintrag in `/categories.json`, die Antwort ist ein Array davon. */
 export interface FeedCategory {
   /** Anzeigetitel — die erste gesehene Schreibweise. */
   title: string;
@@ -126,13 +103,7 @@ export interface FeedCategory {
   count: number;
 }
 
-/**
- * Einheitliche Schlüssel-Normalisierung für Orts-, Gemeinde- und Titel-Vergleiche.
- *
- * Bewusst an EINER Stelle: An dieser Funktion hängen die statischen Tabellen
- * (kirchspiele.ts, kirchen-coords.ts) UND die über /admin gepflegten Korrekturen
- * in der API. Driftet eine Kopie, greifen gepflegte Korrekturen still nicht mehr.
- */
+/** Die eine Schlüssel-Normalisierung für Tabellen und /admin-Korrekturen. */
 export function normalizeKey(s: string): string {
   return s.trim().replace(/\s+/g, " ").toLowerCase();
 }

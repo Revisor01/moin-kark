@@ -1,13 +1,6 @@
-// Gemeinsame Fakes und ein minimaler Hook-Harness für die App-Tests.
-//
-// Die Module `store.ts`, `reminders.ts` und `savedSync.ts` hängen an AsyncStorage
-// und expo-notifications. Beides wird hier durch In-Memory-Fakes ersetzt, die
-// jede Testdatei per `vi.mock(..., async () => (await import("./helpers")).…)`
-// einhängt. Weil derselbe Modul-Instanz auch im Test importiert wird, lassen
-// sich die Aufrufe direkt prüfen.
+// In-Memory-Fakes für AsyncStorage und expo-notifications und ein Hook-Harness.
 import React, { act, useState } from "react";
-// @ts-ignore — @types/react-dom ist in der App nicht installiert; react-dom
-// selbst liegt im Root-node_modules und reicht als Renderer für Hook-Tests.
+// @ts-ignore — @types/react-dom fehlt in der App, react-dom selbst liegt im Root.
 import { createRoot } from "react-dom/client";
 import { vi } from "vitest";
 import type { EventFeature } from "@moinkark/shared";

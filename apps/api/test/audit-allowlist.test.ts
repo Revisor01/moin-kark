@@ -6,9 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-// Wächter für das Audit in der CI (.github/scripts/audit.mjs): Ein Eintrag in
-// der Allowlist lässt genau eine Meldung zu — nicht ein Paket, nicht eine
-// Schwelle — und nur, solange sein Grund besteht.
+// Ein Allowlist-Eintrag lässt genau eine Meldung zu, nur solange sein Grund besteht.
 
 const path = (rel: string) => fileURLToPath(new URL(`../../../${rel}`, import.meta.url));
 const script = path(".github/scripts/audit.mjs");
@@ -70,10 +68,7 @@ const reportOf = (vulnerabilities: Record<string, Vuln>) => ({
   metadata: {},
 });
 
-// Auszug aus dem echten Bericht vom 02.10.2026: node-forge (high) kommt über
-// das Expo-Kommandozeilenwerkzeug, decode-uri-component (moderate) über
-// expo-router. Die übrigen Einträge sind nur Weitergabe — samt des
-// fixAvailable: true, das npm dort meldet, obwohl es keinen Fix gibt.
+// Auszug aus dem echten Bericht vom 02.10.2026; fixAvailable: true meldet npm dort ohne echten Fix.
 function today(): Record<string, Vuln> {
   return {
     "node-forge": vuln("node-forge", "high", [advisory("node-forge", FORGE, "high")], {
