@@ -41,6 +41,12 @@ describe("Xcode-Cloud-Skript", () => {
     expect([...stellen].sort((a, b) => a - b)).toEqual(stellen);
   });
 
+  // Ab SDK 57 raeumt `expo prebuild` ohne --no-clean ios/ ab und erzeugt es
+  // neu; dann waeren SceneDelegate, Signier-Zeilen und Package.resolved weg.
+  it("ruft prebuild mit --no-clean auf", () => {
+    expect(text).toContain("npx expo prebuild --platform ios --no-install --no-clean");
+  });
+
   // Xcode Cloud schaltet die automatische Paketaufloesung ab (Build 88,
   // 27.10.2026: „a resolved file is required"); die Datei muss im Repo liegen.
   it("Package.resolved liegt im Repo und nennt die MapLibre-Version des Projekts", () => {

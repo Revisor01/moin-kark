@@ -35,7 +35,9 @@
       </intent-filter>
       <intent-filter android:autoVerify="true" data-generated="true">
         <action android:name="android.intent.action.VIEW"/>
+        <data android:scheme="https" android:host="moin-kark.de" android:pathPrefix="/event/"/>
         <data android:scheme="https" android:host="karte.moin-kark.de"/>
+        <data android:scheme="https" android:host="api.moin-kark.de" android:pathPrefix="/event/"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
