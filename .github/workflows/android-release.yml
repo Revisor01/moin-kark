@@ -86,12 +86,12 @@ jobs:
 
       - name: Natives Projekt aus app.json aktualisieren
         working-directory: apps/app
-        # Ohne --clean: Das versionierte android/ bleibt stehen (dort liegt das
-        # Release-Signing), prebuild trägt nur Version, versionCode und
-        # Plugin-Änderungen nach. --no-install, weil npm ci schon lief.
+        # --no-clean (ab SDK 57 nötig): Das versionierte android/ mit dem
+        # Release-Signing bleibt stehen, prebuild trägt nur Version, versionCode
+        # und Plugin-Änderungen nach. --no-install, weil npm ci schon lief.
         env:
           CI: 1
-        run: npx expo prebuild --platform android --no-install
+        run: npx expo prebuild --platform android --no-install --no-clean
 
       - name: Signing und Version im Gradle-Projekt prüfen
         working-directory: apps/app

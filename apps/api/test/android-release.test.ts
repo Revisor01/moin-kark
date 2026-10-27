@@ -37,6 +37,13 @@ describe("Android-Release", () => {
     expect(upload.secrets).toEqual({ dienstkonto: "${{ secrets.GPLAY_SA_JSON_BASE64 }}" });
   });
 
+  // Ab SDK 57 ist --clean die Vorgabe von prebuild: android/ samt
+  // Release-Signing würde neu erzeugt.
+  it("aktualisiert das native Projekt ohne es neu zu erzeugen", () => {
+    const schritt = build.steps.find((s: any) => s.name === "Natives Projekt aus app.json aktualisieren");
+    expect(schritt.run).toBe("npx expo prebuild --platform android --no-install --no-clean");
+  });
+
   it("der Schlüssel des Dienstkontos steht nicht im Bau-Job", () => {
     expect(JSON.stringify(build)).not.toContain("GPLAY_SA_JSON_BASE64");
     expect(existsSync(pfad(".github/scripts/upload-play.py"))).toBe(false);
