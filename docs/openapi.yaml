@@ -10,12 +10,9 @@ info:
     Die Schnittstelle ist ausschließlich lesend. Die ChurchDesk-Zugänge bleiben
     server-seitig; Clients kennen nur diese Adresse.
 
-    **Die Antwortformen sind ein Vertrag.** Auf den Geräten laufen App-Versionen
-    aus dem Store, die sich nicht mitdeployen lassen — sie lesen genau die hier
-    beschriebenen Felder. Aus einem Array wird deshalb kein Objekt, Felder
-    verschwinden nicht, Typen ändern sich nicht. Neue Felder dürfen hinzukommen.
-    Wer eine Form ändern muss, legt eine neue, versionierte Route an und lässt
-    die alte stehen, bis keine App sie mehr ruft.
+    **Die Antwortformen sind ein Vertrag.** Aus einem Array wird kein Objekt,
+    Felder verschwinden nicht, Typen ändern sich nicht; neue Felder dürfen
+    hinzukommen. Eine geänderte Form bekommt eine neue, versionierte Route.
 
     Das Zeitfenster ist server-seitig festgelegt (ab heute, Standard 60 Tage) und
     lässt sich nicht per Anfrage steuern. Es beginnt am **Berliner** Kalendertag,
@@ -45,9 +42,7 @@ paths:
         läuft — unabhängig vom Datenstand. Für „ist da überhaupt etwas?";
         den Zustand der Daten meldet `/healthz`.
 
-        `revision` nennt den Commit, aus dem das laufende Image gebaut wurde
-        (seit 01.10.2026). Der Deploy-Workflow wartet darauf, bevor er einen
-        Deploy als gelungen meldet.
+        `revision` nennt den Commit, aus dem das laufende Image gebaut wurde.
       operationId: getRoot
       responses:
         "200":
@@ -198,18 +193,10 @@ paths:
       tags: [Feed]
       summary: Weiche in den passenden App-Store
       description: |
-        Ziel des QR-Codes auf Plakaten und Flyern. Ein QR-Code ist statischer
-        Text und kann nichts entscheiden — die Weiche sitzt deshalb hier:
-        Android-Geräte werden zu Google Play geleitet, iPhone/iPad in den App
+        Ziel des QR-Codes auf Plakaten und Flyern. Anhand des `User-Agent`
+        werden Android-Geräte zu Google Play geleitet, iPhone/iPad in den App
         Store, alles andere auf `https://moin-kark.de/` (dort stehen beide
-        Knöpfe).
-
-        Die Erkennung liest den `User-Agent`. Reihenfolge der Prüfung ist
-        wichtig: Android-Kennungen tragen ebenfalls „AppleWebKit", und „Mac OS
-        X" steht auch im User-Agent eines iPhones („like Mac OS X").
-
-        Antwortet mit `302`, nicht `301`: Die Zuordnung darf sich ändern, ein
-        dauerhaft gecachter Redirect ließe sich nicht zurückholen.
+        Knöpfe). Antwortet mit `302`, nicht `301`.
       responses:
         "302":
           description: Weiterleitung zum passenden Store bzw. zur Startseite.
@@ -229,16 +216,9 @@ paths:
         (Titel, Zeit und Ort, Bild) und leitet Aufrufende per JavaScript
         (`location.replace`) weiter auf `https://karte.moin-kark.de/?event={id}`.
 
-        Hintergrund: Die Web-Karte ist eine Single-Page-App und liefert Crawlern
-        nur ein leeres Grundgerüst — ein in WhatsApp oder Signal geteilter Link
-        erschien deshalb ohne Bild und Text. Diese Route wird von der
-        Teilen-Funktion der App verlinkt; Menschen sehen die Zwischenseite nicht.
-
-        Die Weiterleitung läuft bewusst über ein Skript statt über
-        `meta refresh`: Apples Vorschau-Dienst folgt einem Refresh wie ein
-        Browser und landet auf der Karte ohne OpenGraph-Angaben — in iMessage
-        blieb die Vorschau dadurch leer (behoben 24.09.2026). Vorschau-Dienste
-        führen kein JavaScript aus, Browser schon.
+        Diese Route verlinkt die Teilen-Funktion der App; Menschen sehen die
+        Zwischenseite nicht. Die Weiterleitung läuft über ein Skript, nicht über
+        `meta refresh`.
 
         Antwort ist **HTML**, nicht JSON.
       operationId: getEventPreview
