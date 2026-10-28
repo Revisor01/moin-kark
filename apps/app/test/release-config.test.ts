@@ -212,9 +212,10 @@ describe("Mitteilungs-Symbol auf Android", () => {
   });
 });
 
-// Ab dem iOS-27-SDK ist der UIScene-Lifecycle Pflicht; prebuild --clean entfernt den SceneDelegate.
+// Ab dem iOS-27-SDK ist der UIScene-Lifecycle Pflicht.
 describe("iOS: UIScene-Lifecycle", () => {
   const appDelegate = read("ios/MoinKark/AppDelegate.swift");
+  const sceneDelegate = read("ios/MoinKark/SceneDelegate.swift");
   const scene = (appJson.expo.ios as any).infoPlist?.UIApplicationSceneManifest;
 
   it("meldet in der Info.plist den SceneDelegate an", () => {
@@ -236,19 +237,17 @@ describe("iOS: UIScene-Lifecycle", () => {
     });
   });
 
-  it("startet React im SceneDelegate, nicht im AppDelegate", () => {
-    expect(appDelegate).toMatch(/^class SceneDelegate: UIResponder, UIWindowSceneDelegate \{$/m);
-    expect(appDelegate).toContain("UIWindow(windowScene: windowScene)");
+  it("startet React über Expos SceneDelegate, nicht im AppDelegate", () => {
+    expect(sceneDelegate).toMatch(/^class SceneDelegate: ExpoAppSceneDelegate \{$/m);
+    expect(appDelegate).toContain("class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider {");
     // Ein zweites Fenster im AppDelegate liefe am Scene-Lifecycle vorbei.
     expect(appDelegate).not.toContain("UIWindow(frame: UIScreen.main.bounds)");
-    expect(appDelegate.match(/startReactNative\(/g)?.length).toBe(1);
+    expect(appDelegate).not.toContain("startReactNative(");
   });
 
-  it("reicht Links an den AppDelegate weiter — auch beim Kaltstart", () => {
-    expect(appDelegate).toContain("openURLContexts");
-    expect(appDelegate).toContain("func scene(_ scene: UIScene, continue userActivity: NSUserActivity)");
-    expect(appDelegate).toContain("connectionOptions.urlContexts.first?.url");
-    expect(appDelegate).toContain('"UIApplicationLaunchOptionsURLKey"');
+  it("überlässt Links und Kaltstart der Expo-Basisklasse", () => {
+    // ExpoAppSceneDelegate baut die launchOptions für getInitialURL und reicht URLs und Universal Links weiter.
+    expect(sceneDelegate).not.toMatch(/func scene\(/);
   });
 });
 
