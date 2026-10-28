@@ -110,7 +110,8 @@
         {
           "locationWhenInUsePermission": "Zeigt Veranstaltungen in deiner Nähe und deinen Standort auf der Karte.",
           "locationAlwaysAndWhenInUsePermission": false,
-          "locationAlwaysPermission": false
+          "locationAlwaysPermission": false,
+          "locationFullAccuracyPermission": false
         }
       ],
       "@react-native-community/datetimepicker",

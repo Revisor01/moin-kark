@@ -9,7 +9,8 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
+// LegacyScrollView, weil nur sie als Ref für simultaneousWithExternalGesture taugt.
+import { Gesture, GestureDetector, LegacyScrollView as ScrollView } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
   useAnimatedStyle,

@@ -104,3 +104,11 @@ regexes = ['''^~/Library/$''']
 description = "Produkt-Domain"
 regexTarget = "match"
 regexes = ['''(?i)^(?:t|kkkarte)\.godsapp\.de$''']
+
+[[allowlists]]
+description = "SPEC CHECKSUMS im Podfile.lock: SHA-1 der Podspecs, Namen wie React-cxxstableapi"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)ios/Podfile\.lock$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{40}$''']
