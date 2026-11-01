@@ -26,7 +26,7 @@ permissions:
 jobs:
   tracks-pruefen:
     # Tracks und Neuigkeiten vor dem Bau prüfen, nicht erst nach 40 Minuten.
-    uses: Revisor01/workflows/.github/workflows/play-upload.yml@59236255da497972cdac8407c9af45d994ad0fcb # 1.4.1
+    uses: Revisor01/workflows/.github/workflows/play-upload.yml@3ec878449b89e1a69714b87381cb8effd7075fef # 1.5.1
     with:
       paket: de.godsapp.moinkark
       tracks: ${{ inputs.tracks }}
@@ -152,7 +152,7 @@ jobs:
   upload:
     # Eigener Job, damit der Dienstkonto-Schlüssel nicht neben npm und Gradle liegt.
     needs: [build]
-    uses: Revisor01/workflows/.github/workflows/play-upload.yml@59236255da497972cdac8407c9af45d994ad0fcb # 1.4.1
+    uses: Revisor01/workflows/.github/workflows/play-upload.yml@3ec878449b89e1a69714b87381cb8effd7075fef # 1.5.1
     with:
       paket: de.godsapp.moinkark
       tracks: ${{ inputs.tracks }}
