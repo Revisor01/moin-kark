@@ -10,7 +10,8 @@ export const DITHMARSCHEN = {
   center: [9.0, 54.13] as [number, number], // [lng, lat]
   zoom: 9.4,
   /** Grenzen als [west, south, east, north], wie MapLibre auf beiden Plattformen sie erwartet. */
-  bounds: [8.3, 53.8, 9.6, 54.5] as [number, number, number, number],
+  // West bei 7.7, damit Helgoland erreichbar ist.
+  bounds: [7.7, 53.8, 9.6, 54.5] as [number, number, number, number],
 };
 
 // Vollständiger Style als Objekt (statt URL) → volle Farbkontrolle.
