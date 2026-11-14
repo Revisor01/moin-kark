@@ -4,7 +4,7 @@
     "slug": "kkdith-karte",
     "owner": "r3visor",
     "scheme": "kkdith",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -47,7 +47,7 @@
     },
     "android": {
       "package": "de.godsapp.moinkark",
-      "versionCode": 24,
+      "versionCode": 25,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"

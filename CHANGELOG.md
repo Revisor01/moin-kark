@@ -7,6 +7,8 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-29
+
 ### Geändert
 - Neue Lizenz: GNU AGPL v3.0 statt der Lizenz „quelloffen zur Einsicht“: Betreiben ist jetzt ohne Vereinbarung erlaubt, solange Änderungen offengelegt werden.
 
@@ -467,5 +469,6 @@ enthält alles, was seit Projektbeginn entstanden ist.
   haben dafür eine einzige Quelle, und ein Test wacht darüber, dass ein
   Android-Release nie mit dem Entwicklungsschlüssel signiert wird.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/Revisor01/moin-kark/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/Revisor01/moin-kark/releases/tag/1.0.0
