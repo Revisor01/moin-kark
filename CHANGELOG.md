@@ -12,6 +12,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ### Behoben
 - iPhone: Die App meldet sich jetzt als deutschsprachig; Datumsauswahl und Systemknöpfe erscheinen auf Deutsch, der App Store nennt Deutsch als Sprache.
+- Helgoland liegt jetzt auf der Karte: Die Insel ist erreichbar und nicht mehr ausgegraut, ihre Termine erscheinen auf der Karte und in der Liste.
 
 ### Sonstiges
 
