@@ -1,3 +1,2 @@
 Neu in 1.0.1:
 – Helgoland ist dabei: Die Insel liegt jetzt auf der Karte, ihre Gottesdienste und Veranstaltungen erscheinen auf der Karte und in der Liste.
-– Auf dem iPhone erscheinen Datumsauswahl und Systemknöpfe auf Deutsch.
