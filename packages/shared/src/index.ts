@@ -4,3 +4,4 @@ export * from "./kirchspiele";
 export * from "./kirchen-coords";
 export * from "./kategorien";
 export * from "./theme";
+export * from "./anzeige";

@@ -3,6 +3,8 @@
 export interface EventCategory {
   id: number;
   title: string;
+  /** Titel für die Anzeige ohne Klammerzusätze; nur gesetzt, wenn er vom Titel abweicht. */
+  titleShort?: string;
   /** ChurchDesk-Farbindex (0..n) — wird im UI auf eine Palette gemappt. */
   color: number;
 }
@@ -22,6 +24,8 @@ export interface EventProps {
   /** event.id — global eindeutig, Dedup-Key. */
   id: number;
   title: string;
+  /** Titel für die Anzeige ohne Klammerzusätze; nur gesetzt, wenn er vom Titel abweicht. */
+  titleShort?: string;
   /** Roh-UTC aus der API ("…Z"). Anzeige clientseitig in Europe/Berlin. */
   startUtc: string;
   endUtc: string;
@@ -38,6 +42,10 @@ export interface EventProps {
   parish?: string;
   /** Alle Gemeinden bei Mehrfachzuordnung, sonst nicht gesetzt. */
   parishes?: string[];
+  /** Gemeindename für die Anzeige („Heide“ statt „KG Heide“); nur gesetzt, wenn er von `parish` abweicht. */
+  parishLabel?: string;
+  /** Anzeige-Namen zu `parishes`, gleiche Reihenfolge; nur gesetzt, wenn einer abweicht. */
+  parishLabels?: string[];
   /** Abgeleitetes Kirchspiel (aus orgId-Mapping). */
   kirchspiel: string;
   /** ChurchDesk-Organisation, aus der das Event stammt. */

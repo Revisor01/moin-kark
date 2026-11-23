@@ -366,3 +366,37 @@ describe("Kategorien im Event", () => {
     expect(f?.properties.categories[0].title).toBe("Sela-Yoga");
   });
 });
+
+describe("toFeature — Anzeige-Namen (neue Felder, alte bleiben)", () => {
+  it("setzt titleShort und parishLabel, title und parish bleiben roh", () => {
+    const f = toFeature(
+      cdEvent({
+        title: "Musikunterricht für Kinder (Blockflöte oder Klavier)",
+        parishes: [{ id: 1, title: "KG  Nordhastedt" }],
+      }),
+      6572
+    );
+    expect(f.properties.title).toBe("Musikunterricht für Kinder (Blockflöte oder Klavier)");
+    expect(f.properties.titleShort).toBe("Musikunterricht für Kinder");
+    expect(f.properties.parish).toBe("KG  Nordhastedt");
+    expect(f.properties.parishLabel).toBe("Nordhastedt");
+    expect(f.properties.kirchspiel).toBe("Heide und Umgebung");
+  });
+
+  it("lässt die Felder weg, wenn nichts abweicht", () => {
+    const f = toFeature(cdEvent({ parishes: [{ id: 1, title: "Hennstedt" }] }), 2725);
+    expect(f.properties.titleShort).toBeUndefined();
+    expect(f.properties.parishLabel).toBeUndefined();
+    expect(f.properties.parishLabels).toBeUndefined();
+  });
+
+  it("liefert parishLabels nur bei mehreren Gemeinden mit Abweichung", () => {
+    const f = toFeature(
+      cdEvent({ parishes: [{ id: 1, title: "KG Heide" }, { id: 2, title: "Kirche Wesseln" }] }),
+      6572
+    );
+    expect(f.properties.parishes).toEqual(["KG Heide", "Kirche Wesseln"]);
+    expect(f.properties.parishLabels).toEqual(["Heide", "Wesseln"]);
+    expect(f.properties.parishLabel).toBe("Heide");
+  });
+});

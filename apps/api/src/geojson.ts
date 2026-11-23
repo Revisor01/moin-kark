@@ -7,7 +7,9 @@ import {
   fallbackCoords,
   kanonischeKategorie,
   orgName,
+  parishLabel,
   resolveKirchspiel,
+  titleShort,
   type EventFeature,
   type EventImage,
 } from "@moinkark/shared";
@@ -69,6 +71,9 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
     .map((p) => p.title)
     .filter((t): t is string => !!t);
   const parish = allParishes[0];
+  // Anzeige-Namen nur bei Abweichung, damit der Feed nicht unnötig wächst.
+  const labels = allParishes.map(parishLabel);
+  const shortTitle = titleShort(event.title);
   const lo = event.locationObj;
   // 0/0 liefert ChurchDesk für nicht geokodierte Orte.
   const hasCoords =
@@ -113,6 +118,7 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
     properties: {
       id: event.id,
       title: event.title,
+      titleShort: shortTitle !== event.title ? shortTitle : undefined,
       startUtc: utcIso(event.startDate),
       endUtc: utcIso(event.endDate),
       allDay: !!event.allDay,
@@ -129,6 +135,9 @@ export function toFeature(event: CdEvent, orgId: number): EventFeature {
       contributor: event.contributor || undefined,
       parish,
       parishes: allParishes.length > 1 ? allParishes : undefined,
+      parishLabel: parish && labels[0] !== parish ? labels[0] : undefined,
+      parishLabels:
+        allParishes.length > 1 && labels.some((l, i) => l !== allParishes[i]) ? labels : undefined,
       kirchspiel: resolveKirchspiel(parish, orgId),
       orgId,
       orgName: orgName(orgId),

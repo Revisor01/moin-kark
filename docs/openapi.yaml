@@ -29,6 +29,8 @@ servers:
 tags:
   - name: Feed
     description: Die Termindaten, die die App liest.
+  - name: Kalender
+    description: Termine als Kalenderdatei und Kalender-Abo.
   - name: Betrieb
     description: Zustand der Schnittstelle.
 
@@ -245,6 +247,85 @@ paths:
         "500":
           $ref: "#/components/responses/FeedUnavailable"
 
+  /event/{id}.ics:
+    get:
+      tags: [Kalender]
+      summary: Ein Termin als Kalenderdatei
+      description: |
+        Kalenderdatei nach RFC 5545 mit einem VEVENT: Zeiten in Europe/Berlin
+        (mit VTIMEZONE), UID `{id}@moin-kark.de` (stabil, ein erneuter Import
+        ersetzt den Termin statt ihn zu verdoppeln), Ort, Koordinate,
+        Beschreibung mit Link zum Termin. Zeilen sind nach 75 Oktetten gefaltet.
+
+        Auf Geräten mit der App fangen App-Links alles unter `/event/` ab; Knöpfe
+        in App und Web-Karte verlinken deshalb `/calendar/{id}.ics`. Seit 23.11.2026.
+      operationId: getEventIcs
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          $ref: "#/components/responses/Calendar"
+        "404":
+          description: Kein Termin mit dieser ID im aktuellen Feed.
+        "500":
+          $ref: "#/components/responses/FeedUnavailable"
+
+  /calendar/{id}.ics:
+    get:
+      tags: [Kalender]
+      summary: Ein Termin als Kalenderdatei (Linkziel für Knöpfe)
+      description: |
+        Dieselbe Datei wie `/event/{id}.ics`, aber außerhalb von `/event/`, das
+        die App-Links von iOS und Android beanspruchen. Seit 23.11.2026.
+      operationId: getCalendarEventIcs
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          $ref: "#/components/responses/Calendar"
+        "404":
+          description: Kein Termin mit dieser ID im aktuellen Feed.
+        "500":
+          $ref: "#/components/responses/FeedUnavailable"
+
+  /calendar.ics:
+    get:
+      tags: [Kalender]
+      summary: Kalender-Abo
+      description: |
+        Alle Termine des Zeitfensters als abonnierbarer Kalender (RFC 5545,
+        `webcal://` oder https). Filter sind optional und kombinierbar; mehrere
+        Werte eines Filters durch Komma getrennt, Groß-/Kleinschreibung egal.
+        Kalenderprogramme fragen stündlich nach (`REFRESH-INTERVAL`). Seit 23.11.2026.
+      operationId: getCalendarIcs
+      parameters:
+        - name: parish
+          in: query
+          required: false
+          description: Kirchengemeinde, roh (`KG Heide`) oder als Anzeige-Name (`Heide`).
+          schema:
+            type: string
+          example: Heide,Wesseln
+        - name: category
+          in: query
+          required: false
+          description: Kategorie wie in `/categories.json`.
+          schema:
+            type: string
+          example: Kirchenmusik
+        - name: kirchspiel
+          in: query
+          required: false
+          description: Kirchspiel wie im Feld `kirchspiel`.
+          schema:
+            type: string
+          example: West
+      responses:
+        "200":
+          $ref: "#/components/responses/Calendar"
+        "500":
+          $ref: "#/components/responses/FeedUnavailable"
+
   /healthz:
     get:
       tags: [Betrieb]
@@ -308,6 +389,15 @@ components:
       schema:
         type: string
         examples: ['W/"3f1c9a2b7d4e5061"']
+    EventId:
+      name: id
+      in: path
+      required: true
+      description: ID des Termins (positive Ganzzahl), gefolgt von `.ics` im Pfad.
+      schema:
+        type: integer
+        minimum: 1
+      example: 4711
 
   headers:
     ETag:
@@ -324,6 +414,25 @@ components:
         const: "public, max-age=60"
 
   responses:
+    Calendar:
+      description: Kalenderdatei nach RFC 5545, Zeilenenden CRLF.
+      content:
+        text/calendar:
+          schema:
+            type: string
+          example: |
+            BEGIN:VCALENDAR
+            VERSION:2.0
+            PRODID:-//Moin Kark//Termine Kirchenkreis Dithmarschen//DE
+            …
+            BEGIN:VEVENT
+            UID:4711@moin-kark.de
+            DTSTART;TZID=Europe/Berlin:20261224T160000
+            DTEND;TZID=Europe/Berlin:20261224T170000
+            SUMMARY:Christvesper
+            …
+            END:VEVENT
+            END:VCALENDAR
     NotModified:
       description: Der Stand ist unverändert; die Antwort hat keinen Inhalt.
       headers:
@@ -414,6 +523,15 @@ components:
           description: ChurchDesk-Event-ID, eindeutig über alle Organisationen.
         title:
           type: string
+          description: Titel, wie die Gemeinde ihn in ChurchDesk eingetragen hat.
+        titleShort:
+          type: string
+          description: |
+            Titel für die Anzeige: ohne Klammerzusätze, „(Kopie)“ und angehängte
+            Leitung, Leerzeichen und GROSS geschriebene Abschnitte bereinigt. Nur
+            gesetzt, wenn er von `title` abweicht; Clients zeigen
+            `titleShort ?? title`. Seit 23.11.2026.
+          examples: ["Musikunterricht für Kinder"]
         startUtc:
           type: string
           format: date-time
@@ -465,6 +583,22 @@ components:
           items:
             type: string
           examples: [["Hennstedt", "Weddingstedt", "Hemme"]]
+        parishLabel:
+          type: string
+          description: |
+            Gemeindename für die Anzeige, ohne Vorsätze wie „KG“ oder „Kirche“.
+            Nur gesetzt, wenn er von `parish` abweicht; Clients zeigen
+            `parishLabel ?? parish`. `parish` bleibt unverändert, weil Filter und
+            ausgelieferte Apps ihn lesen. Seit 23.11.2026.
+          examples: ["Heide"]
+        parishLabels:
+          type: array
+          description: |
+            Anzeige-Namen zu `parishes`, gleiche Reihenfolge. Nur gesetzt, wenn
+            `parishes` gesetzt ist und mindestens ein Name abweicht. Seit 23.11.2026.
+          items:
+            type: string
+          examples: [["Heide", "Wesseln"]]
         kirchspiel:
           type: string
           description: |
