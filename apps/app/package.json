@@ -11,7 +11,7 @@
     "@moinkark/shared": "*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",
-    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-query": "^5.108.2",
     "@vis.gl/react-maplibre": "^8.1.1",
     "expo": "~58.0.26",
     "expo-constants": "~58.0.13",
@@ -23,7 +23,7 @@
     "expo-splash-screen": "~58.0.14",
     "expo-status-bar": "~58.0.4",
     "expo-store-review": "~58.0.3",
-    "maplibre-gl": "^6.18.0",
+    "maplibre-gl": "^6.19.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "scripts": {
     "start": "expo start",
