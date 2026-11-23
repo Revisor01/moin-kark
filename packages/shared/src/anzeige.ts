@@ -69,3 +69,8 @@ export function titleShort(title: string): string {
   while (s.length > 0 && " ,;:–-".includes(s[s.length - 1])) s = s.slice(0, -1);
   return s.length >= 3 ? s : tidy(title);
 }
+
+/** Titel für Liste und Blatt: Kurztitel, sonst der Titel älterer Feeds. */
+export function displayTitle(p: { title: string; titleShort?: string }): string {
+  return p.titleShort ?? p.title;
+}

@@ -192,6 +192,11 @@ export default function DraggableListSheet({
               max: SHEET_STAGES.length,
               now: SHEET_STAGES.indexOf(stage) + 1,
             }}
+            // Im Browser liest der Screenreader nur die aria-Werte des Schiebereglers.
+            aria-valuemin={1}
+            aria-valuemax={SHEET_STAGES.length}
+            aria-valuenow={SHEET_STAGES.indexOf(stage) + 1}
+            aria-valuetext={sheetStageLabel(stage)}
             accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
             onAccessibilityAction={onAccessibilityAction}
           >

@@ -5,14 +5,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { parishLabel } from "@moinkark/shared";
 import type { DateFilter } from "../lib/filters";
-import { colorForCategory, colors, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
+import { colorForCategory, colors, glyph, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
 
 /** `YYYY-MM-DD` in Berliner Zeit — dieselbe Form, die der Filter erwartet. */
 function alsTag(d: Date): string {
@@ -64,6 +66,8 @@ interface Props {
   onCategory: (c: string | null) => void;
   onReset: () => void;
   resultCount: number;
+  query: string;
+  onQuery: (q: string) => void;
 }
 
 const DATE_LABELS: { key: DateFilter; label: string }[] = [
@@ -132,6 +136,8 @@ export default function FilterSheet({
   onCategory,
   onReset,
   resultCount,
+  query,
+  onQuery,
 }: Props) {
   // Vor dem frühen Return: Hooks müssen in jedem Render laufen.
   const insets = useSafeAreaInsets();
@@ -149,7 +155,7 @@ export default function FilterSheet({
       >
         <View style={styles.grabber} />
         <View style={styles.headerRow}>
-          <Text style={styles.heading}>Filter</Text>
+          <Text style={styles.heading}>Suchen und filtern</Text>
           <TouchableOpacity onPress={onReset} accessibilityRole="button" hitSlop={12}>
             <Text style={styles.reset}>Zurücksetzen</Text>
           </TouchableOpacity>
@@ -160,6 +166,38 @@ export default function FilterSheet({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
         >
+          <View style={styles.group}>
+            <Text style={styles.groupLabel}>Suche</Text>
+            <View style={styles.searchRow}>
+              <TextInput
+                value={query}
+                onChangeText={onQuery}
+                placeholder="Titel, Ort oder Gemeinde"
+                placeholderTextColor={colors.faint}
+                style={styles.searchInput}
+                accessibilityLabel="Termine durchsuchen"
+                returnKeyType="search"
+                onSubmitEditing={onClose}
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
+              {query ? (
+                <TouchableOpacity
+                  onPress={() => onQuery("")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Suche leeren"
+                  hitSlop={8}
+                  style={styles.searchClear}
+                >
+                  <Text style={styles.searchClearText}>×</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            {query.trim() ? (
+              <Text style={styles.searchHint}>Die Suche gilt für alle kommenden Termine, unabhängig von Zeitraum und Kartenausschnitt.</Text>
+            ) : null}
+          </View>
+
           <Group label="Wann">
             {DATE_LABELS.map((d) => (
               <Chip key={d.key} label={d.label} active={date === d.key} onPress={() => onDate(d.key)} />
@@ -267,7 +305,7 @@ export default function FilterSheet({
             <Group label="Gemeinde">
               <Chip label="Alle" active={activeGemeinde === null} onPress={() => onGemeinde(null)} />
               {gemeinden.map((g) => (
-                <Chip key={g} label={g} active={activeGemeinde === g} onPress={() => onGemeinde(g)} />
+                <Chip key={g} label={parishLabel(g)} active={activeGemeinde === g} onPress={() => onGemeinde(g)} />
               ))}
             </Group>
           ) : null}
@@ -382,6 +420,22 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.lg },
   group: { gap: spacing.sm, marginTop: spacing.md },
   groupLabel: { ...text.eyebrow, color: colors.faint },
+  searchRow: { flexDirection: "row", alignItems: "center" },
+  searchInput: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingRight: 40,
+    backgroundColor: colors.surface,
+    color: colors.ink,
+    ...text.body,
+  },
+  searchClear: { position: "absolute", right: spacing.sm, width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  searchClearText: { ...glyph.md, color: colors.muted },
+  searchHint: { ...text.label, color: colors.muted },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: {
     paddingHorizontal: spacing.lg,
@@ -399,7 +453,7 @@ const styles = StyleSheet.create({
   apply: {
     marginHorizontal: spacing.xl,
     marginTop: spacing.md,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary, // Weiß auf Orange hätte nur 3,7:1.
     borderRadius: radius.md,
     paddingVertical: spacing.md,
     alignItems: "center",

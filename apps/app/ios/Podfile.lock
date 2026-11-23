@@ -5,7 +5,7 @@ PODS:
     - ReactNativeDependencies
   - EXConstants (58.0.16):
     - ExpoModulesCore
-  - Expo (58.0.25):
+  - Expo (58.0.26):
     - ExpoModulesCore
     - ExpoModulesJSI
     - hermes-engine
@@ -38,7 +38,7 @@ PODS:
     - ExpoModulesCore
   - ExpoDomWebView (58.0.2):
     - ExpoModulesCore
-  - ExpoFileSystem (58.0.13):
+  - ExpoFileSystem (58.0.14):
     - ExpoModulesCore
   - ExpoFont (58.0.12):
     - ExpoModulesCore
@@ -90,7 +90,7 @@ PODS:
     - RNWorklets
   - ExpoNotifications (58.1.9):
     - ExpoModulesCore
-  - ExpoRouter (58.0.31):
+  - ExpoRouter (58.0.32):
     - ExpoModulesCore
     - RNScreens
   - ExpoSplashScreen (58.0.14):
@@ -2614,11 +2614,11 @@ SPEC CHECKSUMS:
   boost: 8502bfdc46e2804408af2e163049ece181009af4
   DoubleConversion: 501a575c40c0b50c89685762dd3e415e6bb26fb0
   EXConstants: aeda76f4be923fc719522ae162dd0b8c6483f9cc
-  Expo: c11bb32bebda9fafb2e1b8482ddeae4eaf69594d
+  Expo: 23763d9c59158fd5cae2d5831d3e42576f61f011
   ExpoApplication: c83355b2f69f996b5d26b64fef39228e7f1e1208
   ExpoAsset: eda9e4844b55b78d4e71a0e2de767a038f3a0806
   ExpoDomWebView: b2a6d681b9d34c23b1f584321386ca8da1d36afb
-  ExpoFileSystem: b619d80b490c53117a9a9c976021a4ce5a9da440
+  ExpoFileSystem: 3f4f423755d1ed5ef084caeb3a62c4a3fca0bf12
   ExpoFont: daea737a2e3742f9a946f2884518e70dd37011f3
   ExpoGlassEffect: 6594e055df1e0b88d34cc189ba0b21589adec6bf
   ExpoKeepAwake: 3dc7cce59bdc13796f772ac54d3af1ca6b6954cd
@@ -2630,7 +2630,7 @@ SPEC CHECKSUMS:
   ExpoModulesWorklets: 03d171c0296cdffc054e9570e9393a7655ef360d
   ExpoModulesWorkletsAdapter: b395e6ebac830751dbaa6f3db74a4039f598d475
   ExpoNotifications: fa890b1d743fd72ca15c52ac9f9f23c76860e228
-  ExpoRouter: 7c96a57464b14a338bef360493bcfe7190bcc5eb
+  ExpoRouter: 01c92a99308a0ebb09fe41fddb2ecb180e78b52b
   ExpoSplashScreen: 5df81b55f086d8acc7a24008537514f5379aa6f9
   ExpoStatusBar: 38eff05a54229c9a388cb56cef29117b8dc77eb1
   ExpoStoreReview: 70299dc7a36228eb985a8bbd3f65307a8a519c31

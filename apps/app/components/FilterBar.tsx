@@ -31,7 +31,7 @@ export default function FilterBar({
         activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel={
-          activeCount > 0 ? `Filter (${activeCount} aktiv)` : "Filter öffnen"
+          activeCount > 0 ? `Suchen und filtern (${activeCount} aktiv)` : "Suchen und filtern"
         }
       >
         <BarIcon name="search" size={sizes.icon.md} color={colors.primary} />

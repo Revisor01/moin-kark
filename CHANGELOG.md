@@ -5,22 +5,28 @@ Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 Das Format orientiert sich an [Keep a Changelog 1.1.0](https://keepachangelog.com/de/1.1.0/),
 die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
-## [Unreleased]
+## [Unreleased] - 1.1.0
+
+### Hinzugefügt
+- „In den Kalender“ im Termin: auf dem iPhone und am Rechner als Kalenderdatei, auf Android über Google Kalender.
+- „Alle Termine aus … abonnieren“ im Termin: die Gemeinde als Kalender-Abo, das sich von selbst aktualisiert.
+- Suche nach Titel, Ort, Gemeinde, Kategorie oder Mitwirkenden im Filter; sie findet alle kommenden Termine, nicht nur die dieser Woche.
+- Jeder Termin lässt sich als Kalenderdatei laden, und alle Termine einer Gemeinde, Kategorie oder eines Kirchspiels lassen sich als Kalender abonnieren.
+- Der Feed liefert zusätzlich bereinigte Anzeige-Namen: Gemeinden ohne Vorsätze wie „KG“, Titel ohne Klammerzusätze.
 
 ### Geändert
+- Liste, Termin und Erinnerungen zeigen kurze Titel und Gemeindenamen wie „Heide“ statt „KG Heide“.
 - Neue Lizenz: GNU AGPL v3.0 statt der Lizenz „quelloffen zur Einsicht“: Betreiben ist jetzt ohne Vereinbarung erlaubt, solange Änderungen offengelegt werden.
 - Die Karte im Browser startet deutlich schneller: Liste und Kopf erscheinen, bevor die Karte geladen ist, und wiederholte Besuche laden kaum noch etwas neu.
 - Die Karte im Browser meldet sich als deutschsprachig und hat einen aussagekräftigen Titel und eine Beschreibung für Suchmaschinen.
-- Die Landingpage lädt auf dem Handy kleinere Bilder.
+- Karte im Browser: Ein geöffneter Termin steht in der Adresszeile und im Seitentitel, Screenreader erfahren Namen und Stufe von Willkommen und Liste, das Herz in der Liste ist größer, Kategorien sind besser lesbar.
 - Geteilte Termin-Links tragen für Suchmaschinen den kurzen Titel, das Ende, den Ort mit Anschrift und die Gemeinde als Veranstalter.
+- Die Landingpage lädt auf dem Handy kleinere Bilder.
 - Landingpage: Kalender-Abos je Kirchspiel, Helgoland genannt, keine feste Gemeindezahl mehr, „Datensparsam“ beschreibt die anonyme Nutzungszählung genau, Knöpfe mit besserem Kontrast.
 
 ### Behoben
+- Helgoland liegt jetzt auf der Karte: Die Insel ist erreichbar und nicht mehr ausgegraut, ihre Termine erscheinen auf der Karte und in der Liste.
 - iPhone: Die App meldet sich jetzt als deutschsprachig; Datumsauswahl und Systemknöpfe erscheinen auf Deutsch, der App Store nennt Deutsch als Sprache.
-
-### Hinzugefügt
-- Jeder Termin lässt sich als Kalenderdatei laden, und alle Termine einer Gemeinde, Kategorie oder eines Kirchspiels lassen sich als Kalender abonnieren.
-- Der Feed liefert zusätzlich bereinigte Anzeige-Namen: Gemeinden ohne Vorsätze wie „KG“, Titel ohne Klammerzusätze.
 
 ### Sonstiges
 

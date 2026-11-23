@@ -24,6 +24,7 @@ export const EREIGNISSE = {
   "erinnerung-ausgeloest": {},
   "filter-genutzt": { filter: ["zeit", "kirchspiel", "art", "zuruecksetzen"] },
   "geteilt": { weg: ["system", "zwischenablage"] },
+  "kalender": { art: ["termin", "abo"] },
   "bereich-geoeffnet": { bereich: ["karte", "liste", "filter", "profil", "merkliste"] },
 } as const;
 

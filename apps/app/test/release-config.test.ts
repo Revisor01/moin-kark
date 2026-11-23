@@ -119,6 +119,12 @@ describe("Release-Notes für Google Play", () => {
     expect(notes.length).toBeGreaterThan(0);
     expect(notes.length).toBeLessThanOrEqual(500);
   });
+
+  it("nennen keine Änderungen, die nur das iPhone betreffen", () => {
+    // Die Datei geht nur an Google Play.
+    const notes = read("release-notes-de.txt");
+    expect(notes).not.toMatch(/iPhone|iOS|iPad/);
+  });
 });
 
 describe("Nur iPhone, kein iPad", () => {

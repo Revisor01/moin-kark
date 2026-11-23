@@ -2,7 +2,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { EventFeature } from "@moinkark/shared";
+import { displayTitle, type EventFeature } from "@moinkark/shared";
 
 export type ReminderPref = "evening" | "2h" | "both" | "off";
 const REMINDER_KEY = "kkd:reminderPref";
@@ -130,7 +130,8 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
   }
 
   // Titel: „Erinnerung: <Event>" — Body: relativer Tag + volles Datum/Uhrzeit + Ort.
-  const place = f.properties.locationName ?? f.properties.parish ?? f.properties.kirchspiel;
+  const place =
+    f.properties.locationName ?? f.properties.parishLabel ?? f.properties.parish ?? f.properties.kirchspiel;
   const when = formatWhen(start);
 
   await withMap(async (map) => {
@@ -144,7 +145,7 @@ export async function scheduleForEvent(f: EventFeature, pref: ReminderPref): Pro
       if (t.date.getTime() <= now) continue; // Vergangenheit überspringen
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: f.properties.title,
+          title: displayTitle(f.properties),
           // „Heute“/„Morgen“ bezogen auf den Zustellzeitpunkt, nicht auf jetzt.
         body: `${t.lead}${relativeDay(start, t.date)}, ${when}${place ? ` — ${place}` : ""}`,
           data: { eventId: f.properties.id },

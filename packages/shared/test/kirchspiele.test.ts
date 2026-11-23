@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventParishes, orgName, parishesLabel, resolveKirchspiel } from "../src/kirchspiele";
+import { eventParishLabels, eventParishes, orgName, parishesLabel, resolveKirchspiel } from "../src/kirchspiele";
 
 describe("resolveKirchspiel", () => {
   it("ordnet über den Gemeindenamen zu, auch wenn die orgId etwas anderes sagt", () => {
@@ -88,5 +88,38 @@ describe("orgName", () => {
 
   it("nennt unbekannte Organisationen bei ihrer Nummer", () => {
     expect(orgName(9999)).toBe("Org 9999");
+  });
+});
+
+describe("Anzeige-Namen mit Rückfall auf ältere Feeds", () => {
+  it("nimmt parishLabel und parishLabels, wenn der Feed sie liefert", () => {
+    expect(eventParishLabels({ parish: "KG Heide", parishLabel: "Heide" })).toEqual(["Heide"]);
+    expect(
+      eventParishLabels({
+        parish: "KG Heide",
+        parishes: ["KG Heide", "Kirche Wesseln"],
+        parishLabels: ["Heide", "Wesseln"],
+      })
+    ).toEqual(["Heide", "Wesseln"]);
+    expect(
+      parishesLabel({
+        parishes: ["KG Heide", "Kirche Wesseln"],
+        parishLabels: ["Heide", "Wesseln"],
+        kirchspiel: "Heide und Umgebung",
+      })
+    ).toBe("Kirchspiel Heide und Umgebung: Heide und Wesseln");
+    expect(parishesLabel({ parish: "KG  Nordhastedt", parishLabel: "Nordhastedt", kirchspiel: "Heide und Umgebung" })).toBe(
+      "Nordhastedt"
+    );
+  });
+
+  it("fällt ohne neue Felder auf parish und parishes zurück", () => {
+    expect(eventParishLabels({ parish: "KG Heide" })).toEqual(["KG Heide"]);
+    expect(eventParishLabels({ parishes: ["A", "B"] })).toEqual(["A", "B"]);
+    expect(eventParishLabels({})).toEqual([]);
+  });
+
+  it("nimmt parishLabels nur, wenn die Länge zu parishes passt", () => {
+    expect(eventParishLabels({ parishes: ["A", "B"], parishLabels: ["a"] })).toEqual(["A", "B"]);
   });
 });

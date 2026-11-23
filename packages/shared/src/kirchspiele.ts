@@ -129,13 +129,27 @@ export function eventParishes(p: { parish?: string; parishes?: string[] }): stri
   return p.parish ? [p.parish] : [];
 }
 
+/** Gemeinden für die Anzeige: neue Anzeige-Namen, sonst die Rohnamen älterer Feeds. */
+export function eventParishLabels(p: {
+  parish?: string;
+  parishes?: string[];
+  parishLabel?: string;
+  parishLabels?: string[];
+}): string[] {
+  if (p.parishes?.length) return p.parishLabels?.length === p.parishes.length ? p.parishLabels : p.parishes;
+  const one = p.parishLabel ?? p.parish;
+  return one ? [one] : [];
+}
+
 /** Anzeigename mit allen Gemeinden und dem Kirchspiel als Klammer. */
 export function parishesLabel(p: {
   parish?: string;
   parishes?: string[];
+  parishLabel?: string;
+  parishLabels?: string[];
   kirchspiel: string;
 }): string | undefined {
-  const all = eventParishes(p);
+  const all = eventParishLabels(p);
   if (all.length === 0) return undefined;
   if (all.length === 1) return all[0];
   const list = `${all.slice(0, -1).join(", ")} und ${all[all.length - 1]}`;
