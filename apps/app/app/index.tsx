@@ -370,7 +370,8 @@ export default function Home() {
     (filters.date !== DEFAULT_FILTERS.date ? 1 : 0) +
     (filters.kirchspiel ? 1 : 0) +
     (filters.parish ? 1 : 0) +
-    (filters.category ? 1 : 0);
+    (filters.category ? 1 : 0) +
+    (filters.query?.trim() ? 1 : 0);
 
   const filterBar = (
     <FilterBar
@@ -407,6 +408,8 @@ export default function Home() {
       onCategory={(c) => setFilters((f) => ({ ...f, category: c }))}
       onReset={() => setFilters(DEFAULT_FILTERS)}
       resultCount={filtered.length}
+      query={filters.query ?? ""}
+      onQuery={(q) => setFilters((f) => ({ ...f, query: q }))}
     />
   );
 

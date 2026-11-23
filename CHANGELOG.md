@@ -24,6 +24,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 - „In den Kalender“ im Termin: auf dem iPhone und am Rechner als Kalenderdatei, auf Android über Google Kalender.
 - „Alle Termine aus … abonnieren“ im Termin: die Gemeinde als Kalender-Abo, das sich von selbst aktualisiert.
 - Liste, Termin und Erinnerungen zeigen kurze Titel und Gemeindenamen wie „Heide“ statt „KG Heide“.
+- Suche nach Titel, Ort, Gemeinde, Kategorie oder Mitwirkenden im Filter; sie findet alle kommenden Termine, nicht nur die dieser Woche.
 
 ### Sonstiges
 
