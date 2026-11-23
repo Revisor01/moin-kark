@@ -1,2 +1,6 @@
-Neu in 1.0.1:
-– Helgoland ist dabei: Die Insel liegt jetzt auf der Karte, ihre Gottesdienste und Veranstaltungen erscheinen auf der Karte und in der Liste.
+Neu in 1.1:
+– In den Kalender: Jeden Termin mit einem Tipp in deinen Kalender übernehmen.
+– Gemeinde abonnieren: Alle Termine deiner Gemeinde als Kalender, der sich von selbst aktualisiert.
+– Suche nach Titel, Ort oder Gemeinde, über alle kommenden Termine.
+– Kürzere Titel und Gemeindenamen in Liste und Termin.
+– Helgoland ist dabei: Die Insel liegt auf der Karte, ihre Termine stehen in der Liste.
