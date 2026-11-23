@@ -1,9 +1,9 @@
 import { memo } from "react";
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { eventParishes, type EventFeature } from "@moinkark/shared";
+import { displayTitle, eventParishLabels, type EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { CARD_MAX_FONT_SCALE, cardOuterHeight } from "../lib/listLayout";
-import { colorForCategory, colors, glyph, radius, shadow, spacing, text } from "../lib/theme";
+import { colorForCategory, colors, glyph, radius, shadow, spacing, text, textColorForCategory } from "../lib/theme";
 import { placeholderFor } from "../lib/placeholders";
 
 interface Props {
@@ -26,10 +26,10 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
   const accent = colorForCategory(cat);
   const time = formatEventTime(p.startUtc, p.endUtc, p.allDay, p.showEndtime);
   // Bei Mehrfachzuordnung das Kirchspiel statt einer herausgegriffenen Gemeinde.
+  const parishes = eventParishLabels(p);
   const place =
-    eventParishes(p).length > 1
-      ? `Kirchspiel ${p.kirchspiel}`
-      : p.parish ?? p.locationName ?? p.kirchspiel;
+    parishes.length > 1 ? `Kirchspiel ${p.kirchspiel}` : parishes[0] ?? p.locationName ?? p.kirchspiel;
+  const title = displayTitle(p);
 
   return (
     <View
@@ -45,7 +45,8 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
       <Pressable
         onPress={() => onPress(p.id)}
         accessibilityRole="button"
-        accessibilityLabel={`${p.title}, ${time}, ${place}`}
+        // Reihenfolge wie sichtbar, sonst passt der vorgelesene Name nicht zum Text.
+        accessibilityLabel={[time, title, cat, place].filter(Boolean).join(", ")}
         style={styles.pressArea}
       >
         <View style={[styles.accent, { backgroundColor: accent }]} />
@@ -62,13 +63,13 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
             {time}
           </Text>
           <Text style={styles.title} numberOfLines={2} maxFontSizeMultiplier={CARD_MAX_FONT_SCALE}>
-            {p.title}
+            {title}
           </Text>
           <View style={styles.metaRow}>
             {cat ? (
               <View style={[styles.tag, { borderColor: accent }]}>
                 <Text
-                  style={[styles.tagText, { color: accent }]}
+                  style={[styles.tagText, { color: textColorForCategory(cat) }]}
                   numberOfLines={1}
                   maxFontSizeMultiplier={CARD_MAX_FONT_SCALE}
                 >
@@ -86,7 +87,7 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
         <Pressable
           style={styles.heart}
           onPress={() => onToggleSave(p.id)}
-          hitSlop={8}
+          hitSlop={4}
           accessibilityRole="button"
           accessibilityLabel={saved ? "Nicht mehr merken" : "Merken"}
         >
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   accent: { width: spacing.xs },
   // Feste Höhe statt stretch, sonst zieht das Web die Zelle auf die natürliche Bildhöhe.
   thumb: { width: 96 },
-  body: { flex: 1, padding: spacing.md, gap: spacing.xxs, justifyContent: "center" },
+  body: { flex: 1, padding: spacing.md, paddingRight: 44, gap: spacing.xxs, justifyContent: "center" },
   time: { ...text.captionStrong, color: colors.primary },
   title: { ...text.title, color: colors.ink },
   metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.xxs },
@@ -147,12 +148,13 @@ const styles = StyleSheet.create({
   },
   tagText: text.captionMedium,
   place: { ...text.caption, color: colors.muted, flexShrink: 1 },
+  // 44 pt, weil das Herz direkt neben dem Titel liegt und sonst der Daumen den Termin öffnet.
   heart: {
     position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 28,
-    height: 28,
+    top: 0,
+    right: 0,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },

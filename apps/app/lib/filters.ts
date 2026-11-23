@@ -21,6 +21,8 @@ export interface Filters {
   rangeFrom?: string;
   /** Eigener Zeitraum, letzter Tag als `YYYY-MM-DD` — einschließlich. */
   rangeTo?: string;
+  /** Freitext; gesetzt gilt er für alle kommenden Termine, ohne Zeitraum und Kartenausschnitt. */
+  query?: string;
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -210,17 +212,54 @@ export function isPast(f: EventFeature, now: Date = new Date()): boolean {
   return end < now.getTime();
 }
 
+/** Für die Suche: klein, ohne Akzente, ß als ss, Leerzeichen zusammengezogen. */
+export function searchKey(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Jedes Wort der Suche muss in Titel, Ort, Gemeinde, Kategorie oder Mitwirkenden vorkommen. */
+export function matchesQuery(f: EventFeature, query?: string): boolean {
+  const words = searchKey(query ?? "").split(" ").filter(Boolean);
+  if (words.length === 0) return true;
+  const p = f.properties;
+  const hay = searchKey(
+    [
+      p.title,
+      p.titleShort,
+      p.locationName,
+      p.city,
+      ...(p.parishes ?? (p.parish ? [p.parish] : [])),
+      ...(p.parishLabels ?? (p.parishLabel ? [p.parishLabel] : [])),
+      p.kirchspiel,
+      p.contributor,
+      ...p.categories.map((c) => c.title),
+    ]
+      .filter(Boolean)
+      .join(" | ")
+  );
+  return words.every((w) => hay.includes(w));
+}
+
 export function applyFilters(
   features: EventFeature[],
   filters: Filters,
   ctx: FilterContext = {}
 ): EventFeature[] {
   const now = ctx.now ?? new Date();
+  const searching = searchKey(filters.query ?? "") !== "";
   return features.filter((f) => {
     // Vergangene Events IMMER raus (Endzeit liegt in der Vergangenheit).
     if (isPast(f, now)) return false;
-    // Tipps-Modus: nur Highlights, über alle künftigen Termine (Datumsfilter aus).
-    if (filters.highlightsOnly) {
+    if (searching) {
+      // Wer „Krippenspiel“ sucht, will auch die Termine nach dieser Woche finden.
+      if (!matchesQuery(f, filters.query)) return false;
+    } else if (filters.highlightsOnly) {
       if (!f.properties.highlight) return false;
     } else {
       if (!matchesDate(f.properties.startUtc, filters.date, now, filters.rangeFrom, filters.rangeTo))
@@ -230,7 +269,7 @@ export function applyFilters(
     if (filters.kirchspiel && f.properties.kirchspiel !== filters.kirchspiel) return false;
     // Mehrfach zugeordnete Events zählen zu jeder ihrer Gemeinden.
     if (filters.parish && !eventParishes(f.properties).includes(filters.parish)) return false;
-    if (ctx.bounds && !inBounds(f, ctx.bounds)) return false;
+    if (ctx.bounds && !searching && !inBounds(f, ctx.bounds)) return false;
     return true;
   });
 }

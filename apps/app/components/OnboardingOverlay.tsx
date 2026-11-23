@@ -11,7 +11,7 @@ const STEPS = [
   {
     icon: "♥",
     title: "Merk dir, was dich interessiert",
-    body: "Tippe bei einer Veranstaltung auf das Herz. Deine Merkliste findest du oben rechts im Profil.",
+    body: "Tippe bei einer Veranstaltung auf das Herz. Deine Merkliste öffnest du oben rechts mit dem Herz.",
   },
   {
     icon: "🔔",
@@ -22,7 +22,14 @@ const STEPS = [
 
 export default function OnboardingOverlay({ visible, onDone }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onDone}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onDone}
+      // Im Browser wird der Modal zum Dialog und braucht einen Namen.
+      {...({ "aria-label": "Willkommen bei Moin Kark" } as object)}
+    >
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.kicker}>Willkommen</Text>

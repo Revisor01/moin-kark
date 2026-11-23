@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useURL } from "expo-linking";
 import { useLocalSearchParams } from "expo-router";
-import { KIRCHSPIELE, eventParishes } from "@moinkark/shared";
+import { KIRCHSPIELE, displayTitle, eventParishes } from "@moinkark/shared";
 import EventMap from "../components/EventMap";
 import EventList from "../components/EventList";
 import EventSheet from "../components/EventSheet";
@@ -27,6 +27,7 @@ import { useLocation } from "../lib/hooks/useLocation";
 import { useSavedSync } from "../lib/hooks/useSavedSync";
 import { useMapsApp, useReminderPref, useSavedEvents } from "../lib/store";
 import { eventIdFromUrl } from "../lib/share";
+import { addressFor, pageTitleFor } from "../lib/webAddress";
 import { shouldShowOnboarding } from "../lib/onboardingGate";
 import { track, trackScreen } from "../lib/analytics";
 import {
@@ -291,6 +292,19 @@ export default function Home() {
     [allFeatures, selectedId]
   );
 
+  // Nur im Browser: replaceState, damit Zurück nicht durch jeden geöffneten Termin führt.
+  const selectedTitle = selectedFeature ? displayTitle(selectedFeature.properties) : null;
+  // Erst nach der ersten Auswahl, sonst löscht der Start einen geteilten ?event=-Link vor dem Öffnen.
+  const addressTouched = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    if (selectedId !== null) addressTouched.current = true;
+    if (!addressTouched.current || (selectedId !== null && !selectedTitle)) return;
+    const next = addressFor(window.location.search, selectedId);
+    if (next !== window.location.pathname + window.location.search) window.history.replaceState(null, "", next);
+    document.title = pageTitleFor(selectedTitle);
+  }, [selectedId, selectedTitle]);
+
   const header = (
     <View style={styles.header}>
       <View style={styles.headerText}>
@@ -356,7 +370,8 @@ export default function Home() {
     (filters.date !== DEFAULT_FILTERS.date ? 1 : 0) +
     (filters.kirchspiel ? 1 : 0) +
     (filters.parish ? 1 : 0) +
-    (filters.category ? 1 : 0);
+    (filters.category ? 1 : 0) +
+    (filters.query?.trim() ? 1 : 0);
 
   const filterBar = (
     <FilterBar
@@ -393,6 +408,8 @@ export default function Home() {
       onCategory={(c) => setFilters((f) => ({ ...f, category: c }))}
       onReset={() => setFilters(DEFAULT_FILTERS)}
       resultCount={filtered.length}
+      query={filters.query ?? ""}
+      onQuery={(q) => setFilters((f) => ({ ...f, query: q }))}
     />
   );
 

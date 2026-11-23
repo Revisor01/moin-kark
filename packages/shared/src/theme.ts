@@ -90,6 +90,35 @@ export function colorForCategory(title?: string): string {
   return categoryColors.default;
 }
 
+function relLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Kontrastverhältnis nach WCAG 2. */
+export function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [relLuminance(a), relLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** Kategorie-Farbe als Schrift auf Weiß: so weit Richtung `ink` gemischt, bis sie 4,5:1 erreicht. */
+export function textColorForCategory(title?: string): string {
+  const base = colorForCategory(title);
+  const [r, g, b] = hexToRgb(base);
+  const [ir, ig, ib] = hexToRgb(colors.ink);
+  for (let t = 0; t <= 1.0001; t += 0.05) {
+    const mix = [r + (ir - r) * t, g + (ig - g) * t, b + (ib - b) * t]
+      .map((v) => Math.round(v).toString(16).padStart(2, "0"))
+      .join("");
+    const hex = `#${mix.toUpperCase()}`;
+    if (contrastRatio(hex, colors.surface) >= 4.5) return hex;
+  }
+  return colors.ink;
+}
+
 // ── Kartenfarben ──
 export const mapColors = {
   land: colors.background,
