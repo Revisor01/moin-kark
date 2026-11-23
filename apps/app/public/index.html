@@ -37,18 +37,28 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        align-items: center;
         justify-content: center;
+        padding: 24px;
         gap: 8px;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         color: #1c2b2b;
+        max-width: 640px;
+        margin: 0 auto;
       }
-      .mk-start strong {
-        font-size: 28px;
+      .mk-start small {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
         color: #0e6e6e;
       }
+      .mk-start strong {
+        font-size: 36px;
+        line-height: 1.15;
+      }
       .mk-start span {
-        font-size: 16px;
+        font-size: 17px;
+        line-height: 1.5;
       }
     </style>
   </head>
@@ -56,6 +66,6 @@
   <body>
     <noscript>Moin Kark braucht JavaScript. Die Termine gibt es auch in der App: https://moin-kark.de</noscript>
     <!-- Erstes Bild ohne Skript; React ersetzt den Inhalt beim Start. -->
-    <div id="root"><div class="mk-start" role="status"><strong>Moin Kark</strong><span>Termine werden geladen …</span></div></div>
+    <div id="root"><div class="mk-start" role="status"><small>Moin Kark · Evangelische Kirche Dithmarschen</small><strong>Kirche. In deiner Nähe.</strong><span>Gottesdienste, Konzerte und Gruppen aus allen Gemeinden auf einer Karte. Die Termine werden geladen …</span></div></div>
   </body>
 </html>
