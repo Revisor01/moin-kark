@@ -12,6 +12,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 - Die Karte im Browser startet deutlich schneller: Liste und Kopf erscheinen, bevor die Karte geladen ist, und wiederholte Besuche laden kaum noch etwas neu.
 - Die Karte im Browser meldet sich als deutschsprachig und hat einen aussagekräftigen Titel und eine Beschreibung für Suchmaschinen.
 - Die Landingpage lädt auf dem Handy kleinere Bilder.
+- Geteilte Termin-Links tragen für Suchmaschinen den kurzen Titel, das Ende, den Ort mit Anschrift und die Gemeinde als Veranstalter.
 
 ### Behoben
 - iPhone: Die App meldet sich jetzt als deutschsprachig; Datumsauswahl und Systemknöpfe erscheinen auf Deutsch, der App Store nennt Deutsch als Sprache.

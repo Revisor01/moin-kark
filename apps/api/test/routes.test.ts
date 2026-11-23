@@ -962,3 +962,67 @@ describe("Kalenderdateien", () => {
     expect(await uids("parish=Gibtsnicht")).toEqual([]);
   });
 });
+
+describe("Strukturierte Daten der Teilen-Seite", () => {
+  /** JSON-LD aus der Vorschauseite. */
+  async function ld(id: number): Promise<any> {
+    const html = await (await app.request(`/event/${id}`)).text();
+    const m = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
+    return JSON.parse(m![1]);
+  }
+
+  it("nennt Ende, Gemeinde als Veranstalter und den Ort mit Anschrift", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([
+        feature({
+          id: 42,
+          title: "Orgelkonzert (Kopie)",
+          titleShort: "Orgelkonzert",
+          parish: "KG Heide",
+          parishLabel: "Heide",
+          locationName: "St.-Jürgen-Kirche",
+          address: "Markt 1",
+          zipcode: "25746",
+          city: "Heide",
+        }),
+      ])
+    );
+    expect(await ld(42)).toEqual({
+      "@context": "https://schema.org",
+      "@type": "Event",
+      name: "Orgelkonzert",
+      startDate: "2026-06-15T08:00:00Z",
+      endDate: "2026-06-15T09:00:00Z",
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: {
+        "@type": "Place",
+        name: "St.-Jürgen-Kirche",
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: "Markt 1",
+          postalCode: "25746",
+          addressLocality: "Heide",
+          addressCountry: "DE",
+        },
+      },
+      image: "https://moin-kark.de/og.jpg",
+      url: "https://karte.moin-kark.de/?event=42",
+      organizer: { "@type": "Organization", name: "Kirchengemeinde Heide" },
+    });
+  });
+
+  it("zeigt den Kurztitel auch in den OpenGraph-Angaben", async () => {
+    buildFeatureCollection.mockResolvedValue(
+      collection([feature({ id: 42, title: "Orgelkonzert (Kopie)", titleShort: "Orgelkonzert" })])
+    );
+    const html = await (await app.request("/event/42")).text();
+    expect(html).toContain('property="og:title" content="Orgelkonzert"');
+  });
+
+  it("lässt die Anschrift weg, wenn keine bekannt ist", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([feature({ id: 42, locationName: "St. Clemens" })]));
+    expect((await ld(42)).location).toEqual({ "@type": "Place", name: "St. Clemens" });
+    expect((await ld(42)).organizer).toEqual({ "@type": "Organization", name: "Kirchengemeinde Büsum" });
+  });
+});

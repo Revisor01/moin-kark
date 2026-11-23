@@ -412,15 +412,22 @@ app.get("/event/:id", async (c) => {
   if (!f) return c.notFound();
 
   const p = f.properties;
-  const place = ortsangabe(p.locationName, p.parish);
+  const gemeinde = p.parishLabel ?? p.parish;
+  const place = ortsangabe(p.locationName, gemeinde);
+  const ortName = p.locationName ?? gemeinde;
   return c.html(
     eventPreviewPage({
       id: p.id,
-      title: p.title,
+      title: p.titleShort ?? p.title,
       time: previewTime(p.startUtc, p.allDay),
       place,
       imageUrl: vorschauBild(p.image?.url),
       startIso: p.startUtc,
+      endIso: p.endUtc,
+      organizer: gemeinde ? `Kirchengemeinde ${gemeinde}` : p.orgName,
+      location: ortName
+        ? { name: ortName, street: p.address, postalCode: p.zipcode, locality: p.city }
+        : undefined,
     })
   );
 });
