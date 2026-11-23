@@ -726,9 +726,14 @@ describe("Zuordnungsdateien fuer App-Links", () => {
     expect(body.applinks.details[0].appIDs).toEqual(["J459G9CJT5.de.godsapp.kkdithkarte"]);
   });
 
-  it("beschraenkt die Zuordnung auf /event/*", async () => {
+  it("beschraenkt die Zuordnung auf /event/*, ohne Kalenderdateien", async () => {
     const body = (await (await app.request("/.well-known/apple-app-site-association")).json()) as any;
-    expect(body.applinks.details[0].components[0]["/"]).toBe("/event/*");
+    const components = body.applinks.details[0].components;
+    // Apple nimmt den ersten Treffer: der Ausschluss muss vor /event/* stehen.
+    expect(components.map((c: any) => [c["/"], c.exclude === true])).toEqual([
+      ["/event/*.ics", true],
+      ["/event/*", false],
+    ]);
   });
 
   it("liefert assetlinks.json mit Paketname und Fingerprint", async () => {
@@ -877,5 +882,83 @@ describe("Ortsangabe in der Vorschau", () => {
       collection([feature({ id: 43, locationName: "St. Clemens", parish: undefined })])
     );
     expect(await (await app.request("/event/43")).text()).toContain("St. Clemens");
+  });
+});
+
+describe("Kalenderdateien", () => {
+  const termin = feature({
+    id: 42,
+    title: "Orgelkonzert (Kopie)",
+    titleShort: "Orgelkonzert",
+    parish: "KG Heide",
+    parishLabel: "Heide",
+    kirchspiel: "Heide und Umgebung",
+    startUtc: "2026-06-20T17:00:00Z",
+    endUtc: "2026-06-20T18:30:00Z",
+  });
+  const andere = feature({
+    id: 43,
+    title: "Krabbelkreis",
+    categories: [{ id: 2, title: "Kinder", color: 2 }],
+    startUtc: "2026-06-18T08:00:00Z",
+    endUtc: "2026-06-18T09:00:00Z",
+  });
+
+  it("liefert einen Termin als .ics unter /event/{id}.ics", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([termin, andere]));
+    const res = await app.request("/event/42.ics");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/calendar; charset=utf-8");
+    expect(res.headers.get("content-disposition")).toBe('attachment; filename="moin-kark-42.ics"');
+    const ics = await res.text();
+    expect(ics.startsWith("BEGIN:VCALENDAR\r\nVERSION:2.0\r\n")).toBe(true);
+    expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(ics).toContain("UID:42@moin-kark.de\r\n");
+    expect(ics).toContain("DTSTAMP:20260615T060000Z\r\n");
+    // 17:00 UTC im Juni = 19:00 Sommerzeit.
+    expect(ics).toContain("DTSTART;TZID=Europe/Berlin:20260620T190000\r\n");
+    expect(ics).toContain("DTEND;TZID=Europe/Berlin:20260620T203000\r\n");
+    expect(ics).toContain("SUMMARY:Orgelkonzert\r\n");
+  });
+
+  it("liefert dieselbe Datei unter /calendar/{id}.ics, außerhalb der App-Links", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([termin]));
+    const a = await (await app.request("/event/42.ics")).text();
+    const b = await (await app.request("/calendar/42.ics")).text();
+    expect(b).toBe(a);
+  });
+
+  it("antwortet 404 für unbekannte Termine und lässt /event/{id} als Vorschau", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([termin]));
+    expect((await app.request("/event/99.ics")).status).toBe(404);
+    expect((await app.request("/event/abc.ics")).status).toBe(404);
+    const vorschau = await app.request("/event/42");
+    expect(vorschau.headers.get("content-type")).toMatch(/text\/html/);
+  });
+
+  it("liefert das Abo nach Startzeit sortiert, mit Name und Aktualisierung", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([termin, andere]));
+    const res = await app.request("/calendar.ics");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/calendar; charset=utf-8");
+    const ics = await res.text();
+    expect(ics).toContain("X-WR-CALNAME:Moin Kark: alle Termine\r\n");
+    expect(ics).toContain("REFRESH-INTERVAL;VALUE=DURATION:PT1H\r\n");
+    const uids = [...ics.matchAll(/UID:(\d+)@/g)].map((m) => m[1]);
+    expect(uids).toEqual(["43", "42"]);
+  });
+
+  it("filtert das Abo nach Gemeinde (roh oder Anzeige-Name) und Kategorie", async () => {
+    buildFeatureCollection.mockResolvedValue(collection([termin, andere]));
+    const uids = async (q: string) =>
+      [...(await (await app.request(`/calendar.ics?${q}`)).text()).matchAll(/UID:(\d+)@/g)].map((m) => m[1]);
+    expect(await uids("parish=Heide")).toEqual(["42"]);
+    expect(await uids("parish=KG%20Heide")).toEqual(["42"]);
+    expect(await uids("parish=B%C3%BCsum")).toEqual(["43"]);
+    expect(await uids("category=kinder")).toEqual(["43"]);
+    expect(await uids("parish=Heide,B%C3%BCsum&category=Gottesdienst")).toEqual(["42"]);
+    expect(await uids("kirchspiel=West")).toEqual(["43"]);
+    expect(await uids("parish=Gibtsnicht")).toEqual([]);
   });
 });

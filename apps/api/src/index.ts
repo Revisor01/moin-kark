@@ -16,6 +16,7 @@ import { buildFeatureCollection, extractCategories, EXCLUDED_CATEGORIES } from "
 import { fmtDate } from "./churchdesk.js";
 import { SwrCache } from "./cache.js";
 import { hasHighlightTag } from "./geojson.js";
+import { buildCalendar, calendarName, filterFeatures } from "./ics.js";
 import {
   getOverrides,
   InvalidOverridesError,
@@ -281,7 +282,10 @@ const APPLE_APP_SITE_ASSOCIATION = {
     details: [
       {
         appIDs: ["J459G9CJT5.de.godsapp.kkdithkarte"],
-        components: [{ "/": "/event/*", comment: "Geteilte Termin-Links oeffnen die App." }],
+        components: [
+          { "/": "/event/*.ics", exclude: true, comment: "Kalenderdateien bleiben im Browser." },
+          { "/": "/event/*", comment: "Geteilte Termin-Links oeffnen die App." },
+        ],
       },
     ],
   },
@@ -339,6 +343,56 @@ function previewTime(startUtc: string, allDay?: boolean): string {
   }).format(d);
   return `${datum}, ${zeit} Uhr`;
 }
+
+const ICS_CONTENT_TYPE = "text/calendar; charset=utf-8";
+
+/** Kalenderdatei eines Termins; der Datenstand ist der DTSTAMP. */
+async function eventIcs(c: Context, file: string): Promise<Response> {
+  const id = Number(file.replace(/\.ics$/, ""));
+  if (!Number.isInteger(id) || id <= 0) return c.notFound();
+  let fc: EventFeatureCollection;
+  try {
+    fc = await getCollection();
+  } catch (e: any) {
+    console.error(`[${c.req.path}]`, e?.message ?? e);
+    return c.json({ error: FEED_UNAVAILABLE }, 500);
+  }
+  const f = fc.features.find((x) => x.properties.id === id);
+  if (!f) return c.notFound();
+  const stamp = new Date(fc.meta?.generatedAt ?? Date.now());
+  c.header("Content-Type", ICS_CONTENT_TYPE);
+  c.header("Content-Disposition", `attachment; filename="moin-kark-${id}.ics"`);
+  c.header("Cache-Control", FEED_CACHE_CONTROL);
+  return c.body(buildCalendar([f], { name: "Moin Kark", stamp }));
+}
+
+app.get("/event/:file{[0-9]+\\.ics}", (c) => eventIcs(c, c.req.param("file")));
+// Gleiche Datei außerhalb von /event/, weil Android-Apps bis 1.0.x jeden /event/-Link abfangen.
+app.get("/calendar/:file{[0-9]+\\.ics}", (c) => eventIcs(c, c.req.param("file")));
+
+/** Kalender-Abo mit Filtern nach Gemeinde, Kategorie und Kirchspiel. */
+app.get("/calendar.ics", async (c) => {
+  let fc: EventFeatureCollection;
+  try {
+    fc = await getCollection();
+  } catch (e: any) {
+    console.error(`[${c.req.path}]`, e?.message ?? e);
+    return c.json({ error: FEED_UNAVAILABLE }, 500);
+  }
+  const filter = {
+    parish: c.req.query("parish"),
+    category: c.req.query("category"),
+    kirchspiel: c.req.query("kirchspiel"),
+  };
+  const features = filterFeatures(fc.features, filter).sort((a, b) =>
+    a.properties.startUtc.localeCompare(b.properties.startUtc)
+  );
+  const stamp = new Date(fc.meta?.generatedAt ?? Date.now());
+  c.header("Content-Type", ICS_CONTENT_TYPE);
+  c.header("Content-Disposition", 'inline; filename="moin-kark.ics"');
+  c.header("Cache-Control", "public, max-age=900");
+  return c.body(buildCalendar(features, { name: calendarName(filter), stamp, subscription: true }));
+});
 
 /** Link-Vorschau für geteilte Termine, weil Crawler in der SPA nichts sehen. */
 app.get("/event/:id", async (c) => {

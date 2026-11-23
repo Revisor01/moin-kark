@@ -16,6 +16,10 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 ### Behoben
 - iPhone: Die App meldet sich jetzt als deutschsprachig; Datumsauswahl und Systemknöpfe erscheinen auf Deutsch, der App Store nennt Deutsch als Sprache.
 
+### Hinzugefügt
+- Jeder Termin lässt sich als Kalenderdatei laden, und alle Termine einer Gemeinde, Kategorie oder eines Kirchspiels lassen sich als Kalender abonnieren.
+- Der Feed liefert zusätzlich bereinigte Anzeige-Namen: Gemeinden ohne Vorsätze wie „KG“, Titel ohne Klammerzusätze.
+
 ### Sonstiges
 
 - iOS-Builds entstehen in Xcode Cloud; der Release-Knopf auf GitHub startet sie und wartet darauf.
