@@ -69,4 +69,10 @@ describe("titleShort", () => {
     expect(titleShort("(Kopie)")).toBe("(Kopie)");
     expect(titleShort("(Orgel)  ")).toBe("(Orgel)");
   });
+
+  it("bleibt bei langen Leerzeichenfolgen schnell", () => {
+    const start = performance.now();
+    expect(titleShort(`a${" ".repeat(50_000)}b${" ".repeat(50_000)}`)).toBe("a b");
+    expect(performance.now() - start).toBeLessThan(200);
+  });
 });

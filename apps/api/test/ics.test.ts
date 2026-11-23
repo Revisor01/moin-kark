@@ -118,6 +118,14 @@ describe("veventLines", () => {
   });
 });
 
+describe("HTML in der Beschreibung", () => {
+  it("entfernt auch verschachtelte Tags vollständig", () => {
+    const lines = veventLines(feature({ descriptionHtml: "<<b>script>alert(1)<</b>/script>Text" }), STAMP);
+    const desc = unfold(lines.join("\r\n")).match(/DESCRIPTION:([^\r]*)/)![1];
+    expect(desc).toBe("alert(1)Text\\n\\nKirchengemeinde Büsum\\n\\nhttps://moin-kark.de/event/7");
+  });
+});
+
 describe("buildCalendar", () => {
   it("hat Kopf, Zeitzone, CRLF überall und keine Zeile über 75 Oktette", () => {
     const ics = buildCalendar([feature({ summary: "x".repeat(300) })], { name: "Moin Kark", stamp: STAMP });

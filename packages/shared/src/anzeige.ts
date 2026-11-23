@@ -4,7 +4,7 @@
 function tidy(s: string): string {
   return s
     .replace(/\s+/g, " ")
-    .replace(/\s+([,;:])/g, "$1")
+    .replace(/ ([,;:])/g, "$1")
     .trim();
 }
 
@@ -65,7 +65,7 @@ export function titleShort(title: string): string {
   } while (s !== vorher);
   s = s.replace(/,\s*Leitung:\s*[^,]+$/i, "");
   s = entschaerfeVersalien(tidy(s));
-  // Reste wie ein Bindestrich am Ende.
-  s = s.replace(/[\s,;:–-]+$/, "").trim();
+  // Reste wie ein Bindestrich am Ende; Schleife statt Regex, weil die bei langen Leerzeichenfolgen quadratisch liefe.
+  while (s.length > 0 && " ,;:–-".includes(s[s.length - 1])) s = s.slice(0, -1);
   return s.length >= 3 ? s : tidy(title);
 }

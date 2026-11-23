@@ -91,10 +91,14 @@ function nextDay(yyyymmdd: string): string {
 /** HTML grob zu Text, wie im Termin-Blatt; Redaktions-Marker fallen weg. */
 function htmlToText(html?: string): string {
   if (!html) return "";
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<[^>]+>/g, "")
+  let text = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n");
+  // Bis nichts mehr fällt, sonst bleibt aus „<<b>script>“ ein Tag übrig.
+  let vorher: string;
+  do {
+    vorher = text;
+    text = text.replace(/<[^<>]*>/g, "");
+  } while (text !== vorher);
+  return text
     .replace(/&nbsp;/g, " ")
     .replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(Number(c)))
     .replace(/&lt;/g, "<")
