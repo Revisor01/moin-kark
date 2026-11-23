@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Moin Kark – Termine der Kirche in Dithmarschen auf einer Karte</title>
+    <meta name="description" content="Gottesdienste, Konzerte, Gruppen und mehr aus allen Gemeinden des Kirchenkreises Dithmarschen und Helgolands auf einer Karte. Ohne Konto, ohne Werbung." />
+    <meta name="theme-color" content="#0E6E6E" />
+    <meta property="og:title" content="Moin Kark – Was ist los in Dithmarschen" />
+    <meta property="og:description" content="Gottesdienste, Konzerte, Gruppen und mehr aus dem Kirchenkreis Dithmarschen auf einer Karte." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://karte.moin-kark.de/" />
+    <meta property="og:image" content="https://moin-kark.de/og.jpg" />
+    <meta property="og:locale" content="de_DE" />
+    <link rel="canonical" href="https://karte.moin-kark.de/" />
+    <!-- Feed und Kacheln laden, während das Skript noch kommt; crossorigin wie beim fetch der App, sonst lädt der Browser doppelt. -->
+    <link rel="preconnect" href="https://api.moin-kark.de" crossorigin />
+    <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
+    <link rel="preload" href="https://api.moin-kark.de/events.geojson" as="fetch" crossorigin="anonymous" />
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        margin: 0;
+        background: #fbf6ee;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      .mk-start {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #1c2b2b;
+      }
+      .mk-start strong {
+        font-size: 28px;
+        color: #0e6e6e;
+      }
+      .mk-start span {
+        font-size: 16px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Moin Kark braucht JavaScript. Die Termine gibt es auch in der App: https://moin-kark.de</noscript>
+    <!-- Erstes Bild ohne Skript; React ersetzt den Inhalt beim Start. -->
+    <div id="root"><div class="mk-start" role="status"><strong>Moin Kark</strong><span>Termine werden geladen …</span></div></div>
+  </body>
+</html>
