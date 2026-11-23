@@ -446,15 +446,31 @@ export function eventPreviewPage(p: EventPreview): string {
     "@type": "Event",
     name: p.title,
     startDate: p.startIso,
-    location: p.place || undefined,
+    endDate: p.endIso,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: p.location
+      ? {
+          "@type": "Place",
+          name: p.location.name,
+          address:
+            p.location.street || p.location.postalCode || p.location.locality
+              ? {
+                  "@type": "PostalAddress",
+                  streetAddress: p.location.street,
+                  postalCode: p.location.postalCode,
+                  addressLocality: p.location.locality,
+                  addressCountry: "DE",
+                }
+              : undefined,
+        }
+      : p.place || undefined,
     image: bild,
     url,
-    organizer: {
-      "@type": "Organization",
-      name: "Moin Kark",
-      url: "https://moin-kark.de",
-      logo: LOGO_URL,
-    },
+    // Veranstalter ist die Gemeinde; Moin Kark zeigt den Termin nur.
+    organizer: p.organizer
+      ? { "@type": "Organization", name: p.organizer }
+      : { "@type": "Organization", name: "Moin Kark", url: "https://moin-kark.de", logo: LOGO_URL },
   })}</script>
 <link rel="canonical" href="${esc(url)}">
 </head><body>
@@ -479,4 +495,10 @@ export interface EventPreview {
   imageUrl?: string;
   /** Startzeit als ISO-Zeichenkette — nur für die strukturierten Daten. */
   startIso?: string;
+  /** Ende als ISO-Zeichenkette, für die strukturierten Daten. */
+  endIso?: string;
+  /** Veranstaltende Gemeinde, etwa „Kirchengemeinde Heide“. */
+  organizer?: string;
+  /** Ort mit Anschrift für die strukturierten Daten. */
+  location?: { name: string; street?: string; postalCode?: string; locality?: string };
 }
