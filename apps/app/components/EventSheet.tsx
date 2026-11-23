@@ -92,9 +92,9 @@ const CAL_PLATFORM = Platform.OS as CalendarPlatform;
 const USER_AGENT = IS_WEB && typeof navigator !== "undefined" ? navigator.userAgent : undefined;
 
 /** Kalenderdatei und webcal im selben Tab, damit der Browser sie dem Kalender übergibt; Google in neuem Tab. */
-function openCalendar(url: string) {
+function openCalendar(url: string, google: boolean) {
   if (IS_WEB && typeof window !== "undefined") {
-    if (url.startsWith("https://calendar.google.com")) window.open(url, "_blank");
+    if (google) window.open(url, "_blank");
     else window.location.href = url;
     return;
   }
@@ -244,7 +244,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
           <TouchableOpacity
             style={styles.aboLink}
             onPress={() => {
-              openCalendar(subscribeUrl(aboGemeinde, CAL_PLATFORM, USER_AGENT));
+              openCalendar(subscribeUrl(aboGemeinde, CAL_PLATFORM, USER_AGENT), googleKalender);
               track("kalender", { art: "abo" });
             }}
             accessibilityRole="link"
@@ -375,7 +375,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
               accessibilityRole="button"
               accessibilityHint={googleKalender ? "Öffnet Google Kalender" : "Lädt den Termin als Kalenderdatei"}
               onPress={() => {
-                openCalendar(addToCalendarUrl(p, CAL_PLATFORM, USER_AGENT));
+                openCalendar(addToCalendarUrl(p, CAL_PLATFORM, USER_AGENT), googleKalender);
                 track("kalender", { art: "termin" });
               }}
             >
