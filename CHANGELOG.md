@@ -8,7 +8,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 ## [Unreleased] - 1.1.0
 
 ### Hinzugefügt
-- „In den Kalender“ im Termin: auf dem iPhone und am Rechner als Kalenderdatei, auf Android über Google Kalender.
+- „In den Kalender“ im Termin: In der App öffnet sich der Kalender des Geräts zum Anlegen des Termins, im Browser gibt es eine Kalenderdatei oder auf Android Google Kalender.
 - „Alle Termine aus … abonnieren“ im Termin: die Gemeinde als Kalender-Abo, das sich von selbst aktualisiert.
 - Suche nach Titel, Ort, Gemeinde, Kategorie oder Mitwirkenden im Filter; sie findet alle kommenden Termine, nicht nur die dieser Woche.
 - Jeder Termin lässt sich als Kalenderdatei laden, und alle Termine einer Gemeinde, Kategorie oder eines Kirchspiels lassen sich als Kalender abonnieren.

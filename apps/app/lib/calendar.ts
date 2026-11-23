@@ -82,3 +82,44 @@ export function subscribeUrl(parish: string, platform: CalendarPlatform, userAge
     return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`;
   return webcal;
 }
+
+/** Felder für den System-Dialog „Termin anlegen“ (iOS EKEventEditViewController, Android ACTION_INSERT). */
+export interface NativeEventData {
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  allDay: boolean;
+  location?: string;
+  notes: string;
+  url: string;
+  timeZone: string;
+}
+
+/** Berliner Kalendertag als UTC-Mitternacht; Android erwartet ganztägige Termine so. */
+function berlinDayUtc(iso: string, plusDays = 0): Date {
+  const [y, m, d] = berlinDate(iso).match(/^(\d{4})(\d{2})(\d{2})$/)!.slice(1).map(Number);
+  return new Date(Date.UTC(y, m - 1, d + plusDays));
+}
+
+export function nativeEventData(p: CalendarEvent, platform: "ios" | "android"): NativeEventData {
+  const start = new Date(p.startUtc);
+  const endRaw = new Date(p.endUtc).getTime();
+  const end = new Date(Number.isFinite(endRaw) && endRaw > start.getTime() ? endRaw : start.getTime() + 3600_000);
+  const location = [p.locationName, p.address, [p.zipcode, p.city].filter(Boolean).join(" ")]
+    .filter((x) => !!x && x.trim() !== "")
+    .join(", ");
+  const link = `https://moin-kark.de/event/${p.id}`;
+  // Ganztägig: Android rechnet in UTC-Tagen mit exklusivem Ende, iOS nimmt den Tag in der Zeitzone des Termins.
+  const androidAllDay = p.allDay && platform === "android";
+  const lastDayIso = new Date(end.getTime() - 1000).toISOString();
+  return {
+    title: p.titleShort ?? p.title,
+    startDate: androidAllDay ? berlinDayUtc(p.startUtc) : start,
+    endDate: androidAllDay ? berlinDayUtc(lastDayIso, 1) : end,
+    allDay: p.allDay,
+    location: location || undefined,
+    notes: link,
+    url: link,
+    timeZone: androidAllDay ? "UTC" : "Europe/Berlin",
+  };
+}
