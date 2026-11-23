@@ -52,6 +52,10 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
+      "blockedPermissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#F3E6CF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -115,6 +119,15 @@
         }
       ],
       "@react-native-community/datetimepicker",
+      [
+        "expo-calendar",
+        {
+          "writeOnlyAccess": true,
+          "writeOnlyCalendarPermission": "Legt Termine, die du auswählst, in deinem Kalender an.",
+          "calendarPermission": "Legt Termine, die du auswählst, in deinem Kalender an.",
+          "remindersPermission": false
+        }
+      ],
     [
       "expo-notifications",
       {

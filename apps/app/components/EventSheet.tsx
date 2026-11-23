@@ -20,7 +20,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { displayTitle, eventParishes, parishesLabel, type EventFeature } from "@moinkark/shared";
-import { addToCalendarUrl, subscribeUrl, usesGoogleCalendar, type CalendarPlatform } from "../lib/calendar";
+import { addToCalendarUrl, googleCalendarUrl, subscribeUrl, usesGoogleCalendar, type CalendarPlatform } from "../lib/calendar";
+import { addEventNatively } from "../lib/nativeCalendar";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
 import { canShare, shareEvent } from "../lib/share";
@@ -373,10 +374,23 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
               style={[styles.mapButton, styles.calendarButton]}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityHint={googleKalender ? "Öffnet Google Kalender" : "Lädt den Termin als Kalenderdatei"}
+              accessibilityHint={
+                IS_WEB
+                  ? googleKalender
+                    ? "Öffnet Google Kalender"
+                    : "Lädt den Termin als Kalenderdatei"
+                  : "Öffnet den Kalender zum Anlegen des Termins"
+              }
               onPress={() => {
-                openCalendar(addToCalendarUrl(p, CAL_PLATFORM, USER_AGENT), googleKalender);
                 track("kalender", { art: "termin" });
+                if (IS_WEB) {
+                  openCalendar(addToCalendarUrl(p, CAL_PLATFORM, USER_AGENT), googleKalender);
+                  return;
+                }
+                // Nativ nie die .ics-URL öffnen: iOS macht daraus ein Abo.
+                addEventNatively(p).then((ok) => {
+                  if (!ok && Platform.OS === "android") openCalendar(googleCalendarUrl(p), true);
+                });
               }}
             >
               <Text style={[styles.mapButtonText, styles.calendarButtonText]}>In den Kalender</Text>
