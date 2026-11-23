@@ -16,6 +16,7 @@ export {
   alpha,
   categoryColors,
   colorForCategory,
+  textColorForCategory,
   colors,
   mapColors,
   radius,

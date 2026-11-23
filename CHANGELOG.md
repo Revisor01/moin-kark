@@ -12,6 +12,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 - Die Karte im Browser startet deutlich schneller: Liste und Kopf erscheinen, bevor die Karte geladen ist, und wiederholte Besuche laden kaum noch etwas neu.
 - Die Karte im Browser meldet sich als deutschsprachig und hat einen aussagekräftigen Titel und eine Beschreibung für Suchmaschinen.
 - Die Landingpage lädt auf dem Handy kleinere Bilder.
+- Karte im Browser: Ein geöffneter Termin steht in der Adresszeile und im Seitentitel, Screenreader erfahren Namen und Stufe von Willkommen und Liste, das Herz in der Liste ist größer, Kategorien sind besser lesbar.
 - Geteilte Termin-Links tragen für Suchmaschinen den kurzen Titel, das Ende, den Ort mit Anschrift und die Gemeinde als Veranstalter.
 
 ### Behoben

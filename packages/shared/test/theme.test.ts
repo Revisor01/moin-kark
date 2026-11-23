@@ -152,3 +152,18 @@ describe("CSS-Ausgabe", () => {
     expect(file).toBe(css);
   });
 });
+
+describe("textColorForCategory", () => {
+  it("erreicht für jede Kategorie 4,5:1 auf Weiß", async () => {
+    const { textColorForCategory, contrastRatio, categoryColors } = await import("../src/theme");
+    for (const title of [...Object.keys(categoryColors), "Kirchenmusik", "Kinder & Jugend", undefined]) {
+      expect(contrastRatio(textColorForCategory(title), colors.surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("lässt kräftige Farben unverändert und dunkelt Orange ab", async () => {
+    const { textColorForCategory } = await import("../src/theme");
+    expect(textColorForCategory("Gottesdienst")).toBe(colors.primary);
+    expect(textColorForCategory("Treffpunkt")).not.toBe(colors.accent);
+  });
+});
