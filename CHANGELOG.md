@@ -7,6 +7,8 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-29
+
 ### Geändert
 - Neue Lizenz: GNU AGPL v3.0 statt der Lizenz „quelloffen zur Einsicht“: Betreiben ist jetzt ohne Vereinbarung erlaubt, solange Änderungen offengelegt werden.
 - Die Karte im Browser startet deutlich schneller: Liste und Kopf erscheinen, bevor die Karte geladen ist, und wiederholte Besuche laden kaum noch etwas neu.
@@ -18,6 +20,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ### Behoben
 - iPhone: Die App meldet sich jetzt als deutschsprachig; Datumsauswahl und Systemknöpfe erscheinen auf Deutsch, der App Store nennt Deutsch als Sprache.
+- Helgoland liegt jetzt auf der Karte: Die Insel ist erreichbar und nicht mehr ausgegraut, ihre Termine erscheinen auf der Karte und in der Liste.
 
 ### Hinzugefügt
 - Jeder Termin lässt sich als Kalenderdatei laden, und alle Termine einer Gemeinde, Kategorie oder eines Kirchspiels lassen sich als Kalender abonnieren.
@@ -480,5 +483,6 @@ enthält alles, was seit Projektbeginn entstanden ist.
   haben dafür eine einzige Quelle, und ein Test wacht darüber, dass ein
   Android-Release nie mit dem Entwicklungsschlüssel signiert wird.
 
-[Unreleased]: https://github.com/Revisor01/moin-kark/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/Revisor01/moin-kark/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/Revisor01/moin-kark/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/Revisor01/moin-kark/releases/tag/1.0.0
