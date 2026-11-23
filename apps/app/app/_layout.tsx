@@ -14,7 +14,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { queryClient } from "../lib/queryClient";
 import { colors } from "../lib/theme";
 
@@ -31,8 +31,8 @@ export default function RootLayout() {
     if (error) console.warn("Schriften konnten nicht geladen werden, Systemschrift wird genutzt:", error);
   }, [error]);
 
-  // Scheitert das Laden, lieber Systemschrift als eine leere Fläche.
-  if (!loaded && !error) {
+  // Scheitert das Laden, lieber Systemschrift als eine leere Fläche; im Browser tauschen die Schriften ohne Warten nach.
+  if (!loaded && !error && Platform.OS !== "web") {
     return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 

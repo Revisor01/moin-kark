@@ -9,6 +9,9 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 
 ### Geändert
 - Neue Lizenz: GNU AGPL v3.0 statt der Lizenz „quelloffen zur Einsicht“: Betreiben ist jetzt ohne Vereinbarung erlaubt, solange Änderungen offengelegt werden.
+- Die Karte im Browser startet deutlich schneller: Liste und Kopf erscheinen, bevor die Karte geladen ist, und wiederholte Besuche laden kaum noch etwas neu.
+- Die Karte im Browser meldet sich als deutschsprachig und hat einen aussagekräftigen Titel und eine Beschreibung für Suchmaschinen.
+- Die Landingpage lädt auf dem Handy kleinere Bilder.
 
 ### Behoben
 - iPhone: Die App meldet sich jetzt als deutschsprachig; Datumsauswahl und Systemknöpfe erscheinen auf Deutsch, der App Store nennt Deutsch als Sprache.

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import BarIcon from "./BarIcon";
 import { colors, radius, shadow, sizes, spacing, text } from "../lib/theme";
 
 interface Props {
@@ -34,7 +34,7 @@ export default function FilterBar({
           activeCount > 0 ? `Filter (${activeCount} aktiv)` : "Filter öffnen"
         }
       >
-        <Ionicons name="search" size={sizes.icon.md} color={colors.primary} />
+        <BarIcon name="search" size={sizes.icon.md} color={colors.primary} />
         {activeCount > 0 ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{activeCount}</Text>
@@ -51,7 +51,7 @@ export default function FilterBar({
         accessibilityState={{ selected: highlightsOnly }}
         accessibilityLabel={highlightsOnly ? "Nur Tipps – aktiv" : "Nur Tipps anzeigen"}
       >
-        <Ionicons
+        <BarIcon
           name="star"
           size={sizes.icon.md}
           color={highlightsOnly ? colors.onColor : colors.accent}
@@ -68,7 +68,7 @@ export default function FilterBar({
           accessibilityRole="button"
           accessibilityLabel="Zu meinem Standort"
         >
-          <Ionicons name="navigate" size={sizes.icon.md} color={colors.primary} />
+          <BarIcon name="navigate" size={sizes.icon.md} color={colors.primary} />
         </TouchableOpacity>
       ) : null}
     </View>

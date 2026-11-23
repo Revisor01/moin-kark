@@ -1,0 +1,11 @@
+# Landingpage: Bilder und Schriften ändern sich selten, die Seite selbst wird bei jedem Aufruf nachgefragt.
+<IfModule mod_headers.c>
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
+  <FilesMatch "\.(html|css|txt|xml)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(jpe?g|png|ttf|woff2?)$">
+    Header set Cache-Control "public, max-age=604800, stale-while-revalidate=86400"
+  </FilesMatch>
+</IfModule>

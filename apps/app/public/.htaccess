@@ -1,0 +1,18 @@
+# Web-Karte: Dateien mit Prüfsumme im Namen ändern sich nie, alles andere wird bei jedem Aufruf nachgefragt.
+<IfModule mod_headers.c>
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+
+  <FilesMatch "\.(html|json|mjs)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "-[0-9a-f]{32}\.(js|css)$|\.[0-9a-f]{32}\.(png|jpe?g|ttf|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^favicon\.ico$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType text/javascript .mjs
+</IfModule>
