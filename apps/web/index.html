@@ -67,7 +67,7 @@
   }
   .launch{
     display:inline-block;margin:0 0 var(--space-lg);padding:var(--space-sm) var(--space-lg);border-radius:var(--radius-pill);
-    background:rgba(var(--accent-rgb),var(--alpha-tint));color:var(--accent-dark);
+    background:rgba(var(--accent-rgb),var(--alpha-tint));color:var(--ink);
     font-size:var(--text-label);font-weight:600;letter-spacing:var(--tracking-eyebrow);
   }
   .hero h1{font-size:clamp(2.4rem,6.2vw,4.2rem); font-weight:var(--weight-display); max-width:16ch}
@@ -80,15 +80,15 @@
     text-decoration:none;border:2px solid transparent;transition:transform .12s ease,background .12s ease;
   }
   .btn:active{transform:translateY(1px)}
-  .btn-primary{background:var(--accent);color:var(--on-color)}
-  .btn-primary:hover{background:var(--accent-dark);color:var(--on-color)}
+  .btn-primary{background:var(--primary);color:var(--on-color)}
+  .btn-primary:hover{background:var(--ink);color:var(--on-color)}
   .btn-ghost{background:transparent;color:var(--primary);border-color:var(--border)}
   .btn-ghost:hover{background:var(--surface);border-color:var(--primary)}
   .note{margin-top:var(--space-lg);font-size:var(--text-body);color:var(--faint)}
 
   /* Store-Badges noch ohne href, deshalb gedämpft. */
   .stores{margin-top:var(--space-xxl)}
-  .stores-hint{display:block;font-size:var(--text-label);color:var(--faint);margin-bottom:var(--space-md)}
+  .stores-hint{display:block;font-size:var(--text-label);color:var(--muted);margin-bottom:var(--space-md)}
   .store-row{display:flex;flex-wrap:wrap;gap:var(--space-md)}
   .store-badge{
     display:inline-flex;align-items:center;gap:var(--space-sm);
@@ -123,6 +123,14 @@
   .places{padding:var(--space-4xl) 0 var(--space-sm)}
   .places h2{margin-bottom:var(--space-sm)}
   .places .sub{color:var(--muted);margin:0 0 var(--space-xxl);max-width:52ch}
+  .kalender{padding:var(--space-4xl) 0 0}
+  .kalender .sub{color:var(--muted);margin:0 0 var(--space-xl);max-width:56ch}
+  .abo-liste{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--space-sm)}
+  .abo{display:inline-flex;align-items:center;min-height:44px;padding:0 var(--space-lg);border-radius:var(--radius-pill);border:1px solid var(--primary);color:var(--primary);background:var(--surface);font-weight:600;text-decoration:none}
+  .abo:hover{background:var(--primary);color:var(--on-color)}
+  .abo-alle{background:var(--primary);color:var(--on-color)}
+  .kalender .hint{color:var(--muted);font-size:var(--text-label);margin:var(--space-lg) 0 0;max-width:70ch}
+  .kalender code{font-size:var(--text-caption);word-break:break-all}
   /* Alle Gemeinden gleich groß, keine Rangfolge der Kirchen. */
   .place-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-lg)}
   .place{margin:0;border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);border:1px solid var(--border)}
@@ -194,8 +202,8 @@
       <h1>Was ist los in <em>Dithmarschen</em>?</h1>
       <p class="lead">
         Gottesdienste, Konzerte, Gruppen, Yoga — alles aus dem Kirchenkreis
-        Dithmarschen auf einer Karte. Jede Veranstaltung als Pin, mit Gemeinde
-        und Kirchspiel. Kostenlos, ohne Konto, ohne Werbung.
+        Dithmarschen und von Helgoland auf einer Karte. Jede Veranstaltung als
+        Pin, mit Gemeinde und Kirchspiel. Kostenlos, ohne Konto, ohne Werbung.
       </p>
       <div class="cta">
         <a class="btn btn-primary" href="https://karte.moin-kark.de">
@@ -255,7 +263,7 @@
         <div class="card">
           <div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
           <h3>Datensparsam</h3>
-          <p>Kein Konto, kein Tracking, keine Werbung. Der Standort verlässt das Gerät nicht.</p>
+          <p>Kein Konto, keine Profile, keine Werbung. Gezählt wird nur anonym, wie oft etwas genutzt wird. Der Standort verlässt das Gerät nicht.</p>
         </div>
       </div>
     </div>
@@ -265,8 +273,8 @@
     <div class="wrap">
       <h2>Von der Küste bis in die Marsch</h2>
       <p class="sub">
-        18 Kirchengemeinden zwischen Büsum und Meldorf, zwischen Deich und
-        Kohlfeld — alle auf einer Karte.
+        Alle Kirchengemeinden des Kirchenkreises, von Helgoland bis Brunsbüttel,
+        zwischen Deich und Kohlfeld — auf einer Karte.
       </p>
       <div class="place-grid">
         <figure class="place">
@@ -368,6 +376,33 @@
     </div>
   </section>
 
+  <section class="kalender">
+    <div class="wrap">
+      <h2>Termine im eigenen Kalender</h2>
+      <p class="sub">
+        Abonniere die Termine eines Kirchspiels in deinem Kalender. Neue und
+        geänderte Termine kommen von selbst dazu. Einzelne Termine legst du in
+        der Karte mit „In den Kalender“ ab.
+      </p>
+      <ul class="abo-liste">
+        <li><a class="abo" data-abo="kirchspiel=Eider" href="webcal://api.moin-kark.de/calendar.ics?kirchspiel=Eider">Eider</a></li>
+        <li><a class="abo" data-abo="kirchspiel=Geest" href="webcal://api.moin-kark.de/calendar.ics?kirchspiel=Geest">Geest</a></li>
+        <li><a class="abo" data-abo="kirchspiel=Heide%20und%20Umgebung" href="webcal://api.moin-kark.de/calendar.ics?kirchspiel=Heide%20und%20Umgebung">Heide und Umgebung</a></li>
+        <li><a class="abo" data-abo="kirchspiel=Mitte-S%C3%BCd" href="webcal://api.moin-kark.de/calendar.ics?kirchspiel=Mitte-S%C3%BCd">Mitte-Süd</a></li>
+        <li><a class="abo" data-abo="kirchspiel=S%C3%BCd" href="webcal://api.moin-kark.de/calendar.ics?kirchspiel=S%C3%BCd">Süd</a></li>
+        <li><a class="abo" data-abo="kirchspiel=West" href="webcal://api.moin-kark.de/calendar.ics?kirchspiel=West">West mit Helgoland</a></li>
+        <li><a class="abo abo-alle" data-abo="" href="webcal://api.moin-kark.de/calendar.ics">Alle Termine</a></li>
+      </ul>
+      <p class="hint">
+        Auf Android öffnet sich Google Kalender. Ohne Kalender-App lässt sich die
+        Adresse auch kopieren, etwa
+        <code>https://api.moin-kark.de/calendar.ics?kirchspiel=West</code>,
+        und im Kalender „per URL“ hinzufügen. Eine einzelne Gemeinde geht mit
+        <code>?parish=Büsum</code>.
+      </p>
+    </div>
+  </section>
+
   <section class="info">
     <div class="wrap info-grid">
       <div>
@@ -430,5 +465,15 @@
 </footer>
 
 <script>document.getElementById('jahr').textContent=new Date().getFullYear()</script>
+<script>
+  // Android kennt webcal nicht; Google Kalender nimmt das Abo über cid an.
+  if (/android/i.test(navigator.userAgent)) {
+    document.querySelectorAll("a[data-abo]").forEach(function (a) {
+      var q = a.getAttribute("data-abo");
+      var webcal = "webcal://api.moin-kark.de/calendar.ics" + (q ? "?" + q : "");
+      a.href = "https://calendar.google.com/calendar/render?cid=" + encodeURIComponent(webcal);
+    });
+  }
+</script>
 </body>
 </html>

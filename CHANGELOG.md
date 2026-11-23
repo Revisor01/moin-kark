@@ -13,6 +13,7 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 - Die Karte im Browser meldet sich als deutschsprachig und hat einen aussagekräftigen Titel und eine Beschreibung für Suchmaschinen.
 - Die Landingpage lädt auf dem Handy kleinere Bilder.
 - Geteilte Termin-Links tragen für Suchmaschinen den kurzen Titel, das Ende, den Ort mit Anschrift und die Gemeinde als Veranstalter.
+- Landingpage: Kalender-Abos je Kirchspiel, Helgoland genannt, keine feste Gemeindezahl mehr, „Datensparsam“ beschreibt die anonyme Nutzungszählung genau, Knöpfe mit besserem Kontrast.
 
 ### Behoben
 - iPhone: Die App meldet sich jetzt als deutschsprachig; Datumsauswahl und Systemknöpfe erscheinen auf Deutsch, der App Store nennt Deutsch als Sprache.

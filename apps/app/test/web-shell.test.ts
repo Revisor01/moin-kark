@@ -115,3 +115,40 @@ describe("Landingpage", () => {
     expect(forFile("index.html")).toBe("no-cache");
   });
 });
+
+describe("Landingpage: Texte, Kontrast, Kalender-Abos", () => {
+  const webDir = fileURLToPath(new URL("../../web/", import.meta.url));
+  const landing = readFileSync(`${webDir}index.html`, "utf8");
+
+  it("nennt keine feste Gemeindezahl und verspricht nicht „kein Tracking“", () => {
+    expect(landing).not.toMatch(/\d+ Kirchengemeinden/);
+    expect(landing).not.toContain("kein Tracking");
+    expect(landing).toContain("Helgoland");
+  });
+
+  it("setzt den Hauptknopf in Petrol, weil Weiß auf Orange nur 3,7:1 hat", () => {
+    expect(landing).toContain(".btn-primary{background:var(--primary);color:var(--on-color)}");
+  });
+
+  it("bietet für jedes Kirchspiel ein Abo, zusammen alle Termine", () => {
+    const abos = [...landing.matchAll(/href="webcal:\/\/api\.moin-kark\.de\/calendar\.ics(\?[^"]*)?"/g)].map(
+      (m) => decodeURIComponent(m[1] ?? "")
+    );
+    expect(abos).toEqual([
+      "?kirchspiel=Eider",
+      "?kirchspiel=Geest",
+      "?kirchspiel=Heide und Umgebung",
+      "?kirchspiel=Mitte-Süd",
+      "?kirchspiel=Süd",
+      "?kirchspiel=West",
+      "",
+    ]);
+  });
+
+  it("hat robots.txt und Sitemap auf beiden Seiten", () => {
+    expect(readFileSync(`${webDir}robots.txt`, "utf8")).toContain("Sitemap: https://moin-kark.de/sitemap.xml");
+    expect(readFileSync(`${webDir}sitemap.xml`, "utf8")).toContain("<loc>https://moin-kark.de/</loc>");
+    expect(read("public/robots.txt")).toContain("Sitemap: https://karte.moin-kark.de/sitemap.xml");
+    expect(read("public/sitemap.xml")).toContain("<loc>https://karte.moin-kark.de/</loc>");
+  });
+});
