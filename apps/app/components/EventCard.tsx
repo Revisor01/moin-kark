@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { eventParishes, type EventFeature } from "@moinkark/shared";
+import { displayTitle, eventParishLabels, type EventFeature } from "@moinkark/shared";
 import { formatEventTime } from "../lib/filters";
 import { CARD_MAX_FONT_SCALE, cardOuterHeight } from "../lib/listLayout";
 import { colorForCategory, colors, glyph, radius, shadow, spacing, text } from "../lib/theme";
@@ -26,10 +26,10 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
   const accent = colorForCategory(cat);
   const time = formatEventTime(p.startUtc, p.endUtc, p.allDay, p.showEndtime);
   // Bei Mehrfachzuordnung das Kirchspiel statt einer herausgegriffenen Gemeinde.
+  const parishes = eventParishLabels(p);
   const place =
-    eventParishes(p).length > 1
-      ? `Kirchspiel ${p.kirchspiel}`
-      : p.parish ?? p.locationName ?? p.kirchspiel;
+    parishes.length > 1 ? `Kirchspiel ${p.kirchspiel}` : parishes[0] ?? p.locationName ?? p.kirchspiel;
+  const title = displayTitle(p);
 
   return (
     <View
@@ -45,7 +45,7 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
       <Pressable
         onPress={() => onPress(p.id)}
         accessibilityRole="button"
-        accessibilityLabel={`${p.title}, ${time}, ${place}`}
+        accessibilityLabel={`${title}, ${time}, ${place}`}
         style={styles.pressArea}
       >
         <View style={[styles.accent, { backgroundColor: accent }]} />
@@ -62,7 +62,7 @@ function EventCard({ feature, active, onPress, saved, onToggleSave }: Props) {
             {time}
           </Text>
           <Text style={styles.title} numberOfLines={2} maxFontSizeMultiplier={CARD_MAX_FONT_SCALE}>
-            {p.title}
+            {title}
           </Text>
           <View style={styles.metaRow}>
             {cat ? (

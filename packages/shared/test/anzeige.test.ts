@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parishLabel, titleShort } from "../src/anzeige";
+import { displayTitle, parishLabel, titleShort } from "../src/anzeige";
 
 describe("parishLabel", () => {
   it("nimmt Verwaltungs-Vorsätze vom Ortsnamen", () => {
@@ -74,5 +74,12 @@ describe("titleShort", () => {
     const start = performance.now();
     expect(titleShort(`a${" ".repeat(50_000)}b${" ".repeat(50_000)}`)).toBe("a b");
     expect(performance.now() - start).toBeLessThan(200);
+  });
+});
+
+describe("displayTitle", () => {
+  it("nimmt den Kurztitel und fällt ohne ihn auf den Titel zurück", () => {
+    expect(displayTitle({ title: "Krabbelkreis (Leitung: X)", titleShort: "Krabbelkreis" })).toBe("Krabbelkreis");
+    expect(displayTitle({ title: "Gottesdienst" })).toBe("Gottesdienst");
   });
 });

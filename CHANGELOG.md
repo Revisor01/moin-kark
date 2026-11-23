@@ -20,6 +20,9 @@ die Versionierung folgt [SemVer 2.0.0](https://semver.org/lang/de/).
 ### Hinzugefügt
 - Jeder Termin lässt sich als Kalenderdatei laden, und alle Termine einer Gemeinde, Kategorie oder eines Kirchspiels lassen sich als Kalender abonnieren.
 - Der Feed liefert zusätzlich bereinigte Anzeige-Namen: Gemeinden ohne Vorsätze wie „KG“, Titel ohne Klammerzusätze.
+- „In den Kalender“ im Termin: auf dem iPhone und am Rechner als Kalenderdatei, auf Android über Google Kalender.
+- „Alle Termine aus … abonnieren“ im Termin: die Gemeinde als Kalender-Abo, das sich von selbst aktualisiert.
+- Liste, Termin und Erinnerungen zeigen kurze Titel und Gemeindenamen wie „Heide“ statt „KG Heide“.
 
 ### Sonstiges
 

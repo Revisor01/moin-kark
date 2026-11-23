@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { parishLabel } from "@moinkark/shared";
 import type { DateFilter } from "../lib/filters";
 import { colorForCategory, colors, overlays, radius, shadow, sizes, spacing, text } from "../lib/theme";
 
@@ -267,7 +268,7 @@ export default function FilterSheet({
             <Group label="Gemeinde">
               <Chip label="Alle" active={activeGemeinde === null} onPress={() => onGemeinde(null)} />
               {gemeinden.map((g) => (
-                <Chip key={g} label={g} active={activeGemeinde === g} onPress={() => onGemeinde(g)} />
+                <Chip key={g} label={parishLabel(g)} active={activeGemeinde === g} onPress={() => onGemeinde(g)} />
               ))}
             </Group>
           ) : null}

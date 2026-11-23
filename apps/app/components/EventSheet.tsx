@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   Image,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -18,7 +19,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { eventParishes, parishesLabel, type EventFeature } from "@moinkark/shared";
+import { displayTitle, eventParishes, parishesLabel, type EventFeature } from "@moinkark/shared";
+import { addToCalendarUrl, subscribeUrl, usesGoogleCalendar, type CalendarPlatform } from "../lib/calendar";
 import { formatEventTime } from "../lib/filters";
 import { openInMaps } from "../lib/maps";
 import { canShare, shareEvent } from "../lib/share";
@@ -86,6 +88,18 @@ function formatPrice(raw?: string): string {
 }
 
 const IS_WEB = Platform.OS === "web";
+const CAL_PLATFORM = Platform.OS as CalendarPlatform;
+const USER_AGENT = IS_WEB && typeof navigator !== "undefined" ? navigator.userAgent : undefined;
+
+/** Kalenderdatei und webcal im selben Tab, damit der Browser sie dem Kalender übergibt; Google in neuem Tab. */
+function openCalendar(url: string) {
+  if (IS_WEB && typeof window !== "undefined") {
+    if (url.startsWith("https://calendar.google.com")) window.open(url, "_blank");
+    else window.location.href = url;
+    return;
+  }
+  Linking.openURL(url).catch(() => {});
+}
 
 // Grobe Maße zur Entscheidung „fixer Kopf“ oder „alles scrollt“.
 const HERO_HEIGHT = sizes.heroHeight; // styles.hero
@@ -158,11 +172,15 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
   const parishes = eventParishes(p);
   const multiParish = parishes.length > 1;
   const gemeindeValue = parishesLabel(p);
+  const title = displayTitle(p);
+  // Abo nur bei einer Gemeinde; die API findet sie auch über den Anzeige-Namen.
+  const aboGemeinde = multiParish ? undefined : (p.parishLabel ?? p.parish);
+  const googleKalender = usesGoogleCalendar(CAL_PLATFORM, USER_AGENT);
 
   // Höhe des fixen Kopfes grob schätzen.
   const metaCount =
     (multiParish ? 2 : (p.parish ? 1 : 0) + 1) + (p.locationName ? 1 : 0) + (address ? 1 : 0) +
-    (p.contributor ? 1 : 0) + (price ? 1 : 0);
+    (p.contributor ? 1 : 0) + (price ? 1 : 0) + (aboGemeinde ? 1 : 0);
   const headerEstimate = HERO_HEIGHT + HEAD_BASE + metaCount * META_ROW;
   const footerHeight = FOOTER_BASE + insets.bottom;
   const descSpace = sheetHeight - headerEstimate - footerHeight;
@@ -186,7 +204,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
       <View style={styles.content}>
           <Text style={styles.time}>{time}</Text>
           <Text style={styles.title} numberOfLines={2}>
-            {p.title}
+            {title}
           </Text>
 
           <View style={styles.badges}>
@@ -221,6 +239,20 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             {p.contributor ? <Meta label="Mitwirkung" value={p.contributor} /> : null}
           {price ? <Meta label="Eintritt" value={price} highlight /> : null}
         </View>
+
+        {aboGemeinde ? (
+          <TouchableOpacity
+            style={styles.aboLink}
+            onPress={() => {
+              openCalendar(subscribeUrl(aboGemeinde, CAL_PLATFORM, USER_AGENT));
+              track("kalender", { art: "abo" });
+            }}
+            accessibilityRole="link"
+            accessibilityHint={googleKalender ? "Öffnet Google Kalender" : "Öffnet deinen Kalender"}
+          >
+            <Text style={styles.aboLinkText}>Alle Termine aus {aboGemeinde} abonnieren</Text>
+          </TouchableOpacity>
+        ) : null}
 
         {/* Im Web merkt das Herz nur lokal — es gibt dort keine Erinnerung
             (expo-notifications kann im Browser nicht planen). Der Hinweis
@@ -265,7 +297,7 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
               style={styles.share}
               onPress={() =>
                 shareEvent(
-                  { id: p.id, title: p.title, parish: p.parish, locationName: p.locationName },
+                  { id: p.id, title, parish: p.parish, locationName: p.locationName },
                   time
                 ).then(() => track("geteilt", { weg: "system" }))
               }
@@ -335,16 +367,29 @@ export default function EventSheet({ feature, onClose, mapsApp, isSaved, onToggl
             )}
           </GestureDetector>
 
-          {/* Fixer Maps-Button unten. */}
+          {/* Kalender und Karte, fix unten. */}
           <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
+            <TouchableOpacity
+              style={[styles.mapButton, styles.calendarButton]}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityHint={googleKalender ? "Öffnet Google Kalender" : "Lädt den Termin als Kalenderdatei"}
+              onPress={() => {
+                openCalendar(addToCalendarUrl(p, CAL_PLATFORM, USER_AGENT));
+                track("kalender", { art: "termin" });
+              }}
+            >
+              <Text style={[styles.mapButtonText, styles.calendarButtonText]}>In den Kalender</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.mapButton}
               activeOpacity={0.85}
               accessibilityRole="button"
-              onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? p.title)}
+              accessibilityLabel={`In ${mapsApp === "google" ? "Google Maps" : "Apple Karten"} öffnen`}
+              onPress={() => openInMaps(mapsApp, lat, lng, p.locationName ?? title)}
             >
               <Text style={styles.mapButtonText}>
-                In {mapsApp === "google" ? "Google Maps" : "Apple Karten"} öffnen
+                {mapsApp === "google" ? "Google Maps" : "Apple Karten"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -414,6 +459,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   footer: {
+    flexDirection: "row",
+    gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
@@ -474,6 +521,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, // kam vorher vom Container (descScrollInner)
   },
   mapButton: {
+    flex: 1,
     marginTop: spacing.lg,
     backgroundColor: colors.primary,
     borderRadius: radius.md,
@@ -481,6 +529,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   mapButtonText: { ...text.bodyStrong, color: colors.onColor },
+  calendarButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  calendarButtonText: { color: colors.primary },
+  aboLink: { marginTop: spacing.md, minHeight: 44, justifyContent: "center" },
+  aboLinkText: { ...text.labelMedium, color: colors.primary, textDecorationLine: "underline" },
   close: {
     position: "absolute",
     zIndex: 6, // über der Inhalts-ScrollView
